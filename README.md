@@ -52,6 +52,8 @@ Implementation begins only after the remaining laptop/account/storage cutover an
 - [`docs/EYE_DECISIONS.md`](docs/EYE_DECISIONS.md) — canonical vs provisional vs open decisions.
 - [`docs/HARDWARE.md`](docs/HARDWARE.md) — live-observed machine hardware/runtime snapshot.
 - [`docs/RESEARCH.md`](docs/RESEARCH.md) — current vendor-documentation findings that materially affect implementation.
+- [`docs/WORKLOG.md`](docs/WORKLOG.md) — durable record of platform preparation and architecture probes.
+- [`docs/CUTOVER.md`](docs/CUTOVER.md) — exact local-owner cutover checklist for the pending physical-access window.
 
 ## Credentials
 
