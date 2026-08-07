@@ -1,9 +1,7 @@
 # CUTOVER.md
 
-**Status:** Core cutover complete; residual cleanup remains  
+**Status:** Core cutover complete; only old-profile/connector choices remain  
 **Machine:** `STEALTHEYELLC`
-
-This checklist now records the completed physical cutover and the remaining cleanup boundary.
 
 ## Completed — preservation
 
@@ -14,38 +12,31 @@ This checklist now records the completed physical cutover and the remaining clea
 ## Completed — Windows identity
 
 - [x] Local administrator account `StealthEye` created.
-- [x] `C:\Users\StealthEye` created and verified as active interactive profile.
-- [x] GitHub SSH identity works under the new account.
-- [x] Git author identity corrected to `StealthEye <stealtheye.eye@gmail.com>`.
-- [x] Automatic console sign-in configured with Microsoft Sysinternals Autologon.
+- [x] `C:\Users\StealthEye` verified as active interactive profile.
+- [x] Automatic console sign-in configured.
 - [x] Restart verified to go directly to the `StealthEye` desktop.
 - [x] Direct Eye service/tunnel path survives reboot.
+- [x] Git author identity set to `StealthEye <stealtheye.eye@gmail.com>`.
 
 The local account password is intentionally not recorded here.
 
 ## Completed — pagefile and old X removal
 
-- [x] Reboot applied the `C:` pagefile transition.
-- [x] `C:\pagefile.sys` observed at 16 GiB current allocation.
-- [x] Old ~192 GiB `X:\pagefile.sys` no longer exists/is active.
-- [x] Preservation archive and Git bundle reconfirmed before destructive storage work.
+- [x] `C:\pagefile.sys` is the active pagefile.
+- [x] Old ~192 GiB `X:\pagefile.sys` removed from the active configuration by reboot.
+- [x] Preservation archive and Git bundle reconfirmed.
 - [x] Old `C:\Sovereign Node.vhdx` removed.
-- [x] Expected ~400 GB of physical `C:` free space returned.
 
-## Completed — final physical Dev Drive
+## Completed — physical Dev Drive
 
 - [x] Re-queried supported `C:` shrink after old VHD deletion.
-- [x] Supported maximum shrink observed at ~304.9 GiB.
-- [x] Shrunk `C:` by exactly 300 GiB.
-- [x] Created a physical partition on the internal Samsung NVMe.
+- [x] Shrunk `C:` by 300 GiB.
+- [x] Created a physical 300 GiB partition on the internal Samsung NVMe.
 - [x] Assigned `X:`.
-- [x] Formatted using Windows Dev Drive semantics.
-- [x] ReFS verified.
+- [x] Formatted as ReFS Dev Drive.
 - [x] Label set to `Eye Dev`.
-- [x] `fsutil devdrv query X:` reports a trusted developer volume.
-- [x] Deleted the temporary fallback `C:\StealthEye-Dev.vhdx`.
-
-Final development volume:
+- [x] Trusted Dev Drive status verified.
+- [x] Temporary fallback `C:\StealthEye-Dev.vhdx` deleted.
 
 ```text
 X:  300 GiB  ReFS Dev Drive  "Eye Dev"
@@ -53,42 +44,61 @@ X:  300 GiB  ReFS Dev Drive  "Eye Dev"
 
 ## Completed — repository location
 
-- [x] Created `X:\Repos`.
-- [x] Cloned `StealthEyeLLC/eye` to `X:\Repos\eye` over SSH.
-- [x] Confirmed clean `main...origin/main` state immediately after clone.
-- [x] Kept old `se` implementation out of the clean repository.
+- [x] Created `X:\Repos\eye`.
+- [x] Cloned `StealthEyeLLC/eye` over SSH.
+- [x] Clone/pull verified.
+- [x] Old `se` source not imported.
+
+Current laptop SSH authentication is read-only for the repo: a live push was rejected as a deploy key. This does not affect the connected GitHub control path, but steady-state laptop Git write authority remains an explicit design choice.
 
 ## Completed — fresh WSL
 
-- [x] Verified the new Windows account initially had no WSL distributions.
-- [x] Installed `Ubuntu-24.04`.
+- [x] Installed Ubuntu 24.04 under the new Windows account.
 - [x] Observed Ubuntu 24.04.4 LTS.
-- [x] Verified WSL2 kernel `6.6.87.2-microsoft-standard-WSL2`.
-- [x] Preserved/enabled systemd.
-- [x] Configured root as the default Linux user.
-- [x] Verified plain launch runs as UID 0.
-- [x] Verified `systemctl is-system-running` reports `running`.
+- [x] WSL2 verified.
+- [x] systemd enabled/running.
+- [x] root configured as default Linux user.
+- [x] Plain launch verified without Linux credential ceremony.
 
-## Remaining — old user review
+## Completed — HEC / transitional cleanup
 
-Do **not** delete `C:\Users\steal` blindly.
+- [x] Disabled HEC tunnel proven unnecessary to direct Eye operation.
+- [x] `HEC Laptop Tunnel` scheduled task removed.
+- [x] `C:\Users\steal\HEC` removed.
+- [x] Dedicated `laptop-to-hec-vps-ed25519` key pair removed.
+- [x] Old HEC handshake file removed.
+- [x] Old `steal`-bound `StealthEye Session` task removed.
+- [x] `StealthEye Session - New Account` retained because the current prototype still uses it.
+- [x] Tailscale service stopped; direct Eye path remained healthy.
+- [x] Tailscale service disabled. Package retained temporarily for easy reversal.
 
-Review at least:
+## Completed — old-profile inventory
 
-- Documents
-- Downloads
-- iCloudDrive
-- iCloudPhotos
-- any other obvious user-facing data
+The old profile was inspected without deleting or hydrating cloud content.
 
-Preserve anything the owner wants, then retire the old `steal` account/profile and its old per-user WSL registration.
+Desktop/Documents/Downloads contain only small amounts of old development/prototype material.
 
-## Remaining — transitional infrastructure
+The remaining retention question is iCloud:
 
-- Remove inert HEC files/keys/task residue.
-- Keep the current prototype `StealthEye Session - New Account` helper only while prototype user-context operations depend on it.
-- Remove that helper when the clean v2 LocalSystem service implements the proven native active-user launch path.
-- Do not disturb the working direct Secure MCP Tunnel until the clean replacement transport startup is proven.
+- `iCloudDrive`: 15,766 reparse-backed files, ~2.78 GB logical.
+- `iCloudPhotos`: 472 files, ~3.02 GB logical; 463 marked offline.
+
+Do not blindly copy these trees merely to force cloud placeholders to download.
+
+## Remaining — old profile
+
+Choose one:
+
+- trust the existing iCloud/cloud copy and retire the old local profile; or
+- intentionally hydrate/archive selected iCloud material before retirement.
+
+Only after that choice, remove the old `steal` account/profile and old per-user WSL registration.
+
+## Remaining — connected identity
+
+Google Drive, Calendar and Contacts are connected under the Eye Google identity. The ChatGPT Gmail connector is currently pointed at the owner's personal Gmail instead of `stealtheye.eye@gmail.com`.
+
+Switch Gmail to the Eye identity before treating Eye mail authority as live. Do not operate the personal mailbox as Eye.
 
 ## Remaining — optional platform choices
 
@@ -96,27 +106,27 @@ Preserve anything the owner wants, then retire the old `steal` account/profile a
 - Install Linux/user-local packages only as actual work requires them.
 - Decide whether local Ollama/LM Studio/Python applications are needed under the new profile.
 - Verify the favored DPAPI-NG credential blob across a later reboot before making it canonical.
+- Uninstall disabled Tailscale later if no unrelated need appears.
 
 ## Next project phase
 
-After residual old-profile/HEC cleanup:
-
-1. Perform the final small architecture pass against `EYE_CANON.md`, `EYE_DECISIONS.md`, live probes and current vendor docs.
-2. Resolve only the provisional decisions necessary to start.
-3. Begin the minimal clean implementation in `X:\Repos\eye`.
-4. Do **not** import the old `se` implementation wholesale.
+1. Resolve the iCloud/profile and Gmail connector choices.
+2. Perform the final small architecture pass against `EYE_CANON.md`, `EYE_DECISIONS.md`, live probes and current vendor docs.
+3. Resolve only the provisional decisions necessary to start.
+4. Begin the minimal clean implementation in `X:\Repos\eye`.
+5. Do **not** import the old `se` implementation wholesale.
 
 ## Current success state
 
 Already true:
 
-- intended `StealthEye` user is the active interactive identity;
-- machine can restart straight to desktop;
+- `StealthEye` is the active interactive identity;
+- restart goes straight to desktop;
 - direct ChatGPT -> Secure MCP Tunnel -> Eye service survives reboot;
 - old fixed 400 GB VHDX is gone;
-- `X:` is the final physical development Dev Drive;
+- `X:` is the final physical Dev Drive;
 - `E:` contains bulk models/data/archives;
 - fresh WSL belongs to `StealthEye`;
+- HEC residue is removed;
+- Tailscale is not required by Eye and is disabled;
 - `X:\Repos\eye` is the clean permanent workspace.
-
-Remaining cleanup is no longer a blocker for the core account/storage cutover.
