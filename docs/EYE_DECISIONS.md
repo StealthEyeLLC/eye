@@ -99,6 +99,8 @@ as Eye's operational Google identity.
 
 The intended ChatGPT connection set is Gmail, Drive, Calendar and Contacts under this identity.
 
+Current live connector state is tracked in `EYE_CANON.md`; do not treat a connector pointed at another Google account as Eye authority.
+
 ### OpenAI secret names
 
 GitHub Actions secret names supplied by the owner:
@@ -186,17 +188,14 @@ Keep this provisional until a deliberately persisted throwaway blob survives and
 
 ### Old-profile retirement
 
-The old `steal` account/profile remains until its user-facing data is reviewed.
+The old `steal` profile has now been inventoried.
 
-Decide what, if anything, to preserve from:
+Desktop/Documents/Downloads are essentially prototype/developer material. The only material requiring a deliberate retention decision is the old iCloud state:
 
-- Documents
-- Downloads
-- iCloudDrive
-- iCloudPhotos
-- other old-profile application/user data
+- `iCloudDrive`: 15,766 reparse-backed files, ~2.78 GB logical;
+- `iCloudPhotos`: 472 files, ~3.02 GB logical, 463 marked offline.
 
-Then retire the old account and its old WSL registration.
+Do not force hydration merely to archive placeholders. Decide whether the cloud copy is sufficient or whether a local hydrated archive is actually wanted, then retire the old account/profile and its old WSL registration.
 
 ### E: filesystem
 
@@ -227,9 +226,11 @@ Do not intentionally narrow the underlying credential's authority.
 
 ### GitHub machine authority
 
-The local Eye repo successfully clones over the StealthEye SSH identity.
+The local Eye repo successfully clones over SSH from the `StealthEye` account, but a live `git push` was rejected with GitHub's **"denied to deploy key"** error.
 
-Still decide what machine credential to use if `eye.exe` itself should administer GitHub beyond ordinary Git operations.
+Therefore the current laptop SSH credential is suitable for clone/pull but **is not write authority** for `StealthEyeLLC/eye`.
+
+The connected GitHub control path used by ChatGPT currently has repository admin/push authority, so repository writes remain available externally. Still choose a deliberate steady-state machine credential if `eye.exe` itself should push or administer GitHub broadly.
 
 Do not choose a repo-scoped deploy key if the intended authority is broader than one repository.
 
@@ -237,12 +238,16 @@ Do not choose a repo-scoped deploy key if the intended authority is broader than
 
 The prototype's current tunnel supervision is transitional. Final v2 startup/supervision mechanism remains unresolved.
 
+### Tailscale package
+
+Tailscale was stopped and the direct ChatGPT -> Eye path remained healthy; its service is now disabled. Keep the installed package temporarily for easy reversal, then uninstall it if no unrelated use emerges.
+
 ## 4. Build order
 
 Current order:
 
 ```text
-1. Finish residual old-profile/HEC platform cleanup
+1. Resolve old iCloud/profile retirement choice and Gmail connector identity
 2. Freeze the small v2 architecture
 3. Implement the minimal service in X:\Repos\eye
 4. Add native user execution
@@ -255,7 +260,7 @@ Current order:
 11. Remove transitional session helper and remaining prototype residue
 ```
 
-The account, pagefile, physical Dev Drive, fresh WSL and repository-location cutover are complete.
+The account, pagefile, physical Dev Drive, fresh WSL, repository-location and HEC cleanup are complete.
 
 Do not begin by porting old `se` implementation wholesale.
 
