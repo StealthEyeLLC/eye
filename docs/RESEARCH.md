@@ -43,7 +43,7 @@ Primary reference:
 
 - https://developer.chrome.com/blog/remote-debugging-port
 
-Implementation implication: Eye's favored **dedicated StealthEye Chrome profile + loopback CDP** is not only cleaner than controlling the user's normal browser profile; it aligns with current Chrome remote-debugging behavior.
+Implementation implication: Eye's dedicated StealthEye Chrome profile + loopback CDP architecture aligns with current Chrome remote-debugging behavior and avoids coupling Eye to the user's normal browser profile.
 
 ## 4. Physical Dev Drive vs VHD/VHDX
 
@@ -53,7 +53,7 @@ Primary reference:
 
 - https://learn.microsoft.com/en-us/windows/dev-drive/
 
-Implementation/platform implication: the favored final physical ReFS Dev Drive `X:` on the internal Samsung NVMe remains the preferred direction, with the already-tested dynamic VHDX retained only as fallback.
+Implementation/platform implication: the final physical ReFS Dev Drive `X:` on the internal Samsung NVMe is the chosen development volume.
 
 The same documentation notes that WSL's `metadata` mount option is not supported on ReFS volumes. Therefore Linux-native workloads that depend heavily on Unix ownership/permission metadata should live in the WSL Linux filesystem rather than assuming `X:` can substitute for the distro filesystem.
 
@@ -68,29 +68,36 @@ Primary references:
 - https://learn.microsoft.com/en-us/windows/win32/api/ncryptprotect/nf-ncryptprotect-ncryptunprotectsecret
 - https://learn.microsoft.com/en-us/windows/win32/seccng/cng-dpapi-constants
 
-### Live probe on STEALTHEYELLC
+### Live validation on STEALTHEYELLC
 
-A throwaway random plaintext was used; no real Eye credential was involved.
+Only throwaway random plaintext was used; no real Eye credential was involved.
 
-1. A direct descriptor of `SID=S-1-5-18` was created successfully but `NCryptProtectSecret` returned an encryption failure on this machine. Therefore the earlier assumption that a direct LocalSystem SID descriptor was the cleanest path is **not supported by live evidence**.
-2. `LOCAL=user`, invoked by a LocalSystem process, successfully protected the throwaway plaintext.
+Initial probe:
+
+1. A direct descriptor of `SID=S-1-5-18` was created successfully but `NCryptProtectSecret` returned an encryption failure on this machine.
+2. `LOCAL=user`, invoked by a LocalSystem process, successfully protected throwaway plaintext.
 3. The same LocalSystem context successfully decrypted the resulting blob.
-4. The encrypted blob was placed in a location readable by the current interactive user for the negative test.
-5. A process running as `STEALTHEYELLC\steal` could read the blob bytes but `NCryptUnprotectSecret` was blocked and did not recover the plaintext.
-6. The throwaway blob was deleted after the test.
+4. An interactive-user process could read the encrypted test blob but could not decrypt it.
 
-Provisional implementation candidate:
+Reboot-persistence probe:
+
+1. A fresh random 32-byte value was generated under LocalSystem.
+2. LocalSystem protected it with descriptor `LOCAL=user`.
+3. Only the encrypted blob and a SHA-256 verification value were persisted under `C:\ProgramData\StealthEye`.
+4. The laptop was rebooted normally.
+5. The Eye service and Secure MCP Tunnel returned, and automatic console sign-in returned to the `StealthEye` desktop.
+6. LocalSystem successfully decrypted the same persisted blob after reboot and reproduced the expected verification hash.
+7. The interactive `STEALTHEYELLC\StealthEye` account attempted to unprotect the same blob and `NCryptUnprotectSecret` failed with `0x8009002C`; plaintext was not recovered.
+8. The temporary probe source, binary, encrypted blob and hash were deleted.
+
+Implementation conclusion:
 
 ```text
 The LocalSystem Eye service uses DPAPI-NG with LOCAL=user.
-Persist only the encrypted blob and non-secret metadata.
+Persist only encrypted blobs and non-secret metadata in a SYSTEM-owned machine path.
 ```
 
-Because `LOCAL=user` is evaluated in the caller's user context, when Eye invokes it as LocalSystem this produced the desired practical behavior in the live probe: SYSTEM could decrypt; the ordinary interactive user could not.
-
-One remaining validation is reboot persistence. Confirm the same encrypted blob survives/decrypts after the controlled reboot before promoting this mechanism to canonical credential storage.
-
-The goal is not to reduce Eye's authority. It is to keep deliberately granted credentials available unattended to the SYSTEM-owned Eye service without writing plaintext secrets into the public repository or ordinary user-profile files.
+This is now sufficiently validated for the initial v2 credential-store implementation and has been promoted into the canonical design.
 
 ## 6. OpenAI Secure MCP Tunnel
 
@@ -108,13 +115,13 @@ tunnel-client -> loopback Eye MCP endpoint
 
 The tunnel remains transport. Eye should not grow a custom tunnel subsystem unless an actual requirement appears.
 
-A targeted search did not find public OpenAI documentation for the exact Windows `tunnel-client runtimes` supervision semantics beyond the installed client's own help, so the final Windows startup mechanism remains open rather than being guessed from undocumented behavior.
+A targeted search did not find public OpenAI documentation for exact Windows `tunnel-client runtimes` supervision semantics beyond the installed client's own help, so final Windows startup replacement remains intentionally late-bound rather than guessed from undocumented behavior.
 
 ## 7. Research discipline
 
 Before implementing an OS/provider-specific capability:
 
-1. check the current primary vendor documentation;
+1. check current primary vendor documentation;
 2. compare it with a minimal live probe on `STEALTHEYELLC` where practical;
 3. record surprising constraints or useful new APIs here;
 4. promote a result to `EYE_DECISIONS.md` or `EYE_CANON.md` only when it becomes an accepted project decision.
