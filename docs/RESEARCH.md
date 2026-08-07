@@ -27,13 +27,13 @@ Implementation implication: native service-owned active-user execution is a supp
 
 Microsoft added `ReleasePseudoConsole` with a minimum supported client of Windows 11 24H2 / build 26100.
 
-The StealthEye laptop is currently on build 26200, so the v2 implementation can target this newer lifetime API rather than inheriting older pseudoconsole shutdown patterns where appropriate.
+The StealthEye laptop is currently on build 26200. A live `GetProcAddress` probe also confirmed that `kernel32.dll` on this machine exports `ReleasePseudoConsole`.
 
 Primary reference:
 
 - https://learn.microsoft.com/en-us/windows/console/releasepseudoconsole
 
-Implementation implication: use current native ConPTY APIs and explicitly design pseudoconsole lifetime/EOF handling around the current Windows contract.
+Implementation implication: use current native ConPTY APIs and explicitly design pseudoconsole lifetime/EOF handling around the current Windows contract rather than inheriting the older prototype's shutdown pattern.
 
 ## 3. Chrome remote debugging
 
@@ -107,6 +107,8 @@ tunnel-client -> loopback Eye MCP endpoint
 ```
 
 The tunnel remains transport. Eye should not grow a custom tunnel subsystem unless an actual requirement appears.
+
+A targeted search did not find public OpenAI documentation for the exact Windows `tunnel-client runtimes` supervision semantics beyond the installed client's own help, so the final Windows startup mechanism remains open rather than being guessed from undocumented behavior.
 
 ## 7. Research discipline
 
