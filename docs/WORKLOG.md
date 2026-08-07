@@ -76,19 +76,7 @@ The old Ubuntu 22.04 distro under `steal` had accumulated large caches, duplicat
 
 ## 2026-08-07 — machine tooling cleanup
 
-Cleaned machine PATH and established useful developer tools machine-wide, including:
-
-- Git
-- GitHub CLI
-- .NET
-- Node/npm
-- CUDA
-- CMake
-- Ninja
-- FFmpeg
-- VS Code
-- uv/uvx
-- ripgrep
+Cleaned machine PATH and established useful developer tools machine-wide, including Git, GitHub CLI, .NET, Node/npm, CUDA, CMake, Ninja, FFmpeg, VS Code, uv/uvx and ripgrep.
 
 Also enabled Windows Developer Mode and long-path support.
 
@@ -180,8 +168,6 @@ Initial material documents project identity, canonical architecture, current pla
 
 ## 2026-08-07 — physical cutover completed
 
-The owner returned to the laptop and crossed the secure-desktop boundary manually.
-
 ### Windows account / autologon
 
 - Confirmed the new `StealthEye` local administrator account and profile.
@@ -200,12 +186,7 @@ After reboot:
 
 ### Old fixed VHD removal
 
-Immediately before deletion:
-
-- reconfirmed `E:\StealthEye\archives\pre-platform-rebuild-20260807` exists;
-- reconfirmed the complete `se-full.bundle` exists.
-
-Then removed:
+Immediately before deletion, reconfirmed the preservation archive and complete `se-full.bundle`, then removed:
 
 ```text
 C:\Sovereign Node.vhdx
@@ -224,38 +205,24 @@ Actions:
 - assigned `X:`;
 - formatted it using `Format-Volume -DevDrive`;
 - labeled it `Eye Dev`;
-- verified it is ReFS;
-- verified `fsutil devdrv query X:` reports a trusted developer volume.
-
-The staged fallback `C:\StealthEye-Dev.vhdx` was then deleted.
+- verified ReFS and trusted Dev Drive status;
+- deleted the staged fallback `C:\StealthEye-Dev.vhdx`.
 
 ### Permanent repo clone
 
-Created:
+Created `X:\Repos\eye` and cloned `StealthEyeLLC/eye` over SSH from the new Windows account.
 
-```text
-X:\Repos\eye
-```
-
-and cloned `StealthEyeLLC/eye` over SSH from the new Windows account.
-
-The migrated GitHub SSH key worked successfully.
-
-Corrected the new account's Git author identity from the old personal value to:
+The migrated GitHub SSH key works for clone/pull. Git author identity was corrected to:
 
 ```text
 StealthEye <stealtheye.eye@gmail.com>
 ```
 
+A later live push established that the current laptop SSH identity is read-only/deploy-key authority rather than repository write authority.
+
 ### Fresh WSL
 
-The new Windows account initially had no WSL distributions.
-
-Installed:
-
-```text
-Ubuntu-24.04
-```
+Installed `Ubuntu-24.04` under the StealthEye Windows account.
 
 Observed runtime:
 
@@ -264,24 +231,67 @@ Ubuntu 24.04.4 LTS
 6.6.87.2-microsoft-standard-WSL2
 ```
 
-Configured and verified:
+Configured and verified root as default user and systemd running.
 
-- default Linux user: root;
-- systemd enabled;
-- `systemctl is-system-running` => `running`;
-- normal launch requires no Linux username/password prompt.
+## 2026-08-07 — HEC/Tailscale cleanup
 
-A first attempt to write `/etc/wsl.conf` produced literal escape characters; it was immediately overwritten with a correct multiline file, the distro was terminated/relaunched, and root-default + systemd were reverified.
+- Removed the HEC laptop task/files/dedicated SSH key/handshake residue.
+- Performed a final targeted check for HEC-specific services, scheduled tasks and standard install paths; none remained.
+- Stopped Tailscale and immediately confirmed direct ChatGPT -> Eye access continued working.
+- Disabled Tailscale service; package retained temporarily for easy reversal.
 
-## Current boundary after physical cutover
+## 2026-08-07 — old profile retirement completed
 
-Core account/storage/WSL/repository cutover is now complete.
+The old `C:\Users\steal` profile was inspected before deletion.
 
-Remaining platform cleanup:
+To avoid needless cloud hydration, cloud-only iCloud placeholders were not forced local. Locally meaningful material was preserved first under:
 
-- inspect old `C:\Users\steal` user-facing/iCloud material;
-- preserve anything deliberately wanted;
-- retire old `steal` account/profile and old WSL registration;
-- remove inert HEC residue;
-- retain the prototype session helper only until v2 native active-user execution replaces it;
-- perform final small architecture freeze before clean implementation begins.
+```text
+E:\StealthEye\archives\pre-profile-retirement-20260807
+```
+
+Preserved:
+
+- Desktop: 2 files;
+- Documents: local files/directories;
+- Downloads: 9 files;
+- top-level profile inventory JSON;
+- seven locally resident iCloud Photos media files totaling ~44 MiB.
+
+Then:
+
+- removed local Windows user `steal`;
+- removed its Win32 user-profile registration;
+- removed the residual `C:\Users\steal` directory;
+- rebooted and confirmed the directory remains gone;
+- verified the active `StealthEye` user has only the clean `Ubuntu-24.04` WSL registration.
+
+## 2026-08-07 — DPAPI-NG reboot persistence validated
+
+A fresh throwaway 32-byte random value was protected by LocalSystem using DPAPI-NG descriptor `LOCAL=user`.
+
+Only the encrypted blob and a SHA-256 verification value were persisted under `C:\ProgramData\StealthEye`.
+
+The laptop was rebooted. After automatic sign-in and the Eye/tunnel control path returned:
+
+- LocalSystem successfully decrypted the persisted blob and reproduced the expected hash;
+- interactive `STEALTHEYELLC\StealthEye` could read the test material but `NCryptUnprotectSecret` failed with `0x8009002C` and did not recover plaintext;
+- all temporary probe source, binary, blob and hash files were removed.
+
+No real credential was involved.
+
+This completed the missing reboot-persistence validation and the mechanism was promoted into the v2 canonical design.
+
+## 2026-08-07 — Eye Gmail connector corrected
+
+The ChatGPT Gmail connector now points to `stealtheye.eye@gmail.com`. Live mail addressed to the Eye identity was read successfully through the connector.
+
+Drive, Calendar and Contacts were already on the Eye identity.
+
+## Current boundary
+
+The blocking laptop/platform cutover is complete.
+
+The small v2 architecture has been frozen for initial implementation. Remaining choices such as exact replacement tunnel startup, broader machine-side GitHub authority, optional external API surfaces, Tailscale package removal and future `E:` filesystem changes are deliberately late/non-blocking decisions.
+
+Clean implementation can now proceed in `X:\Repos\eye` without importing old `se` wholesale.
