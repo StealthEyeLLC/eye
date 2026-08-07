@@ -1,153 +1,197 @@
 # CUTOVER.md
 
-**Status:** Platform cutover complete  
-**Machine:** `STEALTHEYELLC`
+**Status:** v2 implementation and runtime cutover checklist  
+**Machine:** `STEALTHEYELLC`  
+**Baseline date:** 2026-08-07
 
-## Completed — preservation
+This checklist now covers the path from the current early v2 repository to the final Eye runtime. It intentionally does not preserve obsolete platform-migration procedure as the active plan.
 
-- [x] Old `se` repository/history preserved on `E:`.
-- [x] Complete verified Git bundle preserved.
-- [x] Important old `X:` payload independently archived.
-- [x] Old-profile local material deliberately retained under `E:\StealthEye\archives\pre-profile-retirement-20260807`.
+## Phase 0 — verify machine foundation
 
-## Completed — Windows identity
+Before changing Eye runtime ownership:
 
-- [x] Local administrator account `StealthEye` created.
-- [x] `C:\Users\StealthEye` verified as active interactive profile.
-- [x] Automatic console sign-in configured.
-- [x] Repeated restart verified to go directly to the `StealthEye` desktop.
-- [x] Direct Eye service/tunnel path survives reboot.
-- [x] Git author identity set to `StealthEye <stealtheye.eye@gmail.com>`.
-- [x] Previous local account `steal` removed.
-- [x] Previous Win32 profile registration removed.
-- [x] Residual `C:\Users\steal` directory removed.
+- [ ] Windows boots and operates normally through repeated reboots.
+- [ ] Current encryption/storage state is explicitly known rather than assumed.
+- [ ] `C:` is the Windows/application volume.
+- [ ] `X:` is provisioned as the intended physical trusted ReFS Dev Drive, approximately 300 GiB.
+- [ ] `E:` bulk/archive storage is visible and excluded from destructive provisioning operations.
+- [ ] `X:\Repos\eye` exists as the clean active checkout.
+- [ ] required .NET/Git/build tooling is present.
+- [ ] WSL2 Ubuntu 24.04 baseline is healthy with systemd.
+- [ ] NVIDIA/CUDA stack is healthy where needed.
+- [ ] login/account/autologon configuration is left alone unless the owner explicitly requests a change.
 
-The local account password is intentionally not recorded here.
+## Phase 1 — reconcile repository
 
-## Completed — pagefile and old X removal
+- [ ] Fetch current `main` from `StealthEyeLLC/eye`.
+- [ ] Preserve/reapply only meaningful local work not already committed.
+- [ ] Do not reintroduce CRLF/EOL-only churn.
+- [ ] Do not import old `se` wholesale.
+- [ ] Confirm current architecture docs agree with `EYE_CANON.md`, `EYE_DECISIONS.md`, `MCP_CONTRACT.md` and `OSS_LANDSCAPE.md`.
 
-- [x] `C:\pagefile.sys` is the active pagefile.
-- [x] Old ~192 GiB `X:\pagefile.sys` removed from active configuration.
-- [x] Preservation archive and Git bundle reconfirmed.
-- [x] Old `C:\Sovereign Node.vhdx` removed.
+## Phase 2 — freeze/generated public contract
 
-## Completed — physical Dev Drive
-
-- [x] Re-queried supported `C:` shrink after old VHD deletion.
-- [x] Shrunk `C:` by 300 GiB.
-- [x] Created a physical 300 GiB partition on the internal Samsung NVMe.
-- [x] Assigned `X:`.
-- [x] Formatted as ReFS Dev Drive.
-- [x] Label set to `Eye Dev`.
-- [x] Trusted Dev Drive status verified.
-- [x] Temporary fallback `C:\StealthEye-Dev.vhdx` deleted.
+Canonical public tools:
 
 ```text
-X:  300 GiB  ReFS Dev Drive  "Eye Dev"
+eye_inspect
+eye_run
+eye_change
+eye_interact
+eye_external
 ```
 
-## Completed — repository location
+Checklist:
 
-- [x] Created `X:\Repos\eye`.
-- [x] Cloned `StealthEyeLLC/eye` over SSH.
-- [x] Clone/pull verified.
-- [x] Old `se` source not imported.
+- [ ] `contracts/eye-mcp-v1.json` is the canonical public-contract source.
+- [ ] tool descriptors are generated from it.
+- [ ] C# request/result types are generated from it.
+- [ ] operation/facade registration is generated from it.
+- [ ] capability metadata is generated from it.
+- [ ] exact output schemas are generated/published.
+- [ ] normalized `tools/list` snapshot test exists.
+- [ ] ordinary implementation changes fail tests if they accidentally mutate the public contract.
+- [ ] `AGENTS.md` contract-freeze rule is honored.
 
-Current laptop SSH authentication is read-only/deploy-key authority for the repo. Steady-state machine-side Git write/admin authority remains a later non-blocking authority choice.
+The five facades are effect classifications, not privilege tiers. They all route to one internal operation registry/dispatcher.
 
-## Completed — fresh WSL
+## Phase 3 — native interop foundation
 
-- [x] Installed Ubuntu 24.04 under the StealthEye Windows account.
-- [x] Observed Ubuntu 24.04.4 LTS.
-- [x] WSL2 verified.
-- [x] systemd enabled/running.
-- [x] root configured as default Linux user.
-- [x] Plain launch verified without Linux credential ceremony.
-- [x] After old-profile retirement, current user WSL registration contains only `Ubuntu-24.04`.
+- [ ] Introduce CsWin32 generation.
+- [ ] Replace suitable handwritten Win32 declarations/SafeHandle patterns incrementally.
+- [ ] Keep handwritten declarations only for demonstrated gaps.
+- [ ] Preserve working active-session launch behavior during migration.
 
-## Completed — HEC / transitional cleanup
+## Phase 4 — process and terminal substrate
 
-- [x] HEC tunnel proven unnecessary to direct Eye operation.
-- [x] HEC laptop scheduled task removed.
-- [x] HEC user folder/handshake/dedicated SSH key residue removed.
-- [x] Final targeted scan found no HEC-specific service/task/standard install path.
-- [x] Old `steal`-bound StealthEye session task removed.
-- [x] `StealthEye Session - New Account` retained only because the current prototype still uses it.
-- [x] Tailscale service stopped and direct Eye path reverified.
-- [x] Tailscale service disabled; package retained temporarily for easy reversal.
+- [ ] LocalSystem execution works.
+- [ ] active-user execution works through `WTSQueryUserToken` / `CreateEnvironmentBlock` / `CreateProcessAsUser`.
+- [ ] explicit inherited-handle lists are used.
+- [ ] stdout/stderr capture is asynchronous and reliable.
+- [ ] actual child processes are service-owned through Job Objects.
+- [ ] descendants are cleaned up correctly.
+- [ ] timeout and cancellation semantics are explicit.
+- [ ] native ConPTY is wired into the dispatcher.
+- [ ] terminal resize/input/output/exit lifecycle works.
+- [ ] current ConPTY lifetime behavior including `ReleasePseudoConsole` is handled correctly where available.
+- [ ] WSL execution uses the active-user path and does not require a permanent user helper.
 
-## Completed — old-profile retirement
+## Phase 5 — service/worker IPC
 
-The old profile was inspected before deletion.
+- [ ] short-lived active-session worker can be launched on demand.
+- [ ] StreamJsonRpc named-pipe control path works bidirectionally.
+- [ ] events and cancellation work across the worker boundary.
+- [ ] multiplexed bulk channels handle stdout/stderr/VT/image/audio/file data.
+- [ ] worker crash/exit does not require restarting the LocalSystem service.
+- [ ] no permanent desktop/session daemon is introduced without measured justification.
 
-Cloud-only iCloud placeholders were not intentionally hydrated merely to make a redundant local archive.
+## Phase 6 — desktop observation/control
 
-Before retirement, local material was preserved under:
+- [ ] HWND/process/window inventory is available.
+- [ ] UIA uses cache requests for only needed properties/patterns.
+- [ ] UIA event subscriptions provide changed-state observation.
+- [ ] UIA Remote Operations are used where they reduce cross-process round trips.
+- [ ] Windows.Graphics.Capture supports efficient window/screen capture.
+- [ ] dirty-region updates are used where practical.
+- [ ] Per-Monitor V2 DPI awareness is established before coordinate-sensitive work.
+- [ ] OCR/visual grounding remains a fallback rather than the primary UI representation.
+- [ ] secure desktop/lock state is reported accurately.
+
+## Phase 7 — browser
+
+- [ ] installed Chrome launches as active user.
+- [ ] dedicated Eye profile/data directory is used.
+- [ ] CDP binds only where intended, normally loopback.
+- [ ] typed CDP bindings are generated from the protocol schema.
+- [ ] target/tab/navigation/evaluation/input/network/download/upload/screenshot primitives work.
+- [ ] browser remains usable without Playwright installed.
+- [ ] optional Playwright .NET path can be used for tasks where it materially improves reliability.
+- [ ] no permanent Node daemon or bundled browser fleet is required.
+
+## Phase 8 — high-value Windows-native capabilities
+
+Add each only with a concrete workload and an explicit contract revision where publication is required.
+
+Potential capability families:
+
+- [ ] BITS transfers: `transfer.start/status/wait/cancel`.
+- [ ] VSS consistent snapshots/reads.
+- [ ] Restart Manager locker inspection/coordination.
+- [ ] ReFS block-clone workspace snapshots/clones.
+- [ ] CopyFile2 progress/cancel-aware copies.
+- [ ] Process Snapshotting diagnostics.
+- [ ] Virtual Disk attach/detach/inspect.
+- [ ] ProjFS only if a large lazy-materialization workload appears.
+
+## Phase 9 — code/document/data/media adapters
+
+Add based on actual tasks, not completeness theater.
+
+- [ ] ripgrep baseline.
+- [ ] Tree-sitter and/or ast-grep when syntax-aware operations are needed.
+- [ ] on-demand LSP adapters for symbols/references/rename/diagnostics.
+- [ ] MarkItDown/PdfPig/Open XML/ClosedXML for document work.
+- [ ] Docling only for heavier extraction needs.
+- [ ] DuckDB for structured local data queries.
+- [ ] NAudio for native audio capture.
+- [ ] whisper.cpp for on-demand transcription.
+- [ ] PaddleOCR/Tesseract and ONNX/OpenCV for on-demand vision/OCR.
+- [ ] no always-running local model unless a measured workload later proves the need.
+
+## Phase 10 — updates and measurement
+
+- [ ] staged/atomic update path exists.
+- [ ] failed update can roll back cleanly.
+- [ ] service-aware restart/cutover is reliable.
+- [ ] EyeBench contains a small representative set of real tasks.
+- [ ] measure task success, elapsed time, Eye calls, retries/restarts, bytes transferred and required user intervention.
+
+## Phase 11 — final runtime cutover
+
+Only perform after v2 independently operates the machine.
+
+- [ ] v2 service survives cold reboot.
+- [ ] Secure MCP Tunnel reconnects to v2 loopback endpoint.
+- [ ] `eye_inspect` works.
+- [ ] `eye_run` works in SYSTEM/user/WSL contexts.
+- [ ] active-session worker can be created/destroyed repeatedly.
+- [ ] desktop observation/control works.
+- [ ] browser/CDP works.
+- [ ] file/code operations work.
+- [ ] structured errors and cancellation behave correctly.
+- [ ] machine-secret persistence works.
+- [ ] worker/service/tunnel failure recovery is understood.
+- [ ] switch the production tunnel target to v2.
+- [ ] observe normal operation before removing compatibility mechanisms.
+- [ ] remove obsolete prototype service/runtime pieces.
+- [ ] remove transitional session helper/task if still present.
+- [ ] remove temporary compatibility paths.
+- [ ] reboot from cold state and prove the final architecture end to end.
+
+## Final success state
 
 ```text
-E:\StealthEye\archives\pre-profile-retirement-20260807
+ChatGPT
+   |
+OpenAI Secure MCP Tunnel
+   |
+Eye LocalSystem Service
+   |
+   +-- five generated MCP facades
+   +-- one internal operation registry/dispatcher
+   +-- native SYSTEM capabilities
+   +-- active-user process execution
+   +-- on-demand desktop worker
+   +-- installed Chrome / typed CDP
+   +-- WSL
+   +-- Windows native facilities
+   +-- on-demand specialized engines
 ```
 
-including Desktop, Documents, Downloads, a profile inventory, and seven locally resident iCloud Photos media files (~44 MiB).
-
-Then the old account/profile and residual directory were removed.
-
-## Completed — Google connector identity
-
-- [x] Gmail connected as `stealtheye.eye@gmail.com` and verified with live Eye-addressed mail.
-- [x] Google Drive connected as the Eye identity.
-- [x] Google Calendar connected as the Eye identity.
-- [x] Google Contacts connected as the Eye identity.
-
-## Completed — unattended machine secret validation
-
-- [x] LocalSystem protected throwaway random plaintext with DPAPI-NG `LOCAL=user`.
-- [x] Encrypted blob persisted across reboot.
-- [x] LocalSystem decrypted it successfully after reboot.
-- [x] Interactive `StealthEye` user could not decrypt it.
-- [x] Temporary probe artifacts removed.
-- [x] Mechanism promoted into canonical v2 design.
-
-## Remaining optional/non-blocking platform choices
-
-- Decide whether `E:` ever moves from exFAT to NTFS after another safe copy exists.
-- Install Linux/user-local packages only as actual work requires them.
-- Decide whether local Ollama/LM Studio/Python applications are needed under the new profile.
-- Uninstall disabled Tailscale later if no unrelated need appears.
-- Choose broader machine-side GitHub authority only when `eye.exe` needs it.
-
-## Next project phase
-
-The platform boundary is no longer a blocker.
-
-The small v2 architecture is frozen for initial implementation. Build order is now:
-
-```text
-1. minimal LocalSystem service
-2. native active-user execution
-3. native ConPTY terminal
-4. WSL execution
-5. installed Chrome + loopback CDP
-6. on-demand desktop worker / native UI Automation
-7. external authority operations as concrete needs appear
-8. replace prototype runtime and remove transitional session helper
-```
-
-Do **not** import the old `se` implementation wholesale.
-
-## Success state
-
-All core cutover conditions are true:
-
-- `StealthEye` is the active interactive identity;
-- restart goes straight to desktop;
-- direct ChatGPT -> Secure MCP Tunnel -> Eye service survives reboot;
-- old fixed 400 GB VHDX is gone;
-- `X:` is the final physical Dev Drive;
-- `E:` contains bulk models/data/archives;
-- fresh WSL belongs to StealthEye;
-- old `steal` account/profile is retired after preservation;
-- HEC laptop residue is removed;
-- Eye Google connectors use the Eye identity;
-- DPAPI-NG unattended secret persistence is reboot-validated;
-- `X:\Repos\eye` is the clean permanent workspace.
+No VPS dependency.  
+No HEC dependency.  
+No permanent session daemon.  
+No generic agent runtime.  
+No Docker/Kubernetes base.  
+No permanent Node automation service.  
+No competing MCP servers.
