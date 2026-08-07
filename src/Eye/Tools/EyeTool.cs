@@ -16,7 +16,7 @@ public sealed class EyeTool(EyeDispatcher dispatcher)
         => dispatcher.ExecuteAsync(EyeEffectClass.Inspect, op, args);
 
     [McpServerTool]
-    [Description("Run a local Windows or WSL process in the requested execution context.")]
+    [Description("Run a local process in the requested execution context.")]
     public Task<object> eye_run(
         [Description("Published execution operation name.")] string op,
         [Description("Operation-specific arguments.")] JsonElement? args = null)
