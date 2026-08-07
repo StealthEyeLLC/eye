@@ -153,9 +153,11 @@ Exact mechanism remains open between the official runtime-management path and a 
 
 The laptop will need steady-state access to whatever credentials Eye must use independently of GitHub Actions.
 
-Favor a machine-local mechanism readable by the SYSTEM-owned Eye service.
+Favored mechanism: **DPAPI-NG `LOCAL=user` invoked by the LocalSystem Eye service**, with only encrypted blobs and non-secret metadata persisted on disk.
 
-Current research candidate: DPAPI-NG protection targeted specifically to the LocalSystem SID rather than broadly machine-scoped DPAPI. This remains provisional until a live test succeeds.
+A live throwaway probe on `STEALTHEYELLC` succeeded under SYSTEM and the same blob could not be decrypted by the current interactive user. A direct `SID=S-1-5-18` protection attempt failed during encryption and is no longer the favored form.
+
+Keep this provisional until reboot persistence is verified during the controlled cutover.
 
 ## 3. Open decisions
 
