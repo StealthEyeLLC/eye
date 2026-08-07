@@ -3,7 +3,7 @@
 **Status:** Decision ledger and open-items guardrail  
 **Baseline date:** 2026-08-07
 
-This document exists to prevent exploratory findings from silently becoming canonical Eye design.
+This document prevents exploratory findings from silently becoming canonical Eye design.
 
 Use three states:
 
@@ -15,9 +15,9 @@ Use three states:
 
 ### Identity
 
-- Product name: **StealthEye**
-- New repository: **`StealthEyeLLC/eye`**
-- Planned local repository: **`X:\Repos\eye`**
+- Product: **StealthEye**
+- Repository: **`StealthEyeLLC/eye`**
+- Local repository: **`X:\Repos\eye`**
 - Primary executable: **`eye.exe`**
 - Public MCP tool: **`eye`**
 
@@ -63,6 +63,30 @@ HEC/VPS infrastructure is not part of final Eye.
 
 Docker is not part of the target runtime.
 
+### Windows interactive identity
+
+The dedicated Windows interactive account is:
+
+```text
+StealthEye
+```
+
+It is a local administrator and is configured for automatic console sign-in to the desktop. Routine operation should not require manual sign-in.
+
+Do not store the account password in repository documentation.
+
+### Development volume
+
+The final development drive is:
+
+```text
+X:
+```
+
+It is a **300 GiB physical ReFS Dev Drive partition** on the internal Samsung NVMe and is marked trusted by Windows Dev Drive tooling.
+
+Do not replace it with a VHD/VHDX without a concrete reason.
+
 ### External Eye identity
 
 Use:
@@ -73,7 +97,7 @@ stealtheye.eye@gmail.com
 
 as Eye's operational Google identity.
 
-ChatGPT access is connected for Gmail, Drive, Calendar, and Contacts.
+The intended ChatGPT connection set is Gmail, Drive, Calendar and Contacts under this identity.
 
 ### OpenAI secret names
 
@@ -96,22 +120,22 @@ Do not copy the old codebase wholesale into `eye`.
 
 ## 2. Favored / provisional decisions
 
-These are strong current directions but can still be changed without contradicting the canonical core.
-
 ### User execution
 
 Favor:
 
-- active-session discovery,
-- `WTSQueryUserToken`,
-- `CreateProcessAsUser`,
-- native environment block creation,
-- direct inherited pipes,
+- active-session discovery;
+- `WTSQueryUserToken`;
+- `CreateProcessAsUser`;
+- native environment block creation;
+- direct inherited pipes;
 - Job Objects around the actual child process.
 
 ### Terminal
 
 Favor native ConPTY and remove the old Pty.Net dependency if no missing capability appears.
+
+Use the current ConPTY lifetime APIs available on the laptop, including `ReleasePseudoConsole` where appropriate.
 
 ### Browser
 
@@ -129,69 +153,66 @@ Do not keep a permanent worker alive unless measured performance later proves it
 
 Favor native Windows UI Automation / COM.
 
-### Final X drive
+### WSL baseline
 
-Favor a real physical ReFS Dev Drive partition on the internal Samsung NVMe.
+Current implemented baseline under the `StealthEye` Windows account:
 
-Approximate target size: ~300 GB.
+```text
+Ubuntu 24.04.4 LTS
+WSL2
+systemd enabled
+root default user
+```
 
-Exact size is not final.
-
-### WSL
-
-Favor a fresh Ubuntu 24.04 LTS distribution under `StealthEye`.
-
-Exact distro/default-user policy remains open.
+This is intentionally friction-light and is the favored baseline. It can still change if implementation demonstrates a concrete reason for a non-root default user or different distro.
 
 ### Tunnel supervision
 
 Favor running official `tunnel-client` externally under ordinary Windows startup/supervision rather than custom code inside Eye.
 
-Exact mechanism remains open between the official runtime-management path and a simple Windows scheduled/startup mechanism.
+Exact final mechanism remains open between the official runtime-management path and a simple Windows startup/scheduled mechanism.
 
 ### Secret persistence on laptop
 
-The laptop will need steady-state access to whatever credentials Eye must use independently of GitHub Actions.
+The laptop will need steady-state access to credentials Eye must use independently of GitHub Actions.
 
 Favored mechanism: **DPAPI-NG `LOCAL=user` invoked by the LocalSystem Eye service**, with only encrypted blobs and non-secret metadata persisted on disk.
 
-A live throwaway probe on `STEALTHEYELLC` succeeded under SYSTEM and the same blob could not be decrypted by the current interactive user. A direct `SID=S-1-5-18` protection attempt failed during encryption and is no longer the favored form.
+A live throwaway probe succeeded under SYSTEM and the same blob could not be decrypted by the interactive user. A direct `SID=S-1-5-18` protection attempt failed during encryption and is not favored.
 
-Keep this provisional until reboot persistence is verified during the controlled cutover.
+Keep this provisional until a deliberately persisted throwaway blob survives and decrypts after a reboot.
 
 ## 3. Open decisions
 
-### Account sign-in final form
+### Old-profile retirement
 
-The new `StealthEye` account exists and lock/power policy is largely configured.
+The old `steal` account/profile remains until its user-facing data is reviewed.
 
-The exact final passwordless/automatic-logon implementation is still blocked on one local interactive cutover.
+Decide what, if anything, to preserve from:
 
-### Physical Dev Drive size
+- Documents
+- Downloads
+- iCloudDrive
+- iCloudPhotos
+- other old-profile application/user data
 
-Do not freeze the final `X:` size until after reboot, old fixed VHDX removal, and a fresh supported-shrink query.
+Then retire the old account and its old WSL registration.
 
 ### E: filesystem
 
 Keep exFAT for now.
 
-Possible NTFS conversion/reformat is optional and should happen only after protected data has another safe copy.
+Possible NTFS reformat is optional and should occur only after protected data has another safe copy.
 
-### Fresh WSL policy
+### WSL package set
 
-Still decide:
-
-- Ubuntu 24.04 or another distribution,
-- default user/root policy,
-- which packages are genuinely needed.
+The distro is established, but do not preinstall a huge Linux toolchain merely because it is available. Add packages as concrete work requires them.
 
 ### Google direct API access from eye.exe
 
-ChatGPT already has Google integrations.
+ChatGPT has Google integrations, but standalone `eye.exe` direct Google API credentials remain optional.
 
-Still decide whether the standalone `eye.exe` runtime also needs its own direct Google API credentials for Gmail/Drive/Calendar/Contacts.
-
-Do not add this solely because it is possible; add it if standalone laptop operation benefits.
+Add them only if independent laptop-side Gmail/Drive/Calendar/Contacts operation provides a concrete benefit.
 
 ### OpenAI admin operation surface
 
@@ -199,47 +220,50 @@ The owner intends broad OpenAI admin authority.
 
 Still decide whether Eye exposes:
 
-- a general raw OpenAI API request operation, or
-- a small number of broad organization-management operations.
+- a general raw OpenAI API request operation; or
+- a small set of broad organization-management operations.
 
 Do not intentionally narrow the underlying credential's authority.
 
 ### GitHub machine authority
 
-The repository is public, so clone/pull does not require authentication.
+The local Eye repo successfully clones over the StealthEye SSH identity.
 
-Still decide what machine credential to use if Eye itself should push/administer GitHub broadly.
+Still decide what machine credential to use if `eye.exe` itself should administer GitHub beyond ordinary Git operations.
 
 Do not choose a repo-scoped deploy key if the intended authority is broader than one repository.
 
+### Tunnel startup implementation
+
+The prototype's current tunnel supervision is transitional. Final v2 startup/supervision mechanism remains unresolved.
+
 ## 4. Build order
 
-The project order remains:
+Current order:
 
 ```text
-1. Finish laptop/account/storage cutover
+1. Finish residual old-profile/HEC platform cleanup
 2. Freeze the small v2 architecture
-3. Create the first deliberate source/docs commit in StealthEyeLLC/eye
-4. Implement the minimal service
-5. Add native user execution
-6. Add terminal/ConPTY
-7. Add WSL
-8. Add browser/CDP
-9. Add on-demand desktop worker/UI Automation
-10. Add external authority operations only as concrete needs appear
-11. Replace the old prototype service/tunnel arrangement
-12. Retire obsolete prototype/HEC residue
+3. Implement the minimal service in X:\Repos\eye
+4. Add native user execution
+5. Add terminal/ConPTY
+6. Add WSL
+7. Add browser/CDP
+8. Add on-demand desktop worker/UI Automation
+9. Add external authority operations only as concrete needs appear
+10. Replace the old prototype service/tunnel arrangement
+11. Remove transitional session helper and remaining prototype residue
 ```
 
-The documentation-only repository initialization has now begun while the remaining laptop cutover waits for physical access. This does not authorize implementation before steps 1–2 are complete.
+The account, pagefile, physical Dev Drive, fresh WSL and repository-location cutover are complete.
 
 Do not begin by porting old `se` implementation wholesale.
 
 ## 5. First-repo-commit rule
 
-The first commit established deliberate Eye identity/design documentation rather than carrying prototype baggage.
+The repository was initialized deliberately with v2 identity/design documentation rather than prototype baggage.
 
-Implementation commits should follow only after the laptop cutover and v2 architecture are settled.
+Implementation commits should preserve that clean break.
 
 ## 6. Architecture filter
 
@@ -256,8 +280,8 @@ If the component is mainly ceremony, future-proofing, policy layering, or generi
 
 ## 7. Source-of-truth rule
 
-When a new experiment succeeds, it is **evidence**, not automatically a canonical design change.
+A successful experiment is evidence, not automatically a canonical design change.
 
-Promote it into this ledger only when the owner explicitly accepts the architectural direction or the conversation clearly establishes it as the intended target.
+Promote it here only when the owner explicitly accepts the direction or the conversation clearly establishes it as the intended target.
 
-When a canonical decision changes, update the source docs rather than leaving contradictory instructions scattered across old notes.
+When a canonical decision changes, update the source docs instead of leaving contradictory instructions scattered across old notes.
