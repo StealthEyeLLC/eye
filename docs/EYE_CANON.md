@@ -30,7 +30,7 @@ This does **not** mean StealthEye can bypass controls imposed by Windows secure 
 
 ## 3. Stable public interface
 
-Eye should expose one stable MCP tool:
+Eye exposes one stable MCP tool shape:
 
 ```text
 eye({ op, args })
@@ -68,7 +68,7 @@ Windows Service Control Manager
 
 There should be **one permanent Eye Windows service** running as LocalSystem.
 
-The final architecture should not require a permanent `eye session` user helper, logon task, tray process, or user-session daemon.
+The final architecture does not require a permanent `eye session` user helper, logon task, tray process, or user-session daemon.
 
 The service owns machine execution and creates user-session processes on demand.
 
@@ -76,11 +76,11 @@ The current prototype still uses a transitional session helper for some user-con
 
 ## 6. Active-user execution
 
-For operations that need the logged-in interactive user, the service should use the native Windows path:
+For operations that need the logged-in interactive user, the service uses the native Windows path:
 
 - identify the active session;
-- obtain its user token;
-- construct the appropriate environment block;
+- obtain its user token with `WTSQueryUserToken`;
+- construct its environment with `CreateEnvironmentBlock`;
 - call `CreateProcessAsUser`;
 - capture standard input/output/error with inherited handles;
 - place the actual child in a service-owned Job Object;
@@ -92,29 +92,22 @@ The earlier prototype failure was caused by per-command Job Object / launcher se
 
 ## 7. Process and terminal execution
 
-Preferred native building blocks:
+Native building blocks:
 
 - `CreateProcessAsUser`
 - Windows Job Objects
 - anonymous/inheritable pipes
 - native ConPTY (`CreatePseudoConsole`)
+- current ConPTY lifetime APIs including `ReleasePseudoConsole` where appropriate
 - process handles and exit codes
 
-Live experiments proved:
+Live experiments proved cross-session user execution, direct stdout/stderr capture, Job Object assignment, native ConPTY in the active session, and WSL invocation through that user process.
 
-- cross-session user execution;
-- direct stdout/stderr capture;
-- Job Object assignment after user-process creation;
-- native ConPTY in the active user session;
-- WSL invocation from that user process.
-
-The current Windows build also exports `ReleasePseudoConsole`.
-
-The final implementation should not require Pty.Net if native ConPTY covers the needed terminal behavior.
+The final implementation should not require Pty.Net unless native ConPTY later proves insufficient for a concrete requirement.
 
 ## 8. WSL
 
-WSL should be launched through the active user's token from the LocalSystem service.
+WSL is launched through the active user's token from the LocalSystem service.
 
 A permanent user helper is not required for WSL.
 
@@ -127,11 +120,11 @@ systemd enabled
 root default user
 ```
 
-Linux-native workloads that require Unix permission/ownership semantics should live inside the WSL Linux filesystem rather than depending on ReFS-hosted metadata behavior.
+Linux-native workloads that require Unix permission/ownership semantics live inside the WSL Linux filesystem rather than depending on ReFS-hosted metadata behavior.
 
 ## 9. Desktop-bound operations
 
-Operations that genuinely need the interactive desktop may use a short-lived on-demand worker created by the LocalSystem service in the active user session.
+Operations that genuinely need the interactive desktop use a short-lived on-demand worker created by the LocalSystem service in the active user session.
 
 Examples:
 
@@ -141,7 +134,7 @@ Examples:
 - keyboard/mouse input;
 - window APIs.
 
-Preferred first design:
+Target shape:
 
 ```text
 eye.exe service
@@ -153,9 +146,9 @@ eye.exe service
 
 Do not add a permanent user worker unless measured performance later justifies it.
 
-The worker should opt into Per-Monitor V2 DPI awareness before screen-coordinate work.
+The worker opts into Per-Monitor V2 DPI awareness before screen-coordinate work and favors native Windows UI Automation / COM.
 
-## 10. Lock state
+## 10. Lock and sign-in state
 
 Eye must query and report the real Windows session lock state.
 
@@ -165,27 +158,27 @@ Eye should report/fail desktop operations naturally when secure desktop prevents
 
 Machine, CLI, WSL, browser/CDP, file, and service operations can continue when the interactive desktop is locked where Windows permits them.
 
-The dedicated `StealthEye` Windows account is configured for automatic console sign-in so normal reboot should return directly to the interactive desktop.
+The dedicated `StealthEye` Windows account is configured for automatic console sign-in. Reboot validation has repeatedly returned the machine directly to the interactive `StealthEye` desktop. The previous `steal` account/profile has been retired.
 
 ## 11. Browser
 
-Favored browser architecture:
+Browser architecture:
 
-- use the installed system Chrome;
+- use installed system Chrome;
 - launch it as the active user;
-- use a dedicated StealthEye browser profile;
+- use a dedicated StealthEye browser profile/data directory;
 - bind Chrome DevTools Protocol to loopback;
 - control it from the LocalSystem service through CDP.
 
 Live experiments proved this works across the SYSTEM -> active-user boundary.
 
-The user's ordinary browser/profile for personal use should remain separate.
+The user's ordinary browser/profile for personal use remains separate.
 
-Prefer direct CDP over shipping a bundled browser or Playwright/Node runtime if direct CDP provides the required functionality.
+Prefer direct CDP over shipping a bundled browser or Playwright/Node runtime when direct CDP provides the required capability.
 
 ## 12. UI Automation
 
-Favor native Windows UI Automation / COM from the session worker.
+Use native Windows UI Automation / COM from the short-lived session worker.
 
 Avoid introducing a large third-party desktop automation framework unless a concrete missing capability justifies it.
 
@@ -205,9 +198,7 @@ eye.exe
 
 The current prototype contains custom tunnel supervision, but that is not the target architecture.
 
-For v2, favor ordinary Windows startup/supervision for `tunnel-client` rather than custom tunnel-supervisor code inside Eye.
-
-The exact final tunnel-client startup mechanism is not yet canonical.
+For v2, keep `tunnel-client` external to Eye under ordinary Windows startup/supervision. The exact replacement startup mechanism remains late-bound until it can be tested without risking the working control path.
 
 ## 14. External authority
 
@@ -238,11 +229,11 @@ StealthEyeLLC/eye
 
 It is public.
 
-The `StealthEye` Windows account successfully clones it over SSH into `X:\Repos\eye`.
+The `StealthEye` Windows account clones/pulls it over SSH into `X:\Repos\eye`. The current SSH credential does not provide push authority; broader machine-side GitHub authority can be added later using an authentication primitive that matches the authority the owner actually intends to grant.
 
 Repository source must remain free of plaintext credentials.
 
-If broader GitHub authority is later intentionally granted to Eye, do not select a repo-scoped deploy key merely to reduce that authority. Choose an authentication primitive matching the authority the owner intends to grant.
+Do not choose a repo-scoped deploy key merely to reduce intentionally broader authority.
 
 ### Google identity
 
@@ -252,20 +243,18 @@ Operational Eye Google identity:
 StealthEye <stealtheye.eye@gmail.com>
 ```
 
-Current verified ChatGPT connector state on 2026-08-07:
+Current ChatGPT connector state:
 
+- Gmail: **Eye identity connected**
 - Google Drive: **Eye identity connected**
 - Google Calendar: **Eye identity connected**
 - Google Contacts: **Eye identity connected**
-- Gmail: **not currently connected to the Eye identity; connector is pointed at the owner's personal Gmail account and must be switched before Eye mail authority is considered live**
 
-Do not read, organize, send from, or otherwise operate the personal Gmail mailbox as though it were Eye's mailbox.
-
-The intended durable Eye identity remains `stealtheye.eye@gmail.com` for communication, files, scheduling, and contacts.
+This is Eye's durable service identity for communication, files, scheduling, and contacts.
 
 The account is operationally Eye's identity while remaining legally/administratively owned and recoverable by the owner.
 
-The separate `stealtheye@stealtheye.io` mailbox currently remains hosted through Titan and has not been migrated to Google Workspace.
+The separate `stealtheye@stealtheye.io` mailbox remains hosted through Titan and has not been migrated to Google Workspace.
 
 ## 15. Storage roles
 
@@ -280,9 +269,24 @@ WSL Linux filesystem: Linux-native permission-sensitive work
 
 The old fixed `C:\Sovereign Node.vhdx` and temporary `C:\StealthEye-Dev.vhdx` fallback are gone.
 
-## 16. Dependency posture
+## 16. Machine secret persistence
 
-The target core remains C# / .NET.
+Credentials that the LocalSystem Eye service must retain on the laptop are protected with **DPAPI-NG `LOCAL=user` invoked by LocalSystem**.
+
+Persist only encrypted blobs and non-secret metadata under a SYSTEM-owned machine path.
+
+This exact behavior was live-validated on `STEALTHEYELLC` with throwaway random plaintext:
+
+- protect/unprotect succeeded as SYSTEM;
+- the persisted encrypted blob survived reboot and still decrypted as SYSTEM;
+- the interactive `StealthEye` account could not decrypt the same blob;
+- a direct `SID=S-1-5-18` protection descriptor failed during encryption and is not the chosen path.
+
+The validation artifacts were deleted after the test.
+
+## 17. Dependency posture
+
+The target core is C# / .NET.
 
 Prefer Windows-native capabilities wherever they are sufficient.
 
@@ -299,7 +303,7 @@ Target direction:
 
 Avoid Docker and large runtime stacks unless a concrete requirement appears.
 
-## 17. Things Eye is deliberately not
+## 18. Things Eye is deliberately not
 
 Do not turn Eye into:
 
@@ -314,7 +318,7 @@ Do not turn Eye into:
 
 Add abstractions only after a real requirement proves they are needed.
 
-## 18. Design style
+## 19. Design style
 
 Favor:
 
