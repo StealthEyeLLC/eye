@@ -1,0 +1,131 @@
+{
+  "contract": "stealtheye.eye.mcp",
+  "version": 1,
+  "status": "canonical",
+  "facades": [
+    {
+      "name": "eye_inspect",
+      "effect_class": "inspect",
+      "description": "Inspect local StealthEye machine state without intentionally mutating it.",
+      "operations": [
+        {
+          "op": "system.status",
+          "args_schema": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        {
+          "op": "capabilities",
+          "args_schema": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "eye_run",
+      "effect_class": "run",
+      "description": "Run a local Windows or WSL process in the requested execution context.",
+      "operations": [
+        {
+          "op": "run",
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "context": {
+                "type": "string",
+                "enum": ["system", "user", "wsl"],
+                "default": "system"
+              },
+              "file_name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "arguments": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "working_directory": {
+                "type": ["string", "null"]
+              },
+              "timeout_ms": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 86400000,
+                "default": 30000
+              }
+            },
+            "required": ["file_name"],
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "eye_change",
+      "effect_class": "change",
+      "description": "Apply precisely typed local machine, file, service, storage, or configuration changes.",
+      "operations": []
+    },
+    {
+      "name": "eye_interact",
+      "effect_class": "interact",
+      "description": "Interact with the active desktop, applications, or browser user interface.",
+      "operations": []
+    },
+    {
+      "name": "eye_external",
+      "effect_class": "external",
+      "description": "Perform an operation whose intended effect leaves the local machine, such as sending, posting, uploading, or remote-provider administration.",
+      "operations": []
+    }
+  ],
+  "result_envelope": {
+    "type": "object",
+    "oneOf": [
+      {
+        "properties": {
+          "ok": { "const": true },
+          "result": {}
+        },
+        "required": ["ok", "result"],
+        "additionalProperties": false
+      },
+      {
+        "properties": {
+          "ok": { "const": false },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "retryable": { "type": "boolean" },
+              "expected": {}
+            },
+            "required": ["code", "message"],
+            "additionalProperties": true
+          }
+        },
+        "required": ["ok", "error"],
+        "additionalProperties": false
+      }
+    ]
+  },
+  "generation": {
+    "targets": [
+      "mcp_tool_descriptors",
+      "csharp_request_result_types",
+      "dispatcher_registration",
+      "capabilities",
+      "documentation",
+      "tools_list_snapshot"
+    ],
+    "ordinary_changes_must_not_modify_public_contract": true,
+    "breaking_changes_require_new_contract_version": true
+  }
+}
