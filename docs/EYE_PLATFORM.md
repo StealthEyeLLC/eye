@@ -4,7 +4,7 @@
 **Baseline date:** 2026-08-07  
 **Machine:** `STEALTHEYELLC`
 
-This document records the current machine state and the remaining physical/manual transition boundary. It is a snapshot, not a promise that every value will remain permanent.
+This document records live platform state. It is a snapshot, not a promise that every value will remain permanent.
 
 ## 1. Current Eye prototype
 
@@ -15,14 +15,14 @@ Installed prototype:
 - version observed: `0.5.1`
 - service mode: Windows service
 - service identity: LocalSystem
-- loopback MCP endpoint observed: `http://127.0.0.1:37921/mcp`
+- loopback MCP endpoint: `http://127.0.0.1:37921/mcp`
 - installed config: `C:\ProgramData\StealthEye\config.json`
 
-The prototype is valuable evidence but is **not** automatically the v2 design.
+The prototype is useful evidence and the current control path, but it is **not** automatically the v2 implementation design.
 
 ## 2. Direct OpenAI path
 
-The working direct path is:
+Working path:
 
 ```text
 ChatGPT
@@ -32,159 +32,134 @@ ChatGPT
   -> eye.exe
 ```
 
-The old HEC/VPS reverse tunnel has been stopped and disabled.
-
-Direct Eye calls continued working after HEC was disabled, proving HEC is not in the active request path.
-
-Old HEC files/keys may remain inert until final cleanup, but they are not target architecture.
+The old HEC/VPS reverse tunnel is stopped and disabled. Direct Eye calls continued working without it.
 
 ## 3. Old repository preservation
 
-The old `se` repository and its local-only history were preserved before destructive storage work.
-
-Archive root:
+Before destructive storage work, the old `X:` payload and old `se` repository were preserved under:
 
 ```text
 E:\StealthEye\archives\pre-platform-rebuild-20260807
 ```
 
-A full Git bundle was created:
+Complete Git-history bundle:
 
 ```text
 E:\StealthEye\archives\pre-platform-rebuild-20260807\se-full.bundle
 ```
 
-The bundle was verified to contain the complete history, including the local commits that had not been pushed.
+The bundle was verified to contain the old repository history including local-only commits. The archive and bundle were reconfirmed readable immediately before deleting the old fixed VHDX.
 
-The old repository is historical prototype material.
+## 4. Windows interactive identity — cutover complete
 
-The new v2 repository is `StealthEyeLLC/eye`.
-
-## 4. Windows identity transition
-
-A new local Windows account exists:
+Primary interactive account is now:
 
 ```text
 User: StealthEye
-Full name: StealthEye
 Role: local administrator
 Profile: C:\Users\StealthEye
 ```
 
-It is intended to become the primary interactive account.
+Live Eye session verification after reboot reported `StealthEye` as the interactive user.
 
-The profile has been seeded with a clean Git identity/config and the existing GitHub SSH identity.
+Automatic console sign-in is configured with Microsoft Sysinternals Autologon. A subsequent restart was physically observed to go directly to the `StealthEye` desktop without interactive credential entry.
 
-The old interactive account `steal` has not yet been retired.
+Do not record the local account password in source, chat-derived project state, or repository files.
 
-Important: do not delete `C:\Users\steal` until user-facing data is reviewed.
+The old `steal` account/profile still exists pending review of user-facing data. Do not delete it blindly.
 
-A final scan showed that the old profile still contains items such as:
+The new profile's Git author identity is:
 
-- Documents
-- Downloads
-- iCloudDrive
-- iCloudPhotos
-- old agent/tool state
-- old per-user applications
+```text
+StealthEye <stealtheye.eye@gmail.com>
+```
 
-StealthEye-specific repository history and important machine assets have already been preserved separately, but personal/iCloud material should not be blindly erased.
+The migrated GitHub SSH identity successfully cloned the new repository over SSH.
 
-## 5. Current credential / login boundary
+## 5. Power and availability
 
-Remote platform controls allowed some account and lock-policy changes but did not allow clearing the stored Windows password or injecting credentials into Windows secure desktop.
+Configured direction remains:
 
-The remaining human boundary is a one-time local unlock / account cutover.
+- hibernation off;
+- no automatic sleep;
+- no automatic display shutdown;
+- no automatic disk shutdown;
+- lid close = do nothing;
+- screensaver disabled;
+- password-on-wake disabled where applicable;
+- Dynamic Lock disabled for the StealthEye profile;
+- machine intended to remain continuously available.
 
-Do not store or document the owner's unlock code in project source.
+Windows Update policy is configured to avoid automatic reboot while a user is logged on.
 
-Target behavior after cutover is a dedicated always-available StealthEye machine with no avoidable interactive sign-in friction.
+## 6. Pagefile — transition complete
 
-## 6. Power and availability
+After reboot, the old ~192 GB `X:\pagefile.sys` disappeared and only the Windows pagefile remained.
 
-Configured direction:
-
-- hibernation off,
-- no automatic sleep,
-- no automatic display shutdown,
-- no automatic disk shutdown,
-- lid close = do nothing,
-- screensaver disabled,
-- password-on-wake disabled where applicable,
-- Dynamic Lock disabled for the new profile,
-- machine intended to remain available continuously.
-
-Windows Update policy was configured to avoid automatic reboot while a user is logged on.
-
-## 7. Pagefile transition
-
-The old `X:` currently came from a fixed VHDX and had an extremely large fixed pagefile.
-
-Next-boot pagefile configuration was changed to:
+Current pagefile file:
 
 ```text
 C:\pagefile.sys
-Initial: 16 GB
-Maximum: 32 GB
+Current allocation observed: 16 GiB
+Configured initial: 16 GiB
+Configured maximum: 32 GiB
 ```
 
-The old in-use `X:\pagefile.sys` remains allocated until reboot.
+## 7. Internal storage — final X established
 
-A controlled reboot is therefore part of the final storage cutover.
+Physical internal disk:
 
-## 8. Storage
-
-### Internal disk
-
-Primary internal disk:
-
-- Samsung NVMe
+- `SAMSUNG MZVL81T0HFLB-00BH1`
+- NVMe
 - ~1 TB raw capacity
 - GPT
-- Windows `C:` occupies most of the disk today
 
-The old `X:` is a fixed VHDX:
+The old fixed VHDX:
 
 ```text
 C:\Sovereign Node.vhdx
 ```
 
-It is ~400 GB fully allocated and should be removed only after the controlled reboot and confirmation that the preservation archive is safe.
+was deleted after archive verification and pagefile cutover. This returned roughly 400 GB of physical `C:` free space.
 
-### Favored final X
+Post-delete `Get-PartitionSupportedSize` showed enough supported shrink capacity for a 300 GiB physical development volume.
 
-Favored target:
-
-- carve a real physical partition from the internal NVMe,
-- format it as a ReFS Dev Drive,
-- mount it as `X:`,
-- use it for development/build/repository work.
-
-Approximate favored size is ~300 GB, but the exact size is **not canonical yet** and should be selected after the reboot and a fresh supported-shrink measurement.
-
-### Fallback Dev Drive
-
-A dynamic fallback VHDX was staged:
+Final internal layout now includes:
 
 ```text
-C:\StealthEye-Dev.vhdx
+C:  NTFS  Windows   ~652.7 GiB filesystem
+X:  ReFS  Eye Dev    300.0 GiB
 ```
 
-It is a 400 GB logical ReFS Dev Drive but physically tiny while empty.
+`X:` is a **physical partition on the Samsung NVMe**, formatted using Windows Dev Drive semantics (`Format-Volume -DevDrive`). `fsutil devdrv query X:` reports it as a trusted developer volume.
 
-It was tested successfully and then detached.
+The staged fallback `C:\StealthEye-Dev.vhdx` was deleted after the physical Dev Drive was proven.
 
-Use it only if the physical ReFS partition proves undesirable or awkward.
+## 8. Development repository
+
+Permanent local repository path now exists:
+
+```text
+X:\Repos\eye
+```
+
+It was cloned from:
+
+```text
+StealthEyeLLC/eye
+```
+
+using the StealthEye account's GitHub SSH key.
+
+The local checkout was clean and synchronized with `origin/main` immediately after clone.
 
 ## 9. External bulk-data drive
 
-`E:` is labeled:
+`E:` remains:
 
-```text
-StealthEye
-```
-
-Current filesystem: exFAT.
+- label: `StealthEye`
+- filesystem: exFAT
+- ~2 TB raw device
 
 Primary layout:
 
@@ -199,47 +174,53 @@ E:\StealthEye\
   models\
 ```
 
-Important protected archive:
+Protected archive area:
 
 ```text
 E:\ARCHIVE - do not touch
 ```
 
-LM Studio model data was copied to:
+LM Studio model payload:
 
 ```text
 E:\StealthEye\models\lmstudio
 ```
 
-Ollama machine model location is configured as:
+Ollama model location:
 
 ```text
 E:\StealthEye\models\ollama
 ```
 
-Possible future cleanup: once another spare drive is connected and protected data is copied elsewhere, consider reformatting `E:` from exFAT to NTFS for stronger Windows semantics. This is optional and not yet approved as canonical.
+Possible future cleanup: after protected data has another safe copy, consider whether `E:` should remain exFAT or be reformatted NTFS. This remains optional.
 
 ## 10. Docker
 
-Docker Desktop and its WSL distro were removed.
+Docker Desktop, Docker WSL state and old Docker build/container data were removed.
 
-Old containers/images/build cache were pruned.
+The target Eye runtime does not depend on Docker.
 
-The target Eye architecture should not depend on Docker.
+## 11. WSL — fresh StealthEye distro established
 
-## 11. WSL
+The `StealthEye` Windows account initially had no registered WSL distributions.
 
-The old Ubuntu 22.04 distribution remains associated with the old `steal` user and is transitional.
+A fresh distribution is now installed under that account:
 
-It was heavily cleaned and its VHDX compacted.
+```text
+Distribution: Ubuntu-24.04
+Observed release: Ubuntu 24.04.4 LTS
+WSL kernel: 6.6.87.2-microsoft-standard-WSL2
+Default Linux user: root
+systemd: enabled and running
+```
 
-The preferred direction is a fresh WSL distribution under the new `StealthEye` account after first login.
+A normal `wsl -d Ubuntu-24.04` invocation was verified to run as UID 0 without another credential prompt.
 
-Ubuntu 24.04 LTS is favored, not yet final.
+The old Ubuntu 22.04 registration under the old `steal` Windows account remains transitional and should be removed when that old profile is retired.
+
+Do not place Linux-native permission-sensitive workloads on the ReFS Dev Drive when they require WSL Unix metadata semantics; use the WSL Linux filesystem for those workloads.
 
 ## 12. Machine-wide developer tooling
-
-Machine-level tooling has been cleaned and made available for the future `StealthEye` account.
 
 Known machine-wide tools include:
 
@@ -255,73 +236,53 @@ Known machine-wide tools include:
 - `uv` / `uvx`
 - ripgrep
 
-Windows long paths are enabled.
+Windows Developer Mode and long-path support are enabled.
 
-Git system config enables long paths.
-
-Developer Mode is enabled.
-
-Old-profile-only Python/Ollama/VS Code installations should not be copied wholesale into the new account.
+User-local runtimes should be added deliberately rather than copied wholesale from the old profile.
 
 ## 13. Background-app cleanup
 
-Removed or disabled legacy/nonessential background infrastructure included:
+Removed or disabled legacy/nonessential background infrastructure includes:
 
-- Docker Desktop
-- HEC tunnel
-- HP analytics/support background tasks
-- Razer background services
-- various old per-user auto-start entries
+- Docker Desktop;
+- HEC tunnel runtime;
+- Razer background services where not needed;
+- HP analytics/support background components;
+- assorted old-profile startup entries.
 
-OMEN hardware support was retained.
+OMEN hardware support remains.
 
 ## 14. Live architecture experiments that passed
 
-Disposable experiments proved the following from a LocalSystem service-style context:
+Disposable experiments established:
 
-1. `CreateProcessAsUser` can launch the active user into the real interactive session.
-2. stdout/stderr can be captured directly with inherited pipes.
-3. the created user process can be assigned to a service-owned Job Object.
-4. WSL can be invoked through that user process.
-5. a short-lived desktop worker can be launched into the interactive session.
-6. DPI-aware workers see the physical monitor dimensions.
-7. installed Chrome can be launched as the user with loopback CDP.
+1. `CreateProcessAsUser` can launch the active user from a real LocalSystem SCM service.
+2. stdout/stderr capture works through inherited pipes.
+3. user processes can be placed in service-owned Job Objects.
+4. WSL can be invoked through active-user execution.
+5. short-lived desktop workers can be launched into the interactive session.
+6. Per-Monitor V2 workers see the physical 1920x1200 display coordinates.
+7. installed Chrome can be launched as the user and controlled from SYSTEM over loopback CDP.
 8. native ConPTY works cross-session.
-9. a real SCM LocalSystem service can perform this launch even while itself living inside the normal service job.
+9. `ReleasePseudoConsole` is exported on this laptop's current Windows build.
 
-All disposable probe services/tasks/files were cleaned after testing.
-
-These experiments are the evidence behind the v2 no-permanent-session-helper architecture.
+These are evidence behind the favored v2 no-permanent-session-helper architecture.
 
 ## 15. Lock behavior
 
-The current Windows session was verified as locked during testing.
+Windows secure desktop remains a real boundary. When locked, ordinary desktop capture may be unavailable/black while service, CLI, file, WSL and non-secure-desktop operations continue where Windows permits them.
 
-When locked:
+Eye should expose real lock state rather than pretending the interactive desktop is available.
 
-- normal desktop capture is unavailable/black due to secure desktop,
-- machine/service/CLI operations remain available,
-- WSL and non-desktop process work can continue,
-- browser/CDP can work where it does not require secure-desktop interaction.
+## 16. Remaining platform cleanup
 
-Eye should surface this state rather than attempting to hide it.
+Core account/storage/WSL cutover is complete. Remaining platform work is narrower:
 
-## 16. Remaining cutover sequence
-
-When the owner is physically back at the laptop:
-
-1. Unlock Windows once.
-2. Complete the `StealthEye` local-account credential/sign-in transition.
-3. Log into `StealthEye` once.
-4. Verify the interactive user context.
-5. Perform one controlled reboot.
-6. Confirm the new `C:` pagefile is active and the old `X:` pagefile is gone.
-7. Remove the old fixed `C:\Sovereign Node.vhdx`.
-8. Re-measure supported `C:` shrink.
-9. Prefer creating the physical ReFS Dev Drive `X:`.
-10. Create a fresh WSL distribution under `StealthEye`.
-11. Establish only the user-local runtimes actually needed.
-12. Review old `steal` user-facing/iCloud data.
-13. Retire the old `steal` account/profile only after that review.
-14. Remove inert HEC residue.
-15. Then move into the clean Eye implementation phase.
+1. Review `C:\Users\steal` for Documents, Downloads, iCloudDrive, iCloudPhotos or other user-facing data worth retaining.
+2. Preserve anything deliberately kept.
+3. Retire the old `steal` account/profile and its old WSL registration only after that review.
+4. Remove inert HEC task/files/key residue.
+5. Keep the prototype `StealthEye Session - New Account` helper only while the current prototype needs it; remove it when the v2 LocalSystem service provides native active-user execution.
+6. Decide whether any user-local Python/Ollama/LM Studio installation is actually required.
+7. Re-test the favored DPAPI-NG local credential-store primitive across a future reboot before making it canonical.
+8. Then freeze the small v2 architecture and begin clean implementation in `X:\Repos\eye`.
