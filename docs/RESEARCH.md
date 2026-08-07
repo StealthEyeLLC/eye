@@ -57,9 +57,9 @@ Implementation/platform implication: the favored final physical ReFS Dev Drive `
 
 The same documentation notes that WSL's `metadata` mount option is not supported on ReFS volumes. Therefore Linux-native workloads that depend heavily on Unix ownership/permission metadata should live in the WSL Linux filesystem rather than assuming `X:` can substitute for the distro filesystem.
 
-## 5. SYSTEM-targeted secret protection candidate
+## 5. SYSTEM-owned secret protection
 
-Microsoft's CNG DPAPI / DPAPI-NG APIs support protection descriptors based on principals/SIDs. `NCryptCreateProtectionDescriptor` accepts SID-based protection rules, and `NCryptProtectSecret` / `NCryptUnprotectSecret` provide the protection/unprotection path.
+Microsoft's CNG DPAPI / DPAPI-NG APIs support protection descriptors, including `LOCAL=user`, `LOCAL=machine`, SID and SDDL forms. `NCryptProtectSecret` / `NCryptUnprotectSecret` provide the protection/unprotection path.
 
 Primary references:
 
@@ -68,14 +68,29 @@ Primary references:
 - https://learn.microsoft.com/en-us/windows/win32/api/ncryptprotect/nf-ncryptprotect-ncryptunprotectsecret
 - https://learn.microsoft.com/en-us/windows/win32/seccng/cng-dpapi-constants
 
+### Live probe on STEALTHEYELLC
+
+A throwaway random plaintext was used; no real Eye credential was involved.
+
+1. A direct descriptor of `SID=S-1-5-18` was created successfully but `NCryptProtectSecret` returned an encryption failure on this machine. Therefore the earlier assumption that a direct LocalSystem SID descriptor was the cleanest path is **not supported by live evidence**.
+2. `LOCAL=user`, invoked by a LocalSystem process, successfully protected the throwaway plaintext.
+3. The same LocalSystem context successfully decrypted the resulting blob.
+4. The encrypted blob was placed in a location readable by the current interactive user for the negative test.
+5. A process running as `STEALTHEYELLC\steal` could read the blob bytes but `NCryptUnprotectSecret` was blocked and did not recover the plaintext.
+6. The throwaway blob was deleted after the test.
+
 Provisional implementation candidate:
 
 ```text
-Protect Eye's steady-state secret blobs to the LocalSystem principal (SID S-1-5-18)
-and persist only encrypted blobs + non-secret metadata on disk.
+The LocalSystem Eye service uses DPAPI-NG with LOCAL=user.
+Persist only the encrypted blob and non-secret metadata.
 ```
 
-This should be live-tested before becoming canonical. The goal is not to downscope Eye's authority; it is to make the deliberately granted credentials available unattended to the SYSTEM-owned Eye service without writing plaintext secrets into the public repository or ordinary profile files.
+Because `LOCAL=user` is evaluated in the caller's user context, when Eye invokes it as LocalSystem this produced the desired practical behavior in the live probe: SYSTEM could decrypt; the ordinary interactive user could not.
+
+One remaining validation is reboot persistence. Confirm the same encrypted blob survives/decrypts after the controlled reboot before promoting this mechanism to canonical credential storage.
+
+The goal is not to reduce Eye's authority. It is to keep deliberately granted credentials available unattended to the SYSTEM-owned Eye service without writing plaintext secrets into the public repository or ordinary user-profile files.
 
 ## 6. OpenAI Secure MCP Tunnel
 
