@@ -1,6 +1,6 @@
 # EYE_DECISIONS.md
 
-**Status:** Decision ledger and open-items guardrail  
+**Status:** Decision ledger and architecture freeze guardrail  
 **Baseline date:** 2026-08-07
 
 This document prevents exploratory findings from silently becoming canonical Eye design.
@@ -31,7 +31,7 @@ eye({ op, args })
 
 ### Core implementation language
 
-C# / .NET remains the preferred core.
+C# / .NET is the core implementation language.
 
 ### Permanent runtime
 
@@ -75,6 +75,8 @@ It is a local administrator and is configured for automatic console sign-in to t
 
 Do not store the account password in repository documentation.
 
+The previous `steal` account/profile has been retired after preserving the local material deliberately retained.
+
 ### Development volume
 
 The final development drive is:
@@ -87,6 +89,72 @@ It is a **300 GiB physical ReFS Dev Drive partition** on the internal Samsung NV
 
 Do not replace it with a VHD/VHDX without a concrete reason.
 
+### Native active-user execution
+
+The LocalSystem service owns user-context execution. For commands that must run as the active interactive user, use the native Windows path:
+
+- discover the active session;
+- obtain its token with `WTSQueryUserToken`;
+- build its environment with `CreateEnvironmentBlock`;
+- launch with `CreateProcessAsUser`;
+- capture stdio with inherited handles/pipes;
+- assign the actual child to a service-owned Job Object;
+- supervise process lifetime directly.
+
+A permanent user-session helper is not part of v2.
+
+### Terminal
+
+Use native ConPTY for pseudoterminal execution.
+
+Use current lifetime APIs available on this Windows build, including `ReleasePseudoConsole` where appropriate.
+
+Do not carry the prototype Pty.Net dependency into v2 unless a concrete missing capability is demonstrated.
+
+### Browser
+
+Use installed Chrome with a dedicated StealthEye data/profile directory and loopback Chrome DevTools Protocol.
+
+Prefer direct CDP control from the LocalSystem service over shipping a bundled browser or Playwright runtime when direct CDP is sufficient.
+
+Keep the user's ordinary browser/profile separate.
+
+### Desktop worker and UI Automation
+
+Desktop-bound work uses short-lived `eye.exe worker` processes created on demand in the active session.
+
+Use native Windows UI Automation / COM and native desktop/window/input APIs. Workers opt into Per-Monitor V2 DPI awareness before coordinate-sensitive work.
+
+Do not keep a permanent desktop worker alive unless measured performance later proves it necessary.
+
+### WSL baseline
+
+The StealthEye Windows account uses:
+
+```text
+Ubuntu 24.04.4 LTS
+WSL2
+systemd enabled
+root default user
+```
+
+Launch WSL through active-user execution from the service. Linux-native workloads requiring Unix permission/ownership semantics live inside the WSL Linux filesystem rather than on ReFS.
+
+### Machine credential persistence
+
+For secrets that the LocalSystem Eye service must retain on the laptop, use **DPAPI-NG with protection descriptor `LOCAL=user`, invoked by the LocalSystem service**.
+
+Persist only the encrypted blob and non-secret metadata under a SYSTEM-owned machine path.
+
+Live validation on `STEALTHEYELLC` established that:
+
+- SYSTEM can protect and unprotect with `LOCAL=user`;
+- the encrypted blob survives reboot and still decrypts under SYSTEM;
+- the interactive `StealthEye` account can read the test blob but cannot decrypt it;
+- a direct `SID=S-1-5-18` descriptor did not successfully protect on this machine and is not the chosen path.
+
+No real credential was used in the validation.
+
 ### External Eye identity
 
 Use:
@@ -97,9 +165,7 @@ stealtheye.eye@gmail.com
 
 as Eye's operational Google identity.
 
-The intended ChatGPT connection set is Gmail, Drive, Calendar and Contacts under this identity.
-
-Current live connector state is tracked in `EYE_CANON.md`; do not treat a connector pointed at another Google account as Eye authority.
+ChatGPT Gmail, Drive, Calendar and Contacts connections are now pointed at this Eye identity.
 
 ### OpenAI secret names
 
@@ -122,80 +188,15 @@ Do not copy the old codebase wholesale into `eye`.
 
 ## 2. Favored / provisional decisions
 
-### User execution
-
-Favor:
-
-- active-session discovery;
-- `WTSQueryUserToken`;
-- `CreateProcessAsUser`;
-- native environment block creation;
-- direct inherited pipes;
-- Job Objects around the actual child process.
-
-### Terminal
-
-Favor native ConPTY and remove the old Pty.Net dependency if no missing capability appears.
-
-Use the current ConPTY lifetime APIs available on the laptop, including `ReleasePseudoConsole` where appropriate.
-
-### Browser
-
-Favor installed Chrome + dedicated StealthEye profile + loopback CDP.
-
-Avoid a bundled browser and Playwright runtime if direct CDP remains sufficient.
-
-### Desktop worker
-
-Favor short-lived on-demand `eye.exe worker` processes in the active session.
-
-Do not keep a permanent worker alive unless measured performance later proves it worthwhile.
-
-### UI Automation
-
-Favor native Windows UI Automation / COM.
-
-### WSL baseline
-
-Current implemented baseline under the `StealthEye` Windows account:
-
-```text
-Ubuntu 24.04.4 LTS
-WSL2
-systemd enabled
-root default user
-```
-
-This is intentionally friction-light and is the favored baseline. It can still change if implementation demonstrates a concrete reason for a non-root default user or different distro.
-
 ### Tunnel supervision
 
 Favor running official `tunnel-client` externally under ordinary Windows startup/supervision rather than custom code inside Eye.
 
-Exact final mechanism remains open between the official runtime-management path and a simple Windows startup/scheduled mechanism.
-
-### Secret persistence on laptop
-
-The laptop will need steady-state access to credentials Eye must use independently of GitHub Actions.
-
-Favored mechanism: **DPAPI-NG `LOCAL=user` invoked by the LocalSystem Eye service**, with only encrypted blobs and non-secret metadata persisted on disk.
-
-A live throwaway probe succeeded under SYSTEM and the same blob could not be decrypted by the interactive user. A direct `SID=S-1-5-18` protection attempt failed during encryption and is not favored.
-
-Keep this provisional until a deliberately persisted throwaway blob survives and decrypts after a reboot.
+The exact startup mechanism can remain a late implementation choice while the current working tunnel remains untouched.
 
 ## 3. Open decisions
 
-### Old-profile retirement
-
-The old `steal` profile has now been inventoried.
-
-Desktop/Documents/Downloads are essentially prototype/developer material. The only material requiring a deliberate retention decision is the old iCloud state:
-
-- `iCloudDrive`: 15,766 reparse-backed files, ~2.78 GB logical;
-- `iCloudPhotos`: 472 files, ~3.02 GB logical, 463 marked offline.
-
-Do not force hydration merely to archive placeholders. Decide whether the cloud copy is sufficient or whether a local hydrated archive is actually wanted, then retire the old account/profile and its old WSL registration.
+These items do not block the frozen core architecture or initial implementation.
 
 ### E: filesystem
 
@@ -205,7 +206,7 @@ Possible NTFS reformat is optional and should occur only after protected data ha
 
 ### WSL package set
 
-The distro is established, but do not preinstall a huge Linux toolchain merely because it is available. Add packages as concrete work requires them.
+Do not preinstall a large Linux toolchain merely because it is available. Add packages as concrete work requires them.
 
 ### Google direct API access from eye.exe
 
@@ -226,41 +227,39 @@ Do not intentionally narrow the underlying credential's authority.
 
 ### GitHub machine authority
 
-The local Eye repo successfully clones over SSH from the `StealthEye` account, but a live `git push` was rejected with GitHub's **"denied to deploy key"** error.
+The local Eye repo successfully clones/pulls over the current StealthEye SSH identity, but a live push was rejected by GitHub as a deploy key.
 
-Therefore the current laptop SSH credential is suitable for clone/pull but **is not write authority** for `StealthEyeLLC/eye`.
-
-The connected GitHub control path used by ChatGPT currently has repository admin/push authority, so repository writes remain available externally. Still choose a deliberate steady-state machine credential if `eye.exe` itself should push or administer GitHub broadly.
+The connected GitHub control path used by ChatGPT has repository admin/push authority. Choose a deliberate steady-state machine credential later if `eye.exe` itself should push or administer GitHub broadly.
 
 Do not choose a repo-scoped deploy key if the intended authority is broader than one repository.
 
 ### Tunnel startup implementation
 
-The prototype's current tunnel supervision is transitional. Final v2 startup/supervision mechanism remains unresolved.
+The prototype's current tunnel supervision is transitional. Final v2 startup/supervision remains intentionally late-bound until replacement is tested without risking the working control path.
 
 ### Tailscale package
 
-Tailscale was stopped and the direct ChatGPT -> Eye path remained healthy; its service is now disabled. Keep the installed package temporarily for easy reversal, then uninstall it if no unrelated use emerges.
+Tailscale is disabled and was proven unnecessary to the Eye request path. The package may be uninstalled once there is no unrelated reason to retain it.
 
-## 4. Build order
+## 4. Architecture freeze and build order
+
+The small v2 architecture is frozen as of 2026-08-07 for initial implementation.
 
 Current order:
 
 ```text
-1. Resolve old iCloud/profile retirement choice and Gmail connector identity
-2. Freeze the small v2 architecture
-3. Implement the minimal service in X:\Repos\eye
-4. Add native user execution
-5. Add terminal/ConPTY
-6. Add WSL
-7. Add browser/CDP
-8. Add on-demand desktop worker/UI Automation
-9. Add external authority operations only as concrete needs appear
-10. Replace the old prototype service/tunnel arrangement
-11. Remove transitional session helper and remaining prototype residue
+1. Implement the minimal LocalSystem service in X:\Repos\eye
+2. Add native active-user execution
+3. Add native terminal/ConPTY
+4. Add WSL execution
+5. Add installed-Chrome/CDP browser control
+6. Add on-demand desktop worker/UI Automation
+7. Add external authority operations only as concrete needs appear
+8. Replace the old prototype service/tunnel arrangement
+9. Remove the transitional session helper and remaining prototype residue
 ```
 
-The account, pagefile, physical Dev Drive, fresh WSL, repository-location and HEC cleanup are complete.
+Platform/account/storage/WSL/HEC/old-profile cleanup is complete. Exact tunnel startup and optional external authority surfaces are deliberately not blockers for the core build.
 
 Do not begin by porting old `se` implementation wholesale.
 
