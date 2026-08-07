@@ -1,0 +1,43 @@
+# .NET
+bin/
+obj/
+artifacts/
+TestResults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio / VS Code local state
+.vs/
+.vscode/*.log
+
+# JetBrains
+.idea/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+
+# Local environment / credentials
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key
+*.secrets.json
+appsettings.Local.json
+appsettings.*.Local.json
+
+# Local runtime state
+.eye/
+run/
+logs/
+
+# Packages / generated outputs
+node_modules/
+coverage/
