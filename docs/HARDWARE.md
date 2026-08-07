@@ -4,7 +4,7 @@
 **Observed:** 2026-08-07  
 **Machine:** `STEALTHEYELLC`
 
-This file records what Eye observed directly from the laptop. It is intentionally separate from architecture decisions: hardware facts can change after upgrades, driver changes, repartitioning, or replacement devices.
+This file records what Eye observed directly from the laptop. Hardware and volume facts may change after upgrades, repartitioning, driver changes, or device replacement.
 
 ## System
 
@@ -44,25 +44,31 @@ This file records what Eye observed directly from the laptop. It is intentionall
 ## Display / interactive session
 
 - One active monitor observed
-- Physical desktop bounds observed with DPI-aware session tooling: **1920 x 1200**
-
-The interactive session may be locked while machine/service operations remain available.
+- Physical DPI-aware desktop bounds: **1920 x 1200**
+- Primary interactive Windows profile after cutover: `C:\Users\StealthEye`
 
 ## Internal storage
 
-Physical internal disk:
+Physical disk:
 
 - **SAMSUNG MZVL81T0HFLB-00BH1**
 - NVMe SSD
 - ~1 TB raw capacity
+- GPT
 - Health observed: Healthy / OK
 
-Current Windows volume snapshot at observation time:
+Current physical volume layout after cutover:
 
-- `C:` — NTFS, label `Windows`, ~1.02 TB volume size, ~303 GB free
-- `X:` — ReFS, label `Sovereign Node`, ~400 GB virtual disk, transitional
+- `C:` — NTFS, label `Windows`, filesystem size ~652.7 GiB
+- `X:` — ReFS Dev Drive, label `Eye Dev`, exactly 300 GiB
 
-The current `X:` is backed by the old fixed VHDX and is not the intended final storage topology.
+`X:` is a real partition on the Samsung NVMe and reports as a trusted developer volume.
+
+The former ~400 GB `C:\Sovereign Node.vhdx` fixed virtual disk was deleted after its important contents and Git history were independently archived.
+
+The temporary `C:\StealthEye-Dev.vhdx` fallback was also deleted after the physical Dev Drive succeeded.
+
+Current pagefile is on `C:`; the former ~192 GB `X:` pagefile is gone.
 
 ## External storage
 
@@ -75,25 +81,33 @@ Physical external disk:
 
 Current volume:
 
-- `E:` — exFAT, label `StealthEye`, ~2.05 TB volume size, ~1.81 TB free at observation time
+- `E:` — exFAT, label `StealthEye`
+- used for bulk data, archives, models, artifacts and related large payloads
 
 ## Network
 
 ### Wi-Fi
 
 - **MediaTek Wi-Fi 6E MT7922 (RZ616) 160MHz PCIe Adapter**
-- Status at observation: Up
 
 ### Ethernet
 
 - **Realtek Gaming GbE Family Controller**
-- Status at observation: Disconnected
 
 ## Battery
 
 Battery full-charged capacity telemetry observed around **63.4 Wh**.
 
-Battery/AC firmware telemetry has previously shown internally inconsistent charge/discharge state, so battery status should be treated as operational telemetry rather than a precise hardware-health benchmark until independently validated.
+Battery/AC firmware telemetry has shown internally inconsistent charge/discharge state, so treat it as operational telemetry rather than a precise health benchmark until independently validated.
+
+## WSL
+
+Fresh WSL environment under the StealthEye Windows account:
+
+- Distribution: **Ubuntu 24.04.4 LTS**
+- Kernel: **6.6.87.2-microsoft-standard-WSL2**
+- Default Linux identity: **root (UID 0)**
+- systemd: **running**
 
 ## Current Eye runtime
 
@@ -107,9 +121,9 @@ Live prototype runtime observed:
 
 This runtime is the prototype used to inspect and prepare the machine. It is not the final `StealthEyeLLC/eye` implementation.
 
-## Machine-wide development tooling already established
+## Machine-wide development tooling
 
-The platform preparation has made these tools available machine-wide for the future `StealthEye` account:
+Known machine-wide tools:
 
 - Git
 - GitHub CLI
@@ -125,12 +139,17 @@ The platform preparation has made these tools available machine-wide for the fut
 
 Windows Developer Mode and long-path support are enabled.
 
-## Storage target
+## Current storage roles
 
-Favored final layout after the pending local cutover:
+```text
+C:  Windows / system / installed applications
+X:  physical trusted ReFS Dev Drive / repositories / build workspace
+E:  bulk StealthEye data / models / archives / large artifacts
+WSL Linux filesystem: Linux-native workloads requiring Unix permission semantics
+```
 
-- `C:` — Windows/system/apps
-- `X:` — physical ReFS Dev Drive partition on the internal Samsung NVMe, size chosen after final shrink measurement
-- `E:` — bulk StealthEye data/models/archives
+Permanent Eye repository location:
 
-A tested dynamic ReFS Dev Drive VHDX exists only as a fallback if a physical `X:` partition is not desirable.
+```text
+X:\Repos\eye
+```
