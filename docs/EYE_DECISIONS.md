@@ -17,21 +17,74 @@ Use three states:
 
 - Product: **StealthEye**
 - Repository: **`StealthEyeLLC/eye`**
-- Local repository: **`X:\Repos\eye`**
+- Local repository target: **`X:\Repos\eye`**
 - Primary executable: **`eye.exe`**
-- Public MCP tool: **`eye`**
+- Core implementation language: **C# / .NET**
 
-### Public interface
+### Five-tool public MCP surface
 
-Use one stable MCP tool shape:
+The previous single public `eye({ op, args })` design is retired.
+
+The canonical model-facing public surface is:
 
 ```text
-eye({ op, args })
+eye_inspect
+eye_run
+eye_change
+eye_interact
+eye_external
 ```
 
-### Core implementation language
+Purpose:
 
-C# / .NET is the core implementation language.
+- `eye_inspect` — local observation/read/query;
+- `eye_run` — Windows/WSL/process/PowerShell/ConPTY execution;
+- `eye_change` — precisely typed local mutations;
+- `eye_interact` — desktop/application/browser interaction;
+- `eye_external` — effects that intentionally leave the local machine.
+
+This split is for accurate schemas, tool selection and effect metadata. It is not an internal privilege hierarchy.
+
+All five facades route to one internal operation registry/dispatcher. `eye_run` remains the raw local execution escape hatch.
+
+### Frozen generated public contract
+
+The canonical contract source is:
+
+```text
+contracts/eye-mcp-v1.json
+```
+
+Generate from it:
+
+- MCP tool descriptors;
+- C# request/result types;
+- operation/facade registration;
+- capabilities metadata;
+- contract documentation;
+- normalized `tools/list` snapshot tests.
+
+Public tool names, descriptions, effect classifications, input schemas and output schemas must not change during ordinary implementation work.
+
+Breaking public changes require explicit owner authorization and a contract revision/version.
+
+The repository guardrail is recorded in `AGENTS.md`.
+
+### Result semantics
+
+Use one stable structured result envelope:
+
+```text
+{ ok: true, result: ... }
+```
+
+or:
+
+```text
+{ ok: false, error: { code, message, retryable?, expected? } }
+```
+
+Routine domain failures should not escape as arbitrary MCP transport exceptions.
 
 ### Permanent runtime
 
@@ -43,11 +96,11 @@ eye.exe service
 
 Run it as LocalSystem.
 
-Do not require a permanent user-session daemon in the final design.
+Do not require a permanent user-session daemon, permanent Node automation service, or competing permanent MCP servers.
 
 ### Authority posture
 
-If the owner intentionally grants authority to Eye, StealthEye should not add avoidable internal authority friction on top of that grant.
+If the owner intentionally grants authority to Eye, StealthEye should not add avoidable internal approval or privilege friction on top of that grant.
 
 Do not deliberately downscope broad credentials merely for architectural neatness.
 
@@ -55,105 +108,142 @@ Do not deliberately downscope broad credentials merely for architectural neatnes
 
 The OpenAI Secure MCP Tunnel is transport only.
 
-Eye serves loopback MCP and remains independently useful without understanding tunnel lifecycle.
+Eye serves loopback MCP and remains independently useful without owning tunnel lifecycle.
 
 HEC/VPS infrastructure is not part of final Eye.
 
-### Docker
+### Docker / orchestration
 
-Docker is not part of the target runtime.
+Docker and Kubernetes are not part of the target Eye runtime.
 
-### Windows interactive identity
+Eye is not a generic workflow engine, agent framework, plugin marketplace or generic multi-machine orchestrator.
 
-The dedicated Windows interactive account is:
+### Windows login/account boundary
 
-```text
-StealthEye
-```
+Leave Windows login/account/autologon architecture alone unless the owner explicitly requests a change. It is not a current Eye implementation target.
 
-It is a local administrator and is configured for automatic console sign-in to the desktop. Routine operation should not require manual sign-in.
+### Storage roles
 
-Do not store the account password in repository documentation.
-
-The previous `steal` account/profile has been retired after preserving the local material deliberately retained.
-
-### Development volume
-
-The final development drive is:
+Canonical intended roles:
 
 ```text
-X:
+C: Windows / installed applications
+X: physical ReFS Dev Drive / repos / build workspace
+E: bulk data / models / archives / large artifacts
+WSL filesystem: Linux-native permission-sensitive work
 ```
 
-It is a **300 GiB physical ReFS Dev Drive partition** on the internal Samsung NVMe and is marked trusted by Windows Dev Drive tooling.
-
-Do not replace it with a VHD/VHDX without a concrete reason.
+The intended `X:` development volume is approximately 300 GiB on the internal NVMe when provisioned.
 
 ### Native active-user execution
 
-The LocalSystem service owns user-context execution. For commands that must run as the active interactive user, use the native Windows path:
+The LocalSystem service owns user-context execution. For commands that must run as the active interactive user:
 
 - discover the active session;
 - obtain its token with `WTSQueryUserToken`;
 - build its environment with `CreateEnvironmentBlock`;
 - launch with `CreateProcessAsUser`;
-- capture stdio with inherited handles/pipes;
+- use explicit intended inherited handles/pipes;
 - assign the actual child to a service-owned Job Object;
-- supervise process lifetime directly.
+- supervise descendants, cancellation, timeout and exit state directly.
 
-A permanent user-session helper is not part of v2.
+A permanent user-session helper is not part of the target architecture.
+
+### Win32 bindings
+
+Use **CsWin32-generated bindings and SafeHandles** as the permanent preferred Win32/COM interop layer.
+
+Handwritten interop remains acceptable temporarily while replacing the proven prototype paths.
 
 ### Terminal
 
 Use native ConPTY for pseudoterminal execution.
 
-Use current lifetime APIs available on this Windows build, including `ReleasePseudoConsole` where appropriate.
+Use current lifetime APIs available on the target Windows build, including `ReleasePseudoConsole` where appropriate.
 
-Do not carry the prototype Pty.Net dependency into v2 unless a concrete missing capability is demonstrated.
+Do not carry Pty.Net into v2 unless a concrete missing capability is demonstrated.
+
+### Worker IPC
+
+Use **StreamJsonRpc over named pipes** for service/worker control, events and cancellation.
+
+Use **multiplexed binary streams** (favored implementation: Nerdbank.Streams) for bulk stdout/stderr/VT/image/audio/file traffic.
+
+Do not invent a giant JSON framing protocol for all binary data.
 
 ### Browser
 
 Use installed Chrome with a dedicated StealthEye data/profile directory and loopback Chrome DevTools Protocol.
 
-Prefer direct CDP control from the LocalSystem service over shipping a bundled browser or Playwright runtime when direct CDP is sufficient.
+Raw **generated typed CDP bindings** are the permanent primitive.
 
-Keep the user's ordinary browser/profile separate.
+Playwright .NET may be used as an optional accelerator when its higher-level behavior materially helps, but it must not become a permanent Node daemon or separate browser fleet.
 
-### Desktop worker and UI Automation
+### Desktop worker and observation stack
 
 Desktop-bound work uses short-lived `eye.exe worker` processes created on demand in the active session.
 
-Use native Windows UI Automation / COM and native desktop/window/input APIs. Workers opt into Per-Monitor V2 DPI awareness before coordinate-sensitive work.
+Canonical observation hierarchy:
 
-Do not keep a permanent desktop worker alive unless measured performance later proves it necessary.
+1. HWND/process/window inventory;
+2. event-driven UI Automation with cache requests and Remote Operations;
+3. Windows.Graphics.Capture with dirty-region-aware capture;
+4. OCR/visual grounding only when structural APIs are insufficient.
+
+Workers opt into Per-Monitor V2 DPI awareness before coordinate-sensitive work.
+
+Do not keep a permanent desktop worker unless measurements prove it necessary.
 
 ### WSL baseline
 
-The StealthEye Windows account uses:
+Target:
 
 ```text
-Ubuntu 24.04.4 LTS
+Ubuntu 24.04 LTS
 WSL2
 systemd enabled
 root default user
 ```
 
-Launch WSL through active-user execution from the service. Linux-native workloads requiring Unix permission/ownership semantics live inside the WSL Linux filesystem rather than on ReFS.
+Launch WSL through active-user execution from the service. Linux-native permission/ownership-sensitive workloads live in the WSL Linux filesystem rather than on ReFS.
+
+### Windows-native capability posture
+
+Prefer exposing built-in Windows facilities over reimplementing their lifecycle behavior when a real workload exists.
+
+High-value facilities include:
+
+- BITS;
+- VSS;
+- Restart Manager;
+- Process Snapshotting;
+- ReFS block cloning;
+- CopyFile2;
+- ProjFS when needed;
+- Virtual Disk API;
+- UIA Remote Operations/cache/events.
+
+Candidate operation names are not automatically public contract entries.
+
+### Code/document/data/media posture
+
+Layer capabilities by measured need:
+
+- code: ripgrep -> Tree-sitter/ast-grep -> on-demand language servers;
+- documents: MarkItDown/PdfPig/Open XML/ClosedXML, heavier Docling only as needed;
+- data: embedded/on-demand DuckDB;
+- audio: NAudio + short-lived whisper.cpp;
+- local vision: PaddleOCR/Tesseract + ONNX/OpenCV on demand.
+
+Do not keep an always-running local model merely because the GPU can run one.
 
 ### Machine credential persistence
 
-For secrets that the LocalSystem Eye service must retain on the laptop, use **DPAPI-NG with protection descriptor `LOCAL=user`, invoked by the LocalSystem service**.
+For secrets that the LocalSystem Eye service must retain locally, use **DPAPI-NG with protection descriptor `LOCAL=user`, invoked by LocalSystem**.
 
-Persist only the encrypted blob and non-secret metadata under a SYSTEM-owned machine path.
+Persist only encrypted blobs and non-secret metadata under a SYSTEM-owned machine path.
 
-Live validation on `STEALTHEYELLC` established that:
-
-- SYSTEM can protect and unprotect with `LOCAL=user`;
-- the encrypted blob survives reboot and still decrypts under SYSTEM;
-- the interactive `StealthEye` account can read the test blob but cannot decrypt it;
-- a direct `SID=S-1-5-18` descriptor did not successfully protect on this machine and is not the chosen path.
-
-No real credential was used in the validation.
+This mechanism was previously validated across reboot with throwaway material; the interactive user could not decrypt the same blob.
 
 ### External Eye identity
 
@@ -165,11 +255,11 @@ stealtheye.eye@gmail.com
 
 as Eye's operational Google identity.
 
-ChatGPT Gmail, Drive, Calendar and Contacts connections are now pointed at this Eye identity.
+The separate `stealtheye@stealtheye.io` mailbox remains distinct unless deliberately migrated later.
 
 ### OpenAI secret names
 
-GitHub Actions secret names supplied by the owner:
+Current secret names supplied by the owner:
 
 ```text
 EyeRuntime
@@ -177,8 +267,6 @@ OpenAIAdmin
 ```
 
 Do not place their values in source.
-
-Neither is a GitHub deploy key.
 
 ### Old repository
 
@@ -188,21 +276,39 @@ Do not copy the old codebase wholesale into `eye`.
 
 ## 2. Favored / provisional decisions
 
+### Atomic updates
+
+Favor VeloPack-style staged/atomic Windows updates and rollback.
+
+### EyeBench
+
+Favor a small laptop-native benchmark suite drawn from real desktop/browser/code/terminal/file tasks.
+
+Measure task success, elapsed time, tool calls, retries/restarts, bytes transferred and required user intervention.
+
+### Dependency use
+
+Favored components and external engines are cataloged in `docs/OSS_LANDSCAPE.md`.
+
+A listed project is not automatically a dependency. Add it only when the implementation or a measured workload justifies it.
+
 ### Tunnel supervision
 
-Favor running official `tunnel-client` externally under ordinary Windows startup/supervision rather than custom code inside Eye.
+Favor running official `tunnel-client` externally under ordinary Windows startup/supervision rather than custom tunnel code inside Eye.
 
-The exact startup mechanism can remain a late implementation choice while the current working tunnel remains untouched.
+The exact startup mechanism remains an implementation detail until tested.
+
+### Legal/source hygiene
+
+Favor one `THIRD-PARTY-NOTICES` file plus pinned dependency versions when third-party runtime/deployment dependencies become substantial enough to require it.
+
+Use build-time SBOM/license tooling later if dependency/import volume justifies the machinery.
 
 ## 3. Open decisions
 
-These items do not block the frozen core architecture or initial implementation.
-
 ### E: filesystem
 
-Keep exFAT for now.
-
-Possible NTFS reformat is optional and should occur only after protected data has another safe copy.
+The target role of `E:` is stable; exact filesystem choice can remain a platform decision.
 
 ### WSL package set
 
@@ -210,82 +316,66 @@ Do not preinstall a large Linux toolchain merely because it is available. Add pa
 
 ### Google direct API access from eye.exe
 
-ChatGPT has Google integrations, but standalone `eye.exe` direct Google API credentials remain optional.
-
-Add them only if independent laptop-side Gmail/Drive/Calendar/Contacts operation provides a concrete benefit.
+Standalone direct Google API credentials remain optional. Add them only if laptop-side provider operations provide a concrete benefit beyond ChatGPT connectors.
 
 ### OpenAI admin operation surface
 
 The owner intends broad OpenAI admin authority.
 
-Still decide whether Eye exposes:
+Decide later whether `eye_external` publishes a general raw OpenAI request operation, specific broad organization-management operations, or both.
 
-- a general raw OpenAI API request operation; or
-- a small set of broad organization-management operations.
-
-Do not intentionally narrow the underlying credential's authority.
+Do not intentionally narrow the underlying credential's granted authority.
 
 ### GitHub machine authority
 
-The local Eye repo successfully clones/pulls over the current StealthEye SSH identity, but a live push was rejected by GitHub as a deploy key.
+Choose steady-state machine-side GitHub authority only when `eye.exe` itself needs to push/administer GitHub. Match the credential to the intended authority rather than automatically using a repo-scoped deploy key.
 
-The connected GitHub control path used by ChatGPT has repository admin/push authority. Choose a deliberate steady-state machine credential later if `eye.exe` itself should push or administer GitHub broadly.
+### Semantic/vector retrieval
 
-Do not choose a repo-scoped deploy key if the intended authority is broader than one repository.
+Do not add vector infrastructure until a measured code/document/data retrieval workload demonstrates benefit over current structured/search primitives.
 
-### Tunnel startup implementation
+### Heavy local models / GUI grounding
 
-The prototype's current tunnel supervision is transitional. Final v2 startup/supervision remains intentionally late-bound until replacement is tested without risking the working control path.
+Remain on-demand/experimental. Do not promote them into a permanent runtime without a measured reason.
 
-### Tailscale package
+## 4. Canonical implementation order
 
-Tailscale is disabled and was proven unnecessary to the Eye request path. The package may be uninstalled once there is no unrelated reason to retain it.
-
-## 4. Architecture freeze and build order
-
-The small v2 architecture is frozen as of 2026-08-07 for initial implementation.
-
-Current order:
+Current build order:
 
 ```text
-1. Implement the minimal LocalSystem service in X:\Repos\eye
-2. Add native active-user execution
-3. Add native terminal/ConPTY
-4. Add WSL execution
-5. Add installed-Chrome/CDP browser control
-6. Add on-demand desktop worker/UI Automation
-7. Add external authority operations only as concrete needs appear
-8. Replace the old prototype service/tunnel arrangement
-9. Remove the transitional session helper and remaining prototype residue
+1. Generate/freeze the five-facade public MCP contract and tools/list snapshot
+2. Replace handwritten Win32 declarations with CsWin32
+3. Establish StreamJsonRpc control IPC and multiplexed worker streams
+4. Finish Job Object / active-user / ConPTY execution semantics
+5. Build event-driven cached UIA plus dirty-region capture
+6. Generate typed CDP bindings; add optional Playwright .NET
+7. Add BITS/VSS/Restart Manager/ReFS clone/process snapshots as real workloads require them
+8. Add code/document/data/audio adapters based on actual use
+9. Add whisper/OCR/semantic retrieval only on demand
+10. Add staged atomic updating and EyeBench
+11. Cut over from prototype/transitional runtime only after v2 independently proves reboot/terminal/desktop/browser/failure recovery
 ```
-
-Platform/account/storage/WSL/HEC/old-profile cleanup is complete. Exact tunnel startup and optional external authority surfaces are deliberately not blockers for the core build.
 
 Do not begin by porting old `se` implementation wholesale.
 
-## 5. First-repo-commit rule
-
-The repository was initialized deliberately with v2 identity/design documentation rather than prototype baggage.
-
-Implementation commits should preserve that clean break.
-
-## 6. Architecture filter
+## 5. Architecture filter
 
 Before adding a component, ask:
 
-1. Does Windows/.NET already provide this natively?
-2. Does it need to be permanent?
-3. Does it reduce actual failure modes?
-4. Is it required for a current capability?
-5. Does it preserve the one-tool / one-service simplicity?
-6. Is it adding avoidable authority friction?
+1. Does Windows/.NET already provide the primitive natively?
+2. Can the capability be external/on-demand instead of permanent?
+3. Does the dependency reduce a measured failure mode or implementation burden?
+4. Is it required for a current or near-term capability?
+5. Does it preserve one service, one internal dispatcher and the five stable model-facing effect classes?
+6. Does it avoid manufacturing authority friction?
+7. Does its exact license fit the intended use/distribution model?
 
-If the component is mainly ceremony, future-proofing, policy layering, or generic platform machinery, do not add it yet.
+If the component is mainly ceremony, speculative future-proofing, policy layering, framework gravity or duplicate agency, do not add it yet.
 
-## 7. Source-of-truth rule
+## 6. Source-of-truth rule
 
-A successful experiment is evidence, not automatically a canonical design change.
+A successful experiment or research finding is evidence, not automatically a canonical design change.
 
 Promote it here only when the owner explicitly accepts the direction or the conversation clearly establishes it as the intended target.
 
-When a canonical decision changes, update the source docs instead of leaving contradictory instructions scattered across old notes.
+When a canonical decision changes, update the source documents instead of leaving contradictory instructions scattered through older notes.
