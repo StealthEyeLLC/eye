@@ -1,6 +1,6 @@
 # CUTOVER.md
 
-**Status:** Core cutover complete; only old-profile/connector choices remain  
+**Status:** Platform cutover complete  
 **Machine:** `STEALTHEYELLC`
 
 ## Completed — preservation
@@ -8,22 +8,26 @@
 - [x] Old `se` repository/history preserved on `E:`.
 - [x] Complete verified Git bundle preserved.
 - [x] Important old `X:` payload independently archived.
+- [x] Old-profile local material deliberately retained under `E:\StealthEye\archives\pre-profile-retirement-20260807`.
 
 ## Completed — Windows identity
 
 - [x] Local administrator account `StealthEye` created.
 - [x] `C:\Users\StealthEye` verified as active interactive profile.
 - [x] Automatic console sign-in configured.
-- [x] Restart verified to go directly to the `StealthEye` desktop.
+- [x] Repeated restart verified to go directly to the `StealthEye` desktop.
 - [x] Direct Eye service/tunnel path survives reboot.
 - [x] Git author identity set to `StealthEye <stealtheye.eye@gmail.com>`.
+- [x] Previous local account `steal` removed.
+- [x] Previous Win32 profile registration removed.
+- [x] Residual `C:\Users\steal` directory removed.
 
 The local account password is intentionally not recorded here.
 
 ## Completed — pagefile and old X removal
 
 - [x] `C:\pagefile.sys` is the active pagefile.
-- [x] Old ~192 GiB `X:\pagefile.sys` removed from the active configuration by reboot.
+- [x] Old ~192 GiB `X:\pagefile.sys` removed from active configuration.
 - [x] Preservation archive and Git bundle reconfirmed.
 - [x] Old `C:\Sovereign Node.vhdx` removed.
 
@@ -49,76 +53,91 @@ X:  300 GiB  ReFS Dev Drive  "Eye Dev"
 - [x] Clone/pull verified.
 - [x] Old `se` source not imported.
 
-Current laptop SSH authentication is read-only for the repo: a live push was rejected as a deploy key. This does not affect the connected GitHub control path, but steady-state laptop Git write authority remains an explicit design choice.
+Current laptop SSH authentication is read-only/deploy-key authority for the repo. Steady-state machine-side Git write/admin authority remains a later non-blocking authority choice.
 
 ## Completed — fresh WSL
 
-- [x] Installed Ubuntu 24.04 under the new Windows account.
+- [x] Installed Ubuntu 24.04 under the StealthEye Windows account.
 - [x] Observed Ubuntu 24.04.4 LTS.
 - [x] WSL2 verified.
 - [x] systemd enabled/running.
 - [x] root configured as default Linux user.
 - [x] Plain launch verified without Linux credential ceremony.
+- [x] After old-profile retirement, current user WSL registration contains only `Ubuntu-24.04`.
 
 ## Completed — HEC / transitional cleanup
 
-- [x] Disabled HEC tunnel proven unnecessary to direct Eye operation.
-- [x] `HEC Laptop Tunnel` scheduled task removed.
-- [x] `C:\Users\steal\HEC` removed.
-- [x] Dedicated `laptop-to-hec-vps-ed25519` key pair removed.
-- [x] Old HEC handshake file removed.
-- [x] Old `steal`-bound `StealthEye Session` task removed.
-- [x] `StealthEye Session - New Account` retained because the current prototype still uses it.
-- [x] Tailscale service stopped; direct Eye path remained healthy.
-- [x] Tailscale service disabled. Package retained temporarily for easy reversal.
+- [x] HEC tunnel proven unnecessary to direct Eye operation.
+- [x] HEC laptop scheduled task removed.
+- [x] HEC user folder/handshake/dedicated SSH key residue removed.
+- [x] Final targeted scan found no HEC-specific service/task/standard install path.
+- [x] Old `steal`-bound StealthEye session task removed.
+- [x] `StealthEye Session - New Account` retained only because the current prototype still uses it.
+- [x] Tailscale service stopped and direct Eye path reverified.
+- [x] Tailscale service disabled; package retained temporarily for easy reversal.
 
-## Completed — old-profile inventory
+## Completed — old-profile retirement
 
-The old profile was inspected without deleting or hydrating cloud content.
+The old profile was inspected before deletion.
 
-Desktop/Documents/Downloads contain only small amounts of old development/prototype material.
+Cloud-only iCloud placeholders were not intentionally hydrated merely to make a redundant local archive.
 
-The remaining retention question is iCloud:
+Before retirement, local material was preserved under:
 
-- `iCloudDrive`: 15,766 reparse-backed files, ~2.78 GB logical.
-- `iCloudPhotos`: 472 files, ~3.02 GB logical; 463 marked offline.
+```text
+E:\StealthEye\archives\pre-profile-retirement-20260807
+```
 
-Do not blindly copy these trees merely to force cloud placeholders to download.
+including Desktop, Documents, Downloads, a profile inventory, and seven locally resident iCloud Photos media files (~44 MiB).
 
-## Remaining — old profile
+Then the old account/profile and residual directory were removed.
 
-Choose one:
+## Completed — Google connector identity
 
-- trust the existing iCloud/cloud copy and retire the old local profile; or
-- intentionally hydrate/archive selected iCloud material before retirement.
+- [x] Gmail connected as `stealtheye.eye@gmail.com` and verified with live Eye-addressed mail.
+- [x] Google Drive connected as the Eye identity.
+- [x] Google Calendar connected as the Eye identity.
+- [x] Google Contacts connected as the Eye identity.
 
-Only after that choice, remove the old `steal` account/profile and old per-user WSL registration.
+## Completed — unattended machine secret validation
 
-## Remaining — connected identity
+- [x] LocalSystem protected throwaway random plaintext with DPAPI-NG `LOCAL=user`.
+- [x] Encrypted blob persisted across reboot.
+- [x] LocalSystem decrypted it successfully after reboot.
+- [x] Interactive `StealthEye` user could not decrypt it.
+- [x] Temporary probe artifacts removed.
+- [x] Mechanism promoted into canonical v2 design.
 
-Google Drive, Calendar and Contacts are connected under the Eye Google identity. The ChatGPT Gmail connector is currently pointed at the owner's personal Gmail instead of `stealtheye.eye@gmail.com`.
+## Remaining optional/non-blocking platform choices
 
-Switch Gmail to the Eye identity before treating Eye mail authority as live. Do not operate the personal mailbox as Eye.
-
-## Remaining — optional platform choices
-
-- Decide whether `E:` remains exFAT or is later reformatted NTFS after another safe copy exists.
+- Decide whether `E:` ever moves from exFAT to NTFS after another safe copy exists.
 - Install Linux/user-local packages only as actual work requires them.
 - Decide whether local Ollama/LM Studio/Python applications are needed under the new profile.
-- Verify the favored DPAPI-NG credential blob across a later reboot before making it canonical.
 - Uninstall disabled Tailscale later if no unrelated need appears.
+- Choose broader machine-side GitHub authority only when `eye.exe` needs it.
 
 ## Next project phase
 
-1. Resolve the iCloud/profile and Gmail connector choices.
-2. Perform the final small architecture pass against `EYE_CANON.md`, `EYE_DECISIONS.md`, live probes and current vendor docs.
-3. Resolve only the provisional decisions necessary to start.
-4. Begin the minimal clean implementation in `X:\Repos\eye`.
-5. Do **not** import the old `se` implementation wholesale.
+The platform boundary is no longer a blocker.
 
-## Current success state
+The small v2 architecture is frozen for initial implementation. Build order is now:
 
-Already true:
+```text
+1. minimal LocalSystem service
+2. native active-user execution
+3. native ConPTY terminal
+4. WSL execution
+5. installed Chrome + loopback CDP
+6. on-demand desktop worker / native UI Automation
+7. external authority operations as concrete needs appear
+8. replace prototype runtime and remove transitional session helper
+```
+
+Do **not** import the old `se` implementation wholesale.
+
+## Success state
+
+All core cutover conditions are true:
 
 - `StealthEye` is the active interactive identity;
 - restart goes straight to desktop;
@@ -126,7 +145,9 @@ Already true:
 - old fixed 400 GB VHDX is gone;
 - `X:` is the final physical Dev Drive;
 - `E:` contains bulk models/data/archives;
-- fresh WSL belongs to `StealthEye`;
-- HEC residue is removed;
-- Tailscale is not required by Eye and is disabled;
+- fresh WSL belongs to StealthEye;
+- old `steal` account/profile is retired after preservation;
+- HEC laptop residue is removed;
+- Eye Google connectors use the Eye identity;
+- DPAPI-NG unattended secret persistence is reboot-validated;
 - `X:\Repos\eye` is the clean permanent workspace.
