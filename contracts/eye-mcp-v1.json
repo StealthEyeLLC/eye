@@ -27,7 +27,7 @@
     {
       "name": "eye_run",
       "effect_class": "run",
-      "description": "Run a local Windows or WSL process in the requested execution context.",
+      "description": "Run a local process in the requested execution context.",
       "operations": [
         {
           "op": "run",
@@ -36,7 +36,7 @@
             "properties": {
               "context": {
                 "type": "string",
-                "enum": ["system", "user", "wsl"],
+                "enum": ["system", "user"],
                 "default": "system"
               },
               "file_name": {
