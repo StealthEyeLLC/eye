@@ -32,9 +32,9 @@ ChatGPT
   -> eye.exe
 ```
 
-HEC/VPS is no longer part of the laptop path. Its residual laptop task, folder, dedicated SSH key pair and handshake file have now been removed.
+HEC/VPS is no longer part of the laptop path. Its laptop task/files/dedicated key/handshake residue has been removed, and a targeted final check found no HEC-specific service, task, or standard installation path remaining.
 
-Tailscale was also proven unnecessary to this request path by stopping it and immediately re-verifying direct Eye access. Its service is now stopped and disabled; the package remains installed temporarily for easy reversal.
+Tailscale was also proven unnecessary to this request path by stopping it and immediately re-verifying direct Eye access. Its service is stopped and disabled; the package remains installed temporarily for easy reversal.
 
 ## 3. Old repository preservation
 
@@ -52,9 +52,9 @@ E:\StealthEye\archives\pre-platform-rebuild-20260807\se-full.bundle
 
 The bundle was verified to contain the old repository history including local-only commits. The archive and bundle were reconfirmed readable immediately before deleting the old fixed VHDX.
 
-## 4. Windows interactive identity — cutover complete
+## 4. Windows interactive identity — complete
 
-Primary interactive account is now:
+Primary interactive account:
 
 ```text
 User: StealthEye
@@ -62,25 +62,39 @@ Role: local administrator
 Profile: C:\Users\StealthEye
 ```
 
-Live Eye session verification after reboot reported `StealthEye` as the interactive user.
-
-Automatic console sign-in is configured with Microsoft Sysinternals Autologon. A subsequent restart was physically observed to go directly to the `StealthEye` desktop without interactive credential entry.
+Automatic console sign-in is configured with Microsoft Sysinternals Autologon. Multiple subsequent restarts returned directly to the `StealthEye` desktop, including the final cleanup/DPAPI validation reboot.
 
 Do not record the local account password in source or repository files.
 
-The old `steal` account/profile still exists pending a final iCloud retention decision.
+The previous local account `steal` has now been removed. Its Win32 user-profile registration and residual `C:\Users\steal` directory are gone.
 
-The new profile's Git author identity is:
+Before retirement, deliberately retained local material was copied to:
+
+```text
+E:\StealthEye\archives\pre-profile-retirement-20260807
+```
+
+Preserved there:
+
+- Desktop;
+- Documents;
+- Downloads;
+- a top-level old-profile inventory;
+- seven locally resident iCloud Photos media files (~44 MiB).
+
+Cloud-only iCloud placeholders were not deliberately hydrated merely for retirement.
+
+The active profile's Git author identity is:
 
 ```text
 StealthEye <stealtheye.eye@gmail.com>
 ```
 
-The migrated GitHub SSH identity successfully clones/pulls the new repository. A live push was rejected by GitHub as a deploy key, so laptop-side Git write authority is not yet established.
+The migrated GitHub SSH identity clones/pulls the new repository. A live push was rejected by GitHub as a deploy key, so laptop-side Git write authority remains a separate later choice.
 
 ## 5. Power and availability
 
-Configured direction remains:
+Configured direction:
 
 - hibernation off;
 - no automatic sleep;
@@ -96,9 +110,7 @@ Windows Update policy is configured to avoid automatic reboot while a user is lo
 
 ## 6. Pagefile — transition complete
 
-After reboot, the old ~192 GB `X:\pagefile.sys` disappeared and only the Windows pagefile remained.
-
-Current pagefile file:
+Current pagefile:
 
 ```text
 C:\pagefile.sys
@@ -106,6 +118,8 @@ Current allocation observed: 16 GiB
 Configured initial: 16 GiB
 Configured maximum: 32 GiB
 ```
+
+The former ~192 GiB `X:\pagefile.sys` is gone.
 
 ## 7. Internal storage — final X established
 
@@ -116,9 +130,7 @@ Physical internal disk:
 - ~1 TB raw capacity
 - GPT
 
-The old fixed VHDX `C:\Sovereign Node.vhdx` was deleted after archive verification and pagefile cutover. This returned roughly 400 GB of physical `C:` free space.
-
-Post-delete `Get-PartitionSupportedSize` showed enough supported shrink capacity for a 300 GiB physical development volume.
+The old fixed VHDX `C:\Sovereign Node.vhdx` was deleted after archive verification and pagefile cutover.
 
 Final internal layout:
 
@@ -127,7 +139,7 @@ C:  NTFS  Windows   ~652.7 GiB filesystem
 X:  ReFS  Eye Dev    300.0 GiB
 ```
 
-`X:` is a **physical partition on the Samsung NVMe**, formatted using Windows Dev Drive semantics. `fsutil devdrv query X:` reports it as a trusted developer volume.
+`X:` is a physical partition on the Samsung NVMe, formatted using Windows Dev Drive semantics. `fsutil devdrv query X:` reports it as a trusted developer volume.
 
 The staged fallback `C:\StealthEye-Dev.vhdx` was deleted after the physical Dev Drive was proven.
 
@@ -141,7 +153,7 @@ X:\Repos\eye
 
 It was cloned from `StealthEyeLLC/eye` over SSH under the StealthEye account.
 
-Clone/pull works. Current SSH authentication does not permit push; repository writes are still available through the connected GitHub control path while steady-state laptop Git authority remains an open decision.
+Clone/pull works. Current SSH authentication does not permit push; repository writes remain available through the connected GitHub control path while steady-state laptop Git authority remains an open later decision.
 
 ## 9. External bulk-data drive
 
@@ -182,9 +194,9 @@ Docker Desktop, Docker WSL state and old Docker build/container data were remove
 
 The target Eye runtime does not depend on Docker.
 
-## 11. WSL — fresh StealthEye distro established
+## 11. WSL — clean StealthEye baseline
 
-A fresh distribution is installed under the StealthEye Windows account:
+The current Windows account has one registered distro:
 
 ```text
 Distribution: Ubuntu-24.04
@@ -194,9 +206,9 @@ Default Linux user: root
 systemd: enabled and running
 ```
 
-A normal `wsl -d Ubuntu-24.04` invocation was verified to run as UID 0 without another credential prompt.
+A normal `wsl -d Ubuntu-24.04` invocation runs as UID 0 without another credential prompt.
 
-The old Ubuntu 22.04 registration under the old `steal` Windows account remains transitional and should be removed when that old profile is retired.
+The former Ubuntu 22.04 registration belonged to the retired `steal` profile and is no longer part of the active Windows user state.
 
 Linux-native permission-sensitive workloads should use the WSL Linux filesystem rather than relying on ReFS-hosted Unix metadata behavior.
 
@@ -215,12 +227,13 @@ Completed:
 - Docker Desktop removed;
 - HEC laptop task/files/dedicated key removed;
 - Tailscale stopped and disabled after direct-path independence test;
+- old `steal` account/profile retired;
 - old `steal`-bound `StealthEye Session` task removed;
 - Razer/HP analytics and assorted old-profile startup entries previously cleaned.
 
 Still present intentionally:
 
-- `StealthEye Session - New Account` is running under `StealthEye` because the current prototype still uses its session helper. Remove it only when clean v2 native active-user execution replaces it.
+- `StealthEye Session - New Account` remains because the current prototype still uses its session helper. Remove it only when clean v2 native active-user execution replaces it.
 - Tailscale package remains installed but disabled for easy reversal.
 - OMEN hardware support remains.
 
@@ -237,36 +250,53 @@ Disposable experiments established:
 7. installed Chrome can be launched as the user and controlled from SYSTEM over loopback CDP.
 8. native ConPTY works cross-session.
 9. `ReleasePseudoConsole` is exported on this laptop's current Windows build.
+10. DPAPI-NG `LOCAL=user`, called as LocalSystem, can persist an encrypted blob across reboot and decrypt it afterward while the interactive StealthEye user cannot decrypt the same blob.
 
-These are evidence behind the favored v2 no-permanent-session-helper architecture.
+These experiments are the evidence behind the frozen small v2 architecture.
 
-## 15. Old-profile inventory
+## 15. Machine secret persistence — reboot validation complete
 
-`C:\Users\steal` was inventoried read-only.
+A throwaway 32-byte random value was protected by a LocalSystem process with DPAPI-NG descriptor:
 
-Small user-facing areas are essentially old development/prototype material:
+```text
+LOCAL=user
+```
 
-- Desktop: 2 files, ~4.5 KB;
-- Documents: 24 files, ~1.9 MB;
-- Downloads: 9 files, ~28 KB;
-- OneDrive/Videos/Music: effectively empty.
+Only the encrypted blob and a verification hash were persisted under `C:\ProgramData\StealthEye` for the test.
 
-The only material requiring a deliberate retirement choice is iCloud:
+The machine was rebooted. After the Eye service and tunnel returned:
 
-- `iCloudDrive`: 15,766 files, ~2.78 GB logical, all observed as reparse-backed;
-- `iCloudPhotos`: 472 files, ~3.02 GB logical, 463 marked offline and 470 reparse-backed.
+- LocalSystem successfully decrypted the persisted blob and reproduced the expected hash;
+- a process running as interactive `STEALTHEYELLC\StealthEye` could not decrypt it (`NCryptUnprotectSecret` failed);
+- the throwaway probe executable, source, blob and hash were then removed.
 
-No copy/delete/hydration was performed. Blindly copying cloud-backed placeholders is intentionally avoided.
+No real Eye credential was involved.
 
-## 16. Remaining platform cleanup
+## 16. Google connector identity
 
-Core account/storage/WSL/repository/HEC cutover is complete. Remaining work is narrow:
+The ChatGPT connector set is now pointed at the Eye Google identity:
 
-1. Decide whether the old iCloud material needs a local hydrated archive or whether the cloud copy is sufficient.
-2. Retire the old `steal` account/profile and its old WSL registration after that choice.
-3. Keep the prototype `StealthEye Session - New Account` helper only until v2 native active-user execution replaces it.
-4. Optionally uninstall disabled Tailscale if no unrelated use appears.
-5. Decide whether any user-local Python/Ollama/LM Studio installation is actually required.
-6. Re-test the favored DPAPI-NG local credential-store primitive across a future reboot before making it canonical.
-7. Switch the ChatGPT Gmail connector to `stealtheye.eye@gmail.com` before treating Eye Gmail authority as live.
-8. Freeze the small v2 architecture and begin clean implementation in `X:\Repos\eye`.
+```text
+stealtheye.eye@gmail.com
+```
+
+Verified live for Gmail by reading mail addressed to that account. Drive, Calendar and Contacts were already connected under the same Eye identity.
+
+## 17. Platform state after cleanup
+
+The blocking laptop cutover is complete:
+
+- StealthEye is the only intended interactive account;
+- autologon survives reboot;
+- Eye service/tunnel survives reboot;
+- old fixed VHD storage is gone;
+- final physical `X:` Dev Drive exists;
+- clean Ubuntu 24.04 WSL exists under StealthEye;
+- old `steal` profile is retired after local preservation;
+- HEC laptop residue is gone;
+- Eye Google connectors point at the Eye identity;
+- DPAPI-NG machine secret persistence is reboot-validated.
+
+Remaining platform choices are optional/non-blocking: whether to uninstall disabled Tailscale, whether `E:` is ever reformatted NTFS, and which additional user-local/Linux packages are actually needed.
+
+The clean v2 architecture is ready for implementation in `X:\Repos\eye`.
