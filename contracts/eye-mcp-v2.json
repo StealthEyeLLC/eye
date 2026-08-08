@@ -44,6 +44,26 @@
       "ui_only": true
     }
   ],
+  "host_engine_protocol": {
+    "version": "1.0.0",
+    "transport": "stream-json-rpc-over-named-pipes",
+    "worker_protocol_version": "1.0.0",
+    "engine_operation_ids": [],
+    "contract_hash": {
+      "algorithm": "sha256",
+      "encoding": "lowercase-hex",
+      "scope": "canonical-json-utf8"
+    },
+    "engine_handshake": {
+      "required": [
+        "engine_protocol_version",
+        "engine_version",
+        "public_contract_hash",
+        "supported_operation_ids",
+        "worker_protocol_version"
+      ]
+    }
+  },
   "architectural_primitives": {
     "observe": "Structured machine, UI, browser, process, file, job, artifact, and event state.",
     "act": "Raw execution or precise typed changes/interactions/external effects.",

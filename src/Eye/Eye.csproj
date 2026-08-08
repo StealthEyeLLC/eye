@@ -11,4 +11,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.10" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.1.0" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\contracts\eye-mcp-v2.json" LogicalName="StealthEye.Contract.eye-mcp-v2.json" />
+  </ItemGroup>
 </Project>

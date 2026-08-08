@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Eye/Eye.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Eye.Tests/Eye.Tests.csproj" />
+  </Folder>
 </Solution>
