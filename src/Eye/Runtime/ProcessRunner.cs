@@ -17,6 +17,7 @@ public sealed class ProcessRunner
         {
             "system" => RunSystemAsync(request, cancellationToken),
             "user" => RunActiveUserAsync(request, cancellationToken),
+            "wsl" => RunWslAsync(request, cancellationToken),
             _ => throw new ArgumentException($"Unknown process context: {request.Context}", nameof(request))
         };
     }
@@ -81,7 +82,39 @@ public sealed class ProcessRunner
             started.ElapsedMilliseconds);
     }
 
-    private static async Task<ProcessRunResult> RunActiveUserAsync(RunRequest request, CancellationToken cancellationToken)
+    private static async Task<ProcessRunResult> RunWslAsync(RunRequest request, CancellationToken cancellationToken)
+    {
+        var arguments = new List<string>();
+        if (!string.IsNullOrWhiteSpace(request.WorkingDirectory))
+        {
+            arguments.Add("--cd");
+            arguments.Add(request.WorkingDirectory);
+        }
+
+        arguments.Add("--exec");
+        arguments.Add(request.FileName);
+        arguments.AddRange(request.Arguments);
+
+        var wslRequest = new RunRequest
+        {
+            Context = "user",
+            FileName = "wsl.exe",
+            Arguments = [.. arguments],
+            TimeoutMs = request.TimeoutMs
+        };
+
+        var result = await RunActiveUserAsync(wslRequest, cancellationToken, "wsl");
+        return result with
+        {
+            Stdout = NormalizeWslText(result.Stdout),
+            Stderr = NormalizeWslText(result.Stderr)
+        };
+    }
+
+    private static string NormalizeWslText(string value) =>
+        value.Contains('\0') ? value.Replace("\0", string.Empty) : value;
+
+    private static async Task<ProcessRunResult> RunActiveUserAsync(RunRequest request, CancellationToken cancellationToken, string resultContext = "user")
     {
         var started = Stopwatch.StartNew();
         var sessionId = FindActiveSessionId();
@@ -197,7 +230,7 @@ public sealed class ProcessRunner
                     timedOut,
                     stdout,
                     stderr,
-                    "user",
+                    resultContext,
                     identity.Name,
                     started.ElapsedMilliseconds);
             }

@@ -72,7 +72,7 @@
           "args_schema": {
             "type": "object",
             "properties": {
-              "context": { "type": "string", "enum": ["system", "user"], "default": "system" },
+              "context": { "type": "string", "enum": ["system", "user", "wsl"], "default": "system" },
               "file_name": { "type": "string", "minLength": 1 },
               "arguments": { "type": "array", "items": { "type": "string" }, "default": [] },
               "working_directory": { "type": "string" },

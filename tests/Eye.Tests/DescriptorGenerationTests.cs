@@ -49,6 +49,10 @@ public sealed class DescriptorGenerationTests
         AssertPropertySet<CapabilitiesResult>(capabilities.ResultSchema);
         AssertPropertySet<CapabilityFacades>(capabilities.ResultSchema.GetProperty("properties").GetProperty("facades"));
         AssertPropertySet<RunArgs>(run.ArgsSchema);
+        Assert.Equal(
+            ["system", "user", "wsl"],
+            run.ArgsSchema.GetProperty("properties").GetProperty("context").GetProperty("enum")
+                .EnumerateArray().Select(x => x.GetString()!).ToArray());
         AssertPropertySet<RunOperationResult>(run.ResultSchema);
     }
 
