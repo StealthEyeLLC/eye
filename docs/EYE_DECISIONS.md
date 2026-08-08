@@ -1,31 +1,31 @@
 # EYE_DECISIONS.md
 
-**Status:** Decision ledger and architecture freeze guardrail  
+**Status:** Decision ledger and architecture-freeze guardrail  
 **Baseline date:** 2026-08-07
 
 This document prevents exploratory findings from silently becoming canonical Eye design.
 
-Use three states:
+Decision states:
 
-- **Canonical** — approved direction; future work should preserve it unless explicitly changed.
-- **Favored / provisional** — strong current preference supported by evidence, but exact form can still change.
+- **Canonical** — approved direction; preserve unless explicitly changed by the owner.
+- **Favored / provisional** — strong preference, implementation detail may still change.
 - **Open** — intentionally unresolved.
 
 ## 1. Canonical decisions
 
-### Identity
+### Project identity
 
 - Product: **StealthEye**
+- Project: **Eye**
 - Repository: **`StealthEyeLLC/eye`**
 - Local repository target: **`X:\Repos\eye`**
-- Primary executable: **`eye.exe`**
-- Core implementation language: **C# / .NET**
+- Executable / CLI: **`eye.exe` / `eye`**
+- Windows service: **`StealthEye`**
+- Core implementation: **C# / .NET on Windows**
 
-### Five-tool public MCP surface
+### Final public MCP surface
 
-The previous single public `eye({ op, args })` design is retired.
-
-The canonical model-facing public surface is:
+The canonical v2 model-facing surface is exactly:
 
 ```text
 eye_inspect
@@ -33,170 +33,133 @@ eye_run
 eye_change
 eye_interact
 eye_external
+eye_live
 ```
 
-Purpose:
+The first five are effect-class capability facades. `eye_live` is UI-only and performs no machine operation itself.
 
-- `eye_inspect` — local observation/read/query;
-- `eye_run` — Windows/WSL/process/PowerShell/ConPTY execution;
-- `eye_change` — precisely typed local mutations;
-- `eye_interact` — desktop/application/browser interaction;
-- `eye_external` — effects that intentionally leave the local machine.
+`wait` and `transfer` are complete typed operation families beneath the existing facades, not additional top-level tools.
 
-This split is for accurate schemas, tool selection and effect metadata. It is not an internal privilege hierarchy.
+The five effect classes improve schema/tool/effect accuracy but are not a privilege hierarchy. `eye_run` remains the broad local execution escape hatch.
 
-All five facades route to one internal operation registry/dispatcher. `eye_run` remains the raw local execution escape hatch.
+### Contract versioning
 
-### Frozen generated public contract
+`contracts/eye-mcp-v1.json` is historical and immutable.
 
-The canonical contract source is:
+The canonical target contract is:
 
 ```text
-contracts/eye-mcp-v1.json
+contracts/eye-mcp-v2.json
 ```
 
-Generate from it:
+The six v2 tool names are frozen. Public operation/schema changes require an explicit owner-authorized contract revision. Routine implementation work must not alter the public contract implicitly.
 
-- MCP tool descriptors;
-- C# request/result types;
-- operation/facade registration;
-- capabilities metadata;
-- contract documentation;
-- normalized `tools/list` snapshot tests.
+Generate descriptors, C# DTOs, host validation, operation/facade registration, capabilities, server instructions, documentation, and normalized `tools/list` snapshots from the contract source.
 
-Public tool names, descriptions, effect classifications, input schemas and output schemas must not change during ordinary implementation work.
+### Stable result and schema posture
 
-Breaking public changes require explicit owner authorization and a contract revision/version.
+Use shallow, exact, closed operation variants with boring JSON Schema constructs: objects, primitives, arrays, enums, bounds, required properties, and `additionalProperties: false`.
 
-The repository guardrail is recorded in `AGENTS.md`.
+Prefer omitted optional values over `null`. Publish exact output schemas. Do not expose raw exception/stack details to the model. Large results become artifacts plus useful excerpts.
 
-### Result semantics
+### Four machine primitives
 
-Use one stable structured result envelope:
+Eye is built around:
 
 ```text
-{ ok: true, result: ... }
+Observe
+Act
+Wait
+Transfer
 ```
 
-or:
+New capabilities should compose these primitives rather than add architectural layers.
 
-```text
-{ ok: false, error: { code, message, retryable?, expected? } }
-```
+### One permanent SCM service
 
-Routine domain failures should not escape as arbitrary MCP transport exceptions.
+There is exactly one permanent LocalSystem Windows SCM service.
 
-### Permanent runtime
+It contains a tiny stable host that supervises a **separate versioned capability-engine child process**.
 
-One permanent Windows service:
+The engine must not be loaded as a DLL into the stable service because native/COM/media/GPU/dependency faults in feature code must not be able to directly crash the host.
 
-```text
-eye.exe service
-```
+No second Windows service, permanent user daemon, permanent Node automation service, or competing MCP server is part of final Eye.
 
-Run it as LocalSystem.
+### Stable host ownership
 
-Do not require a permanent user-session daemon, permanent Node automation service, or competing permanent MCP servers.
+The stable host owns:
 
-### Authority posture
+- loopback MCP endpoint and six public descriptors;
+- public-contract validation/routing;
+- server instructions;
+- raw SYSTEM/user/WSL execution and minimal repair path;
+- Job Objects and native ConPTY ownership;
+- durable jobs/output streams;
+- artifacts;
+- Trigger Broker durable queues;
+- Mission Blackboard;
+- stable IDs/incarnation generations/observation cursors;
+- minimal Eye Live control/monitor surface;
+- host/engine protocol;
+- engine supervision/A-B selection/rollback;
+- tiny authoritative state.
 
-If the owner intentionally grants authority to Eye, StealthEye should not add avoidable internal approval or privilege friction on top of that grant.
+Routine capability development should almost never modify the stable host.
 
-Do not deliberately downscope broad credentials merely for architectural neatness.
+### Versioned engine ownership
 
-### Transport separation
+The replaceable engine owns evolving feature logic:
 
-The OpenAI Secure MCP Tunnel is transport only.
+- UIA and desktop interpretation/actions;
+- Windows capture implementation;
+- Chrome/CDP behavior;
+- file/code/document/data/media/GPU/provider adapters;
+- higher-level capability implementations;
+- version-matched session-worker behavior.
 
-Eye serves loopback MCP and remains independently useful without owning tunnel lifecycle.
+The engine owns nothing required to repair or roll back itself.
 
-HEC/VPS infrastructure is not part of final Eye.
+### Degraded-mode repair invariant
 
-### Docker / orchestration
+With no healthy engine, ChatGPT must still retain system/capability status, engine restart/activate/rollback, raw SYSTEM/user/WSL execution, jobs/terminals, artifact reads, mission/trigger state, and minimal Eye Live monitoring.
 
-Docker and Kubernetes are not part of the target Eye runtime.
+### Host/engine protocol
 
-Eye is not a generic workflow engine, agent framework, plugin marketplace or generic multi-machine orchestrator.
+The host/engine protocol is independently versioned and small.
 
-### Windows login/account boundary
+The engine handshake includes engine protocol version, engine build/version, public contract hash, supported operation IDs, and worker protocol version.
 
-Leave Windows login/account/autologon architecture alone unless the owner explicitly requests a change. It is not a current Eye implementation target.
+The host refuses incompatible engines.
 
-### Storage roles
+Compatibility is asymmetric: new engines should normally work with the existing host; host changes are rare.
 
-Canonical intended roles:
+### Engine updates
 
-```text
-C: Windows / installed applications
-X: physical ReFS Dev Drive / repos / build workspace
-E: bulk data / models / archives / large artifacts
-WSL filesystem: Linux-native permission-sensitive work
-```
+Engine replacement uses staged A/B directories, supervised startup, protocol/contract handshake, health checks, atomic routing, previous-version retention, and automatic rollback on handshake failure or crash-loop behavior.
 
-The intended `X:` development volume is approximately 300 GiB on the internal NVMe when provisioned.
+Existing host-owned jobs, terminals, artifacts, triggers, mission state, and MCP connectivity are not replaced with the engine.
 
-### Native active-user execution
+### Durable jobs and ConPTY
 
-The LocalSystem service owns user-context execution. For commands that must run as the active interactive user:
+Long operations automatically become durable host-owned jobs after a short fast-completion window.
 
-- discover the active session;
-- obtain its token with `WTSQueryUserToken`;
-- build its environment with `CreateEnvironmentBlock`;
-- launch with `CreateProcessAsUser`;
-- use explicit intended inherited handles/pipes;
-- assign the actual child to a service-owned Job Object;
-- supervise descendants, cancellation, timeout and exit state directly.
+Jobs survive the MCP request, ChatGPT/tunnel disconnects, and engine replacement/crash. Output is incrementally spooled and read through cursors. Job Objects own descendants. Cancellation terminates the owned tree consistently.
 
-A permanent user-session helper is not part of the target architecture.
+Native ConPTY is the canonical pseudoterminal primitive. The host owns terminal handles/lifetime. Use current lifetime APIs including `ReleasePseudoConsole` where available.
 
-### Win32 bindings
+A host crash cannot preserve live Win32 handles/ConPTY; recovered metadata is marked interrupted rather than pretending impossible continuity.
 
-Use **CsWin32-generated bindings and SafeHandles** as the permanent preferred Win32/COM interop layer.
+### Active-user execution
 
-Handwritten interop remains acceptable temporarily while replacing the proven prototype paths.
+LocalSystem owns user-context execution using `WTSQueryUserToken`, `CreateEnvironmentBlock`, `CreateProcessAsUser`, explicit inherited-handle lists, and host-owned Job Objects.
 
-### Terminal
+A permanent user helper is not required.
 
-Use native ConPTY for pseudoterminal execution.
+### WSL
 
-Use current lifetime APIs available on the target Windows build, including `ReleasePseudoConsole` where appropriate.
+WSL runs through active-user execution.
 
-Do not carry Pty.Net into v2 unless a concrete missing capability is demonstrated.
-
-### Worker IPC
-
-Use **StreamJsonRpc over named pipes** for service/worker control, events and cancellation.
-
-Use **multiplexed binary streams** (favored implementation: Nerdbank.Streams) for bulk stdout/stderr/VT/image/audio/file traffic.
-
-Do not invent a giant JSON framing protocol for all binary data.
-
-### Browser
-
-Use installed Chrome with a dedicated StealthEye data/profile directory and loopback Chrome DevTools Protocol.
-
-Raw **generated typed CDP bindings** are the permanent primitive.
-
-Playwright .NET may be used as an optional accelerator when its higher-level behavior materially helps, but it must not become a permanent Node daemon or separate browser fleet.
-
-### Desktop worker and observation stack
-
-Desktop-bound work uses short-lived `eye.exe worker` processes created on demand in the active session.
-
-Canonical observation hierarchy:
-
-1. HWND/process/window inventory;
-2. event-driven UI Automation with cache requests and Remote Operations;
-3. Windows.Graphics.Capture with dirty-region-aware capture;
-4. OCR/visual grounding only when structural APIs are insufficient.
-
-Workers opt into Per-Monitor V2 DPI awareness before coordinate-sensitive work.
-
-Do not keep a permanent desktop worker unless measurements prove it necessary.
-
-### WSL baseline
-
-Target:
+Target baseline:
 
 ```text
 Ubuntu 24.04 LTS
@@ -205,177 +168,271 @@ systemd enabled
 root default user
 ```
 
-Launch WSL through active-user execution from the service. Linux-native permission/ownership-sensitive workloads live in the WSL Linux filesystem rather than on ReFS.
+Linux-native permission-sensitive workloads belong in the WSL Linux filesystem rather than ReFS.
+
+### Trigger Broker / native waits
+
+Waiting is event-driven wherever practical. The host owns durable trigger registrations/queues; UIA/CDP watchers in the engine feed the host queue.
+
+Do not turn waits/triggers into a workflow engine.
+
+### Artifact plane
+
+Large files, output, images, recordings, audio, dumps, downloads, generated documents, and query results use stable artifact handles rather than giant inline MCP payloads.
+
+ChatGPT file inputs should use supported top-level file parameters where applicable.
+
+### Stable identity model
+
+Canonical identity:
+
+```text
+stable object ID + incarnation generation + observation cursor
+```
+
+Use it for processes, terminals, windows/UIA nodes, browser targets/frames/nodes, files/directories, artifacts, and other stateful resources.
+
+Prefer state deltas over repeated complete snapshots.
+
+### Bounded batching only
+
+Allow parallel reads, finite ordered steps, result references, `stop_on_error`, and an overall deadline.
+
+No loops, generic DAG engine, scheduler DSL, workflow language, or visual workflow builder.
+
+### Eye Live
+
+`eye_live` is an optional MCP Apps UI accelerator for mission/job/trigger/artifact/relay supervision.
+
+Everything meaningful it displays or controls must remain available through ordinary MCP operations.
+
+Use `_meta.ui.resourceUri` and the MCP Apps `ui/*` bridge for new UI. App-only helper tools use `_meta.ui.visibility` with app-only visibility. Follow-up messages use `ui/message`.
+
+### Eye Operator skill
+
+The plugin package includes a compact Eye Operator skill teaching this modality order:
+
+```text
+native typed operation
+-> CLI/API/direct file
+-> CDP
+-> UI Automation
+-> pixels/OCR/input
+-> raw execution fallback
+```
+
+It also teaches durable jobs, native waits, artifacts, stable-handle reuse, and contract discipline.
+
+Server initialization instructions carry compact cross-tool guidance; keep the first 512 characters self-contained.
+
+### Mission Blackboard / Relay
+
+The host uses one small embedded SQLite-backed Blackboard containing objective, current facts/decisions, active jobs/triggers, artifacts, unresolved questions, next action, and compact relay messages.
+
+It must not become a transcript archive, task taxonomy, receipt store, generic workflow database, or DAG engine.
+
+Multi-tab relay is optional continuation machinery through Eye Live; Eye does not claim MCP can awaken arbitrary closed chats.
+
+### Context helper
+
+A one-shot global context capture/handoff helper is a first-class feature. It may include active window/app, selection, clipboard, UIA, screenshot/region, current Chrome context, and relevant path.
+
+### Desktop stack
+
+Canonical observation/control hierarchy:
+
+1. HWND/process/window inventory;
+2. event-driven cached UIA + Remote Operations;
+3. Windows.Graphics.Capture dirty-region observation;
+4. OCR/visual grounding only when structural APIs are insufficient.
+
+Workers are short-lived. Host owns worker process/IPC/lifecycle; version-matched worker behavior comes from the active engine.
+
+### Browser stack
+
+Use installed Chrome, dedicated Eye profile/data directory, loopback CDP, and generated typed CDP bindings.
+
+Raw CDP is permanent. Playwright .NET is optional acceleration only. No permanent Node daemon or separate browser fleet.
+
+### Worker IPC / streams
+
+Use StreamJsonRpc over named pipes for typed control/events/cancellation.
+
+Use multiplexed binary streams, favored via Nerdbank.Streams, for stdout/stderr/VT/images/audio/files.
+
+### Win32 bindings
+
+Use CsWin32-generated bindings/SafeHandles as the preferred permanent Win32/COM layer.
 
 ### Windows-native capability posture
 
-Prefer exposing built-in Windows facilities over reimplementing their lifecycle behavior when a real workload exists.
-
-High-value facilities include:
-
-- BITS;
-- VSS;
-- Restart Manager;
-- Process Snapshotting;
-- ReFS block cloning;
-- CopyFile2;
-- ProjFS when needed;
-- Virtual Disk API;
-- UIA Remote Operations/cache/events.
-
-Candidate operation names are not automatically public contract entries.
+Prefer Windows facilities such as BITS, VSS, Restart Manager, Process Snapshotting, ReFS block cloning, CopyFile2, ProjFS where needed, Virtual Disk API, and UIA Remote Operations/cache/events over reinvention.
 
 ### Code/document/data/media posture
 
-Layer capabilities by measured need:
+Layer by measured need:
 
-- code: ripgrep -> Tree-sitter/ast-grep -> on-demand language servers;
-- documents: MarkItDown/PdfPig/Open XML/ClosedXML, heavier Docling only as needed;
-- data: embedded/on-demand DuckDB;
-- audio: NAudio + short-lived whisper.cpp;
-- local vision: PaddleOCR/Tesseract + ONNX/OpenCV on demand.
+- ripgrep -> Tree-sitter/ast-grep -> on-demand language servers;
+- MarkItDown/PdfPig/Open XML/ClosedXML -> heavier Docling only when needed;
+- embedded/on-demand DuckDB;
+- NAudio + short-lived whisper.cpp;
+- PaddleOCR/Tesseract + ONNX/OpenCV on demand.
 
-Do not keep an always-running local model merely because the GPU can run one.
+No permanently loaded local planner/model by default.
 
-### Machine credential persistence
+### Resource-aware execution
 
-For secrets that the LocalSystem Eye service must retain locally, use **DPAPI-NG with protection descriptor `LOCAL=user`, invoked by LocalSystem**.
+Eye may account for GPU free memory, CPU/GPU thermals/throttling where available, AC/battery state, storage tier, process priority/affinity, Job Object resource controls, and Windows power requests.
 
-Persist only encrypted blobs and non-secret metadata under a SYSTEM-owned machine path.
+### Standalone behavior / transport separation
 
-This mechanism was previously validated across reboot with throwaway material; the interactive user could not decrypt the same blob.
+Eye remains laptop-native and useful without ChatGPT connected.
 
-### External Eye identity
+Remote access uses the official OpenAI Secure MCP Tunnel as external transport. A tunnel outage must not stop host-owned local work.
 
-Use:
+HEC/VPS/Docker/Kubernetes/Tailscale/Codex/Work/paid-API controller are not required dependencies.
+
+### Storage roles
+
+Canonical roles:
+
+```text
+C: Windows / applications / stable host state / encrypted secrets / engine metadata
+X: physical ReFS Dev Drive / repos / hot workspaces / job spool / temporary artifacts / ReFS clones
+E: models / media / archives / large downloads / cold bulk artifacts
+WSL filesystem: Linux-native permission-sensitive work
+```
+
+Intended `X:` size is approximately 300 GiB when provisioned.
+
+Tiny authoritative host state must live under a SYSTEM-owned `C:\ProgramData\StealthEye` path and not depend on `X:` existing.
+
+### Machine secret persistence
+
+Use DPAPI-NG `LOCAL=user` invoked by LocalSystem for locally retained service secrets, storing only encrypted blobs and non-secret metadata.
+
+### External identities
+
+Operational Google identity:
 
 ```text
 stealtheye.eye@gmail.com
 ```
 
-as Eye's operational Google identity.
+Separate mailbox:
 
-The separate `stealtheye@stealtheye.io` mailbox remains distinct unless deliberately migrated later.
+```text
+stealtheye@stealtheye.io
+```
 
-### OpenAI secret names
-
-Current secret names supplied by the owner:
+Current secret names:
 
 ```text
 EyeRuntime
 OpenAIAdmin
 ```
 
-Do not place their values in source.
+Never commit secret values.
+
+### Login/account boundary
+
+Leave Windows login/account/autologon architecture alone unless explicitly requested by the owner.
 
 ### Old repository
 
-The old `se` repository is prototype/history material.
+The old `se` repository is prototype/history material. Do not port it wholesale into Eye.
 
-Do not copy the old codebase wholesale into `eye`.
+### Architecture stop rule
+
+The architecture is mature enough to build. New research should normally fit capabilities beneath `docs/BUILD_BLUEPRINT.md` rather than create new layers.
+
+Architectural expansion requires explicit owner authorization.
 
 ## 2. Favored / provisional decisions
 
-### Atomic updates
+### State store
 
-Favor VeloPack-style staged/atomic Windows updates and rollback.
+Favor embedded SQLite for tiny host-owned durable metadata, Blackboard, trigger metadata, job metadata, artifact metadata, and version state.
+
+### Engine/update implementation
+
+Favor simple versioned directories and atomic active-version selection. VeloPack remains useful reference/possible machinery where it fits without obscuring the host-controlled A/B model.
 
 ### EyeBench
 
-Favor a small laptop-native benchmark suite drawn from real desktop/browser/code/terminal/file tasks.
+Use a small real-task EyeBench during engineering for task success, elapsed time, Eye calls, retries/restarts, bytes transferred, and user intervention.
 
-Measure task success, elapsed time, tool calls, retries/restarts, bytes transferred and required user intervention.
+### External dependency use
 
-### Dependency use
-
-Favored components and external engines are cataloged in `docs/OSS_LANDSCAPE.md`.
-
-A listed project is not automatically a dependency. Add it only when the implementation or a measured workload justifies it.
+Dependencies cataloged in `docs/OSS_LANDSCAPE.md` are candidates, not automatic imports. Add only when implementation or measured workload justifies them.
 
 ### Tunnel supervision
 
-Favor running official `tunnel-client` externally under ordinary Windows startup/supervision rather than custom tunnel code inside Eye.
-
-The exact startup mechanism remains an implementation detail until tested.
-
-### Legal/source hygiene
-
-Favor one `THIRD-PARTY-NOTICES` file plus pinned dependency versions when third-party runtime/deployment dependencies become substantial enough to require it.
-
-Use build-time SBOM/license tooling later if dependency/import volume justifies the machinery.
+Favor the official `tunnel-client` external to Eye under ordinary Windows startup/supervision.
 
 ## 3. Open decisions
 
+### Exact engine IPC transport details
+
+StreamJsonRpc/named pipes are favored, but exact host/engine method partition, message framing, and bulk-channel binding should be finalized during implementation without weakening the fault boundary.
+
+### Exact Eye Live presentation
+
+Inline and picture-in-picture behavior are desired where supported; exact component UX remains implementation-level as long as ordinary MCP parity is preserved.
+
 ### E: filesystem
 
-The target role of `E:` is stable; exact filesystem choice can remain a platform decision.
+The role is stable; exact filesystem remains a platform choice.
 
-### WSL package set
+### Direct Google/OpenAI/GitHub provider adapters
 
-Do not preinstall a large Linux toolchain merely because it is available. Add packages as concrete work requires them.
-
-### Google direct API access from eye.exe
-
-Standalone direct Google API credentials remain optional. Add them only if laptop-side provider operations provide a concrete benefit beyond ChatGPT connectors.
-
-### OpenAI admin operation surface
-
-The owner intends broad OpenAI admin authority.
-
-Decide later whether `eye_external` publishes a general raw OpenAI request operation, specific broad organization-management operations, or both.
-
-Do not intentionally narrow the underlying credential's granted authority.
-
-### GitHub machine authority
-
-Choose steady-state machine-side GitHub authority only when `eye.exe` itself needs to push/administer GitHub. Match the credential to the intended authority rather than automatically using a repo-scoped deploy key.
+Add direct provider credentials/operations only when they provide concrete value. Match credentials to the authority the owner actually intends.
 
 ### Semantic/vector retrieval
 
-Do not add vector infrastructure until a measured code/document/data retrieval workload demonstrates benefit over current structured/search primitives.
+Do not add vector infrastructure until measured retrieval workloads justify it.
 
 ### Heavy local models / GUI grounding
 
-Remain on-demand/experimental. Do not promote them into a permanent runtime without a measured reason.
+Remain on-demand/experimental rather than permanent runtime components.
 
-## 4. Canonical implementation order
+## 4. Canonical implementation sequence
 
-Current build order:
+The detailed blueprint is `docs/BUILD_BLUEPRINT.md`.
+
+Current sequence:
 
 ```text
-1. Generate/freeze the five-facade public MCP contract and tools/list snapshot
-2. Replace handwritten Win32 declarations with CsWin32
-3. Establish StreamJsonRpc control IPC and multiplexed worker streams
-4. Finish Job Object / active-user / ConPTY execution semantics
-5. Build event-driven cached UIA plus dirty-region capture
-6. Generate typed CDP bindings; add optional Playwright .NET
-7. Add BITS/VSS/Restart Manager/ReFS clone/process snapshots as real workloads require them
-8. Add code/document/data/audio adapters based on actual use
-9. Add whisper/OCR/semantic retrieval only on demand
-10. Add staged atomic updating and EyeBench
-11. Cut over from prototype/transitional runtime only after v2 independently proves reboot/terminal/desktop/browser/failure recovery
+1. Contract v2 and host/engine protocol
+2. Stable host: raw execution, jobs, artifacts, state, identity model
+3. Versioned engine process: supervision, handshake, A/B selector, rollback
+4. Workers, streams, Trigger Broker, native waits, durable continuation
+5. Eye Live and Eye Operator skill
+6. Desktop and browser perception/control
+7. Blackboard, Relay, context capture, multi-tab continuation
+8. Files/storage/code/documents/data/media/transfer/provider adapters
+9. Atomic final runtime cutover after independent recovery/reboot/end-to-end proof
 ```
-
-Do not begin by porting old `se` implementation wholesale.
 
 ## 5. Architecture filter
 
 Before adding a component, ask:
 
-1. Does Windows/.NET already provide the primitive natively?
-2. Can the capability be external/on-demand instead of permanent?
-3. Does the dependency reduce a measured failure mode or implementation burden?
-4. Is it required for a current or near-term capability?
-5. Does it preserve one service, one internal dispatcher and the five stable model-facing effect classes?
-6. Does it avoid manufacturing authority friction?
-7. Does its exact license fit the intended use/distribution model?
+1. Does it fit under the existing blueprint?
+2. Does Windows/.NET already provide the primitive?
+3. Should it be a host primitive, replaceable engine capability, or on-demand external tool?
+4. Does it reduce a measured failure mode or implementation burden?
+5. Is it required for a current/near-term capability?
+6. Does it preserve the one-service fault boundary and six-tool public surface?
+7. Does it avoid manufacturing authority friction?
+8. Does its exact license fit the intended use/distribution model?
 
-If the component is mainly ceremony, speculative future-proofing, policy layering, framework gravity or duplicate agency, do not add it yet.
+If it mainly adds ceremony, duplicate agency, speculative future-proofing, framework gravity, or a new architectural layer without demonstrated need, do not add it.
 
 ## 6. Source-of-truth rule
 
 A successful experiment or research finding is evidence, not automatically a canonical design change.
 
-Promote it here only when the owner explicitly accepts the direction or the conversation clearly establishes it as the intended target.
+Promote it here only when explicitly accepted by the owner.
 
-When a canonical decision changes, update the source documents instead of leaving contradictory instructions scattered through older notes.
+When canon changes, update the source documents rather than leaving contradictory instructions scattered through old notes.
