@@ -81,6 +81,16 @@ Eye is built around four machine primitives:
 
 Durable jobs, artifacts, stable identities, incarnation generations, observation cursors, and the Trigger Broker are stable-host primitives rather than adapters.
 
+## Eye Operator skill
+
+**Eye Operator** is the canonical ChatGPT-side operating skill for Eye. It is a first-class project deliverable but is not part of `eye.exe` and adds no machine authority of its own.
+
+The skill teaches a fresh regular ChatGPT tab how to use the six Eye tools efficiently: prefer typed native capabilities, use durable jobs for long work, wait on events instead of polling, move large data through artifacts, reuse stable handles/cursors, use Eye Live when continuation benefits from it, and fall back to `eye_run` when no narrower operation fits.
+
+Eye must remain fully usable without the skill. The MCP contract and server instructions remain the correctness boundary; the skill carries the deeper operator doctrine.
+
+Canonical source: [`docs/EYE_OPERATOR_SKILL.md`](docs/EYE_OPERATOR_SKILL.md).
+
 ## Implementation direction
 
 - **Win32:** CsWin32-generated bindings and SafeHandles
@@ -110,6 +120,7 @@ No required HEC/VPS dependency, Docker/Kubernetes base, Codex dependency, Work d
 - [`docs/EYE_DECISIONS.md`](docs/EYE_DECISIONS.md) — decision ledger.
 - [`docs/MCP_CONTRACT.md`](docs/MCP_CONTRACT.md) — public-contract semantics and freeze rules.
 - [`contracts/eye-mcp-v2.json`](contracts/eye-mcp-v2.json) — canonical target v2 public-contract manifest.
+- [`docs/EYE_OPERATOR_SKILL.md`](docs/EYE_OPERATOR_SKILL.md) — canonical ChatGPT-side operator doctrine and skill source.
 - [`docs/OSS_LANDSCAPE.md`](docs/OSS_LANDSCAPE.md) — dependency/research landscape.
 - [`docs/RESEARCH.md`](docs/RESEARCH.md) — vendor/API findings.
 - [`docs/EYE_PLATFORM.md`](docs/EYE_PLATFORM.md) and [`docs/HARDWARE.md`](docs/HARDWARE.md) — platform/hardware references.
