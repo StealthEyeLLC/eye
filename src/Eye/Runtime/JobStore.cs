@@ -222,9 +222,6 @@ public sealed class JobStore
                 command.ExecuteNonQuery();
             }
 
-            EnsureColumn(connection, "terminal", "terminal INTEGER NOT NULL DEFAULT 0");
-            EnsureColumn(connection, "columns", "columns INTEGER NULL");
-            EnsureColumn(connection, "rows", "rows INTEGER NULL");
 
             using var recover = connection.CreateCommand();
             recover.CommandText = """
