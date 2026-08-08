@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace StealthEye.Runtime;
 
@@ -26,6 +26,9 @@ public sealed record JobRecord(
     [property: JsonPropertyName("arguments")] string[] Arguments,
     [property: JsonPropertyName("working_directory")] string? WorkingDirectory,
     [property: JsonPropertyName("timeout_ms")] int TimeoutMs,
+    [property: JsonPropertyName("terminal")] bool Terminal,
+    [property: JsonPropertyName("columns")] int? Columns,
+    [property: JsonPropertyName("rows")] int? Rows,
     [property: JsonPropertyName("pid")] int? Pid,
     [property: JsonPropertyName("effective_identity")] string? EffectiveIdentity,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
@@ -50,3 +53,5 @@ public sealed record JobReadResult(
 public sealed record JobWaitResult(
     [property: JsonPropertyName("job")] JobRecord Job,
     [property: JsonPropertyName("wait_timed_out")] bool WaitTimedOut);
+
+public sealed record JobAttachSnapshot(JobRecord Job, long StdoutCursor, long StderrCursor);

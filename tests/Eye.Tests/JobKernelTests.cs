@@ -55,6 +55,41 @@ public sealed class JobKernelTests : IDisposable
         Assert.True(second.Eof);
     }
     [Fact]
+    public async Task TerminalJob_WritesResizesAttachesAndCompletes()
+    {
+        var store = Store();
+        var manager = new JobManager(store, new ProcessRunner());
+        var job = manager.Start(new RunRequest
+        {
+            Context = "system",
+            FileName = "powershell.exe",
+            Arguments = ["-NoLogo", "-NoProfile", "-NoExit"],
+            TimeoutMs = 10000
+        }, terminal: true, columns: 80, rows: 25);
+
+        Assert.True(job.Terminal);
+        var resized = manager.Resize(job.JobId, 110, 35);
+        Assert.Equal(110, resized.Columns);
+        Assert.Equal(35, resized.Rows);
+
+        var attached = manager.Attach(job.JobId);
+        Assert.True(attached.Job.Terminal);
+        Assert.True(attached.StdoutCursor >= 0);
+        Assert.Equal(0, attached.StderrCursor);
+
+        var written = await manager.WriteAsync(job.JobId, "Write-Output eye-job-terminal\rexit\r");
+        Assert.True(written > 0);
+
+        var waited = await manager.WaitAsync(job.JobId, 10000);
+        Assert.False(waited.WaitTimedOut);
+        Assert.Equal(JobStates.Completed, waited.Job.State);
+
+        var read = await manager.ReadAsync(job.JobId, "stdout", 0, 65536);
+        Assert.Contains("eye-job-terminal", read.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.True(read.Eof);
+    }
+
+    [Fact]
     public async Task Job_CancelTerminatesOwnedProcess()
     {
         var store = Store();

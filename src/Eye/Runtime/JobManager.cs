@@ -8,24 +8,76 @@ public sealed class JobManager(JobStore store, ProcessRunner processRunner)
     private readonly ConcurrentDictionary<string, ActiveJob> _active = new(StringComparer.Ordinal);
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
-    public JobRecord Start(RunRequest request)
+    public JobRecord Start(RunRequest request, bool terminal = false, int columns = 120, int rows = 30)
     {
         if (string.IsNullOrWhiteSpace(request.FileName))
             throw new ArgumentException("file_name is required.", nameof(request));
+        if (terminal && !string.Equals(request.Context, "system", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Interactive terminals currently require context=system; active-user and WSL terminals use the later on-demand session worker.", nameof(request));
+        if (terminal && (columns is < 1 or > short.MaxValue))
+            throw new ArgumentException($"columns must be between 1 and {short.MaxValue}.", nameof(columns));
+        if (terminal && (rows is < 1 or > short.MaxValue))
+            throw new ArgumentException($"rows must be between 1 and {short.MaxValue}.", nameof(rows));
 
         var jobId = "job_" + Guid.NewGuid().ToString("N");
         var paths = store.AllocatePaths(jobId);
-        var record = store.Create(jobId, request, paths);
-        var active = new ActiveJob();
+        var record = store.Create(jobId, request, paths, terminal, terminal ? columns : null, terminal ? rows : null);
+        var active = new ActiveJob(terminal);
         if (!_active.TryAdd(jobId, active))
             throw new InvalidOperationException("Unable to register new job.");
 
-        _ = RunJobAsync(record, request, active);
+        _ = terminal
+            ? RunTerminalJobAsync(record, request, active, columns, rows)
+            : RunJobAsync(record, request, active);
         return record;
     }
 
     public JobRecord Status(string jobId) => store.GetRequired(jobId);
 
+    public JobAttachSnapshot Attach(string jobId)
+    {
+        var job = store.GetRequired(jobId);
+        if (!job.Terminal)
+            throw new ArgumentException($"Job {jobId} is not a terminal.", nameof(jobId));
+        return new JobAttachSnapshot(
+            job,
+            new FileInfo(job.StdoutPath).Length,
+            new FileInfo(job.StderrPath).Length);
+    }
+
+    public async Task<int> WriteAsync(string jobId, string text, CancellationToken cancellationToken = default)
+    {
+        var job = store.GetRequired(jobId);
+        if (!job.Terminal)
+            throw new ArgumentException($"Job {jobId} is not a terminal.", nameof(jobId));
+        if (JobStates.IsTerminal(job.State))
+            throw new ArgumentException($"Terminal {jobId} is no longer active.", nameof(jobId));
+        if (!_active.TryGetValue(jobId, out var active) || active.TerminalReady is null)
+            throw new ArgumentException($"Terminal {jobId} is not attached to this host process.", nameof(jobId));
+
+        var session = await active.TerminalReady.Task.WaitAsync(cancellationToken);
+        return await session.WriteAsync(text, cancellationToken);
+    }
+
+    public JobRecord Resize(string jobId, int columns, int rows)
+    {
+        if (columns is < 1 or > short.MaxValue)
+            throw new ArgumentException($"columns must be between 1 and {short.MaxValue}.", nameof(columns));
+        if (rows is < 1 or > short.MaxValue)
+            throw new ArgumentException($"rows must be between 1 and {short.MaxValue}.", nameof(rows));
+
+        var job = store.GetRequired(jobId);
+        if (!job.Terminal)
+            throw new ArgumentException($"Job {jobId} is not a terminal.", nameof(jobId));
+        if (JobStates.IsTerminal(job.State))
+            throw new ArgumentException($"Terminal {jobId} is no longer active.", nameof(jobId));
+        if (!_active.TryGetValue(jobId, out var active) || active.TerminalReady is null)
+            throw new ArgumentException($"Terminal {jobId} is not attached to this host process.", nameof(jobId));
+
+        var session = active.TerminalReady.Task.GetAwaiter().GetResult();
+        session.Resize(columns, rows);
+        return store.UpdateTerminalSize(jobId, columns, rows);
+    }
     public async Task<JobWaitResult> WaitAsync(string jobId, int waitMs, CancellationToken cancellationToken = default)
     {
         if (waitMs < 0 || waitMs > 86_400_000)
@@ -150,12 +202,14 @@ decoded:
         var eof = JobStates.IsTerminal(current.State) && nextCursor >= new FileInfo(path).Length;
         return new JobReadResult(jobId, stream, cursor, text, nextCursor, eof, current.State);
     }
+
     public async Task<ProcessRunResult?> TryGetInlineProcessResultAsync(
         JobRecord job,
         long maxOutputBytes,
         CancellationToken cancellationToken = default)
     {
-        if (job.State is not (JobStates.Completed or JobStates.TimedOut) ||
+        if (job.Terminal ||
+            job.State is not (JobStates.Completed or JobStates.TimedOut) ||
             job.Pid is null || job.ExitCode is null || job.EffectiveIdentity is null || job.CompletedAt is null)
             return null;
 
@@ -178,6 +232,7 @@ decoded:
             job.EffectiveIdentity,
             durationMs);
     }
+
     private async Task RunJobAsync(JobRecord record, RunRequest request, ActiveJob active)
     {
         try
@@ -218,12 +273,60 @@ decoded:
         }
     }
 
+    private async Task RunTerminalJobAsync(
+        JobRecord record,
+        RunRequest request,
+        ActiveJob active,
+        int columns,
+        int rows)
+    {
+        try
+        {
+            await using var stdoutFile = new FileStream(record.StdoutPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite, 4096, FileOptions.Asynchronous);
+            await using var stdout = new StreamWriter(stdoutFile, new UTF8Encoding(false)) { AutoFlush = true };
+            var hooks = new ProcessRunHooks
+            {
+                CaptureOutput = false,
+                Started = (pid, identity) => store.MarkRunning(record.JobId, pid, identity),
+                Output = async (_, text) =>
+                {
+                    await stdout.WriteAsync(text);
+                    await stdout.FlushAsync();
+                }
+            };
+
+            await using var session = ConPtySession.Start(request, columns, rows, hooks, active.Cancellation.Token);
+            active.TerminalReady!.TrySetResult(session);
+            var result = await session.Completion;
+            var finalState = result.TimedOut ? JobStates.TimedOut : JobStates.Completed;
+            Complete(active, store.Finish(record.JobId, finalState, result));
+        }
+        catch (OperationCanceledException) when (active.Cancellation.IsCancellationRequested)
+        {
+            active.TerminalReady?.TrySetCanceled(active.Cancellation.Token);
+            Complete(active, store.Finish(record.JobId, JobStates.Cancelled, failureCode: "cancelled", failureMessage: "Terminal cancelled."));
+        }
+        catch (Exception ex)
+        {
+            active.TerminalReady?.TrySetException(ex);
+            Complete(active, store.Finish(record.JobId, JobStates.Failed, failureCode: "terminal_failed", failureMessage: ex.Message));
+        }
+        finally
+        {
+            _active.TryRemove(record.JobId, out _);
+            active.Cancellation.Dispose();
+        }
+    }
+
     private static void Complete(ActiveJob active, JobRecord record) =>
         active.Completion.TrySetResult(record);
 
-    private sealed class ActiveJob
+    private sealed class ActiveJob(bool terminal)
     {
         public CancellationTokenSource Cancellation { get; } = new();
         public TaskCompletionSource<JobRecord> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<ConPtySession>? TerminalReady { get; } = terminal
+            ? new(TaskCreationOptions.RunContinuationsAsynchronously)
+            : null;
     }
 }

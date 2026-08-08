@@ -11,6 +11,25 @@ public sealed record RunArgs(
     [property: JsonPropertyName("working_directory"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? WorkingDirectory = null,
     [property: JsonPropertyName("timeout_ms")] int TimeoutMs = 30000);
 
+public sealed record JobStartArgs(
+    [property: JsonPropertyName("file_name")] string FileName,
+    [property: JsonPropertyName("context")] string Context = "system",
+    [property: JsonPropertyName("arguments")] string[]? Arguments = null,
+    [property: JsonPropertyName("working_directory"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? WorkingDirectory = null,
+    [property: JsonPropertyName("timeout_ms")] int TimeoutMs = 30000,
+    [property: JsonPropertyName("terminal")] bool Terminal = false,
+    [property: JsonPropertyName("columns")] int Columns = 120,
+    [property: JsonPropertyName("rows")] int Rows = 30);
+
+public sealed record JobWriteArgs(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("text")] string Text);
+
+public sealed record JobResizeArgs(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("columns")] int Columns,
+    [property: JsonPropertyName("rows")] int Rows);
+
 public sealed record JobIdArgs(
     [property: JsonPropertyName("job_id")] string JobId);
 
@@ -132,6 +151,9 @@ public sealed record JobStatusResult(
     [property: JsonPropertyName("incarnation")] long Incarnation,
     [property: JsonPropertyName("state")] string State,
     [property: JsonPropertyName("context")] string Context,
+    [property: JsonPropertyName("terminal")] bool Terminal,
+    [property: JsonPropertyName("columns"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Columns,
+    [property: JsonPropertyName("rows"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Rows,
     [property: JsonPropertyName("pid"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Pid,
     [property: JsonPropertyName("effective_identity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? EffectiveIdentity,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
@@ -158,6 +180,22 @@ public sealed record JobWaitPublicResult(
 public sealed record JobCancelResult(
     [property: JsonPropertyName("job_id")] string JobId,
     [property: JsonPropertyName("state")] string State);
+
+public sealed record JobWriteResult(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("bytes_written")] int BytesWritten,
+    [property: JsonPropertyName("state")] string State);
+
+public sealed record JobResizeResult(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("columns")] int Columns,
+    [property: JsonPropertyName("rows")] int Rows,
+    [property: JsonPropertyName("state")] string State);
+
+public sealed record JobAttachResult(
+    [property: JsonPropertyName("job")] JobStatusResult Job,
+    [property: JsonPropertyName("stdout_cursor")] long StdoutCursor,
+    [property: JsonPropertyName("stderr_cursor")] long StderrCursor);
 
 public sealed record EyeError(
     [property: JsonPropertyName("code")] string Code,

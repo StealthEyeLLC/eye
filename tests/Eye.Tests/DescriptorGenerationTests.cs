@@ -15,15 +15,19 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(
             [
                 "artifact.delete", "artifact.diff", "artifact.export", "artifact.info", "artifact.preview", "artifact.read_range",
-                "capabilities", "job.cancel", "job.read", "job.result", "job.start", "job.status", "job.wait", "run", "system.status"
+                "capabilities", "job.attach", "job.cancel", "job.read", "job.resize", "job.result", "job.start", "job.status",
+                "job.wait", "job.write", "run", "system.status"
             ],
             contract.PublishedOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Empty(contract.AllowedEngineOperationIds);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("system.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("job.status").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("job.attach").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("artifact.info").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("run").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("job.start").Name);
+        Assert.Equal("eye_run", contract.GetToolForOperation("job.write").Name);
+        Assert.Equal("eye_run", contract.GetToolForOperation("job.resize").Name);
         Assert.Equal("eye_change", contract.GetToolForOperation("artifact.export").Name);
     }
 
@@ -35,14 +39,18 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(["eye_inspect", "eye_run", "eye_change"], descriptors.Select(x => x.Name).ToArray());
 
         var inspect = descriptors.Single(x => x.Name == "eye_inspect");
-        Assert.Equal(10, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(20, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(11, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(22, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var run = descriptors.Single(x => x.Name == "eye_run");
-        Assert.Equal(3, run.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(6, run.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(5, run.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(10, run.OutputSchema.GetProperty("oneOf").GetArrayLength());
         Assert.Contains(
             "job.start",
+            run.InputSchema.GetProperty("oneOf").EnumerateArray()
+                .Select(x => x.GetProperty("properties").GetProperty("op").GetProperty("const").GetString()));
+        Assert.Contains(
+            "job.write",
             run.InputSchema.GetProperty("oneOf").EnumerateArray()
                 .Select(x => x.GetProperty("properties").GetProperty("op").GetProperty("const").GetString()));
 
@@ -59,11 +67,14 @@ public sealed class DescriptorGenerationTests
         var capabilities = Operation(contract, "capabilities");
         var run = Operation(contract, "run");
         var jobStart = Operation(contract, "job.start");
+        var jobWrite = Operation(contract, "job.write");
+        var jobResize = Operation(contract, "job.resize");
         var jobStatus = Operation(contract, "job.status");
         var jobRead = Operation(contract, "job.read");
         var jobWait = Operation(contract, "job.wait");
         var jobCancel = Operation(contract, "job.cancel");
         var jobResult = Operation(contract, "job.result");
+        var jobAttach = Operation(contract, "job.attach");
         var artifactInfo = Operation(contract, "artifact.info");
         var artifactPreview = Operation(contract, "artifact.preview");
         var artifactRead = Operation(contract, "artifact.read_range");
@@ -78,8 +89,12 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(2, run.ResultSchema.GetProperty("oneOf").GetArrayLength());
         AssertPropertySet<RunOperationResult>(run.ResultSchema.GetProperty("oneOf")[0]);
         AssertPropertySet<JobReferenceResult>(run.ResultSchema.GetProperty("oneOf")[1]);
-        AssertPropertySet<RunArgs>(jobStart.ArgsSchema);
+        AssertPropertySet<JobStartArgs>(jobStart.ArgsSchema);
         AssertPropertySet<JobReferenceResult>(jobStart.ResultSchema);
+        AssertPropertySet<JobWriteArgs>(jobWrite.ArgsSchema);
+        AssertPropertySet<JobWriteResult>(jobWrite.ResultSchema);
+        AssertPropertySet<JobResizeArgs>(jobResize.ArgsSchema);
+        AssertPropertySet<JobResizeResult>(jobResize.ResultSchema);
         AssertPropertySet<JobIdArgs>(jobStatus.ArgsSchema);
         AssertPropertySet<JobStatusResult>(jobStatus.ResultSchema);
         AssertPropertySet<JobReadArgs>(jobRead.ArgsSchema);
@@ -91,6 +106,9 @@ public sealed class DescriptorGenerationTests
         AssertPropertySet<JobCancelResult>(jobCancel.ResultSchema);
         AssertPropertySet<JobIdArgs>(jobResult.ArgsSchema);
         AssertPropertySet<JobStatusResult>(jobResult.ResultSchema);
+        AssertPropertySet<JobIdArgs>(jobAttach.ArgsSchema);
+        AssertPropertySet<JobAttachResult>(jobAttach.ResultSchema);
+        AssertPropertySet<JobStatusResult>(jobAttach.ResultSchema.GetProperty("properties").GetProperty("job"));
         AssertPropertySet<ArtifactIdArgs>(artifactInfo.ArgsSchema);
         AssertPropertySet<ArtifactInfoResult>(artifactInfo.ResultSchema);
         AssertPropertySet<ArtifactPreviewArgs>(artifactPreview.ArgsSchema);
@@ -108,10 +126,15 @@ public sealed class DescriptorGenerationTests
             ["system", "user", "wsl"],
             run.ArgsSchema.GetProperty("properties").GetProperty("context").GetProperty("enum")
                 .EnumerateArray().Select(x => x.GetString()!).ToArray());
+        Assert.False(run.ArgsSchema.GetProperty("properties").TryGetProperty("terminal", out _));
+        Assert.True(jobStart.ArgsSchema.GetProperty("properties").TryGetProperty("terminal", out var terminal));
+        Assert.False(terminal.GetProperty("default").GetBoolean());
+        Assert.Equal(120, jobStart.ArgsSchema.GetProperty("properties").GetProperty("columns").GetProperty("default").GetInt32());
+        Assert.Equal(30, jobStart.ArgsSchema.GetProperty("properties").GetProperty("rows").GetProperty("default").GetInt32());
     }
 
     [Fact]
-    public void PublicContract_DoesNotExposeHostStorageInternalsOrUnimplementedTerminalOps()
+    public void PublicContract_DoesNotExposeHostStorageOrNativeHandleInternals()
     {
         var contract = EyeContractCatalog.Load();
         var serialized = JsonSerializer.Serialize(contract.Manifest);
@@ -120,9 +143,8 @@ public sealed class DescriptorGenerationTests
         Assert.DoesNotContain("stderr_path", serialized, StringComparison.Ordinal);
         Assert.DoesNotContain("arguments_json", serialized, StringComparison.Ordinal);
         Assert.DoesNotContain("content_path", serialized, StringComparison.Ordinal);
-        Assert.DoesNotContain("job.write", contract.PublishedOperationIds);
-        Assert.DoesNotContain("job.resize", contract.PublishedOperationIds);
-        Assert.DoesNotContain("job.attach", contract.PublishedOperationIds);
+        Assert.DoesNotContain("pseudo_console", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("native_handle", serialized, StringComparison.OrdinalIgnoreCase);
     }
 
     private static EyeOperationDescriptor Operation(EyeContractCatalog contract, string id) =>

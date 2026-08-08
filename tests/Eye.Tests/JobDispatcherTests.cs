@@ -139,6 +139,56 @@ public sealed class JobDispatcherTests : IDisposable
         Assert.Equal(JobStates.Cancelled, cancelled.GetProperty("result").GetProperty("state").GetString());
     }
 
+    [Fact]
+    public async Task Dispatcher_TerminalJob_AttachResizeWriteAndRead()
+    {
+        var started = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Run,
+            "job.start",
+            JsonSerializer.SerializeToElement(new JobStartArgs(
+                "powershell.exe",
+                "system",
+                ["-NoLogo", "-NoProfile", "-NoExit"],
+                TimeoutMs: 10000,
+                Terminal: true,
+                Columns: 80,
+                Rows: 25))));
+        Assert.True(started.GetProperty("ok").GetBoolean());
+        var jobId = started.GetProperty("result").GetProperty("job_id").GetString()!;
+
+        var attached = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Inspect,
+            "job.attach",
+            JsonSerializer.SerializeToElement(new JobIdArgs(jobId))));
+        Assert.True(attached.GetProperty("result").GetProperty("job").GetProperty("terminal").GetBoolean());
+        Assert.Equal(80, attached.GetProperty("result").GetProperty("job").GetProperty("columns").GetInt32());
+
+        var resized = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Run,
+            "job.resize",
+            JsonSerializer.SerializeToElement(new JobResizeArgs(jobId, 100, 40))));
+        Assert.Equal(100, resized.GetProperty("result").GetProperty("columns").GetInt32());
+        Assert.Equal(40, resized.GetProperty("result").GetProperty("rows").GetInt32());
+
+        var wrote = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Run,
+            "job.write",
+            JsonSerializer.SerializeToElement(new JobWriteArgs(jobId, "Write-Output eye-dispatch-terminal\rexit\r"))));
+        Assert.True(wrote.GetProperty("result").GetProperty("bytes_written").GetInt32() > 0);
+
+        var waited = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Inspect,
+            "job.wait",
+            JsonSerializer.SerializeToElement(new JobWaitArgs(jobId, 10000))));
+        Assert.Equal(JobStates.Completed, waited.GetProperty("result").GetProperty("job").GetProperty("state").GetString());
+
+        var read = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Inspect,
+            "job.read",
+            JsonSerializer.SerializeToElement(new JobReadArgs(jobId))));
+        Assert.Contains("eye-dispatch-terminal", read.GetProperty("result").GetProperty("text").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
     private static JsonElement Element(object value) => JsonSerializer.SerializeToElement(value);
 
     public void Dispose()

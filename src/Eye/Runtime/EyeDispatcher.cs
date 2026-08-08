@@ -54,8 +54,8 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                     return Success(op, new CapabilitiesResult(
                         "eye-mcp-v2",
                         new CapabilityFacades(
-                            ["system.status", "capabilities", "job.status", "job.read", "job.wait", "job.result", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff"],
-                            ["run", "job.start", "job.cancel"],
+                            ["system.status", "capabilities", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff"],
+                            ["run", "job.start", "job.write", "job.resize", "job.cancel"],
                             ["artifact.export", "artifact.delete"],
                             [],
                             [],
@@ -93,10 +93,29 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
 
                 case "job.start":
                 {
-                    var request = DeserializeRequired<RunRequest>(op, args);
-                    ValidateRunRequest(request);
-                    var job = jobManager.Start(request);
+                    var request = DeserializeRequired<JobStartArgs>(op, args);
+                    ValidateJobStartRequest(request);
+                    var runRequest = ToRunRequest(request);
+                    ValidateRunRequest(runRequest);
+                    var job = jobManager.Start(runRequest, request.Terminal, request.Columns, request.Rows);
                     return Success(op, new JobReferenceResult(job.JobId, job.Incarnation, job.State));
+                }
+
+                case "job.write":
+                {
+                    var request = DeserializeRequired<JobWriteArgs>(op, args);
+                    if (request.Text is null || request.Text.Length > 262_144)
+                        throw new ArgumentException("text must contain at most 262144 characters.");
+                    var written = await jobManager.WriteAsync(request.JobId, request.Text, cancellationToken);
+                    var current = jobManager.Status(request.JobId);
+                    return Success(op, new JobWriteResult(current.JobId, written, current.State));
+                }
+
+                case "job.resize":
+                {
+                    var request = DeserializeRequired<JobResizeArgs>(op, args);
+                    var resized = jobManager.Resize(request.JobId, request.Columns, request.Rows);
+                    return Success(op, new JobResizeResult(resized.JobId, resized.Columns!.Value, resized.Rows!.Value, resized.State));
                 }
 
                 case "job.status":
@@ -142,6 +161,13 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                 {
                     var request = DeserializeRequired<JobIdArgs>(op, args);
                     return Success(op, ToPublic(jobManager.Result(request.JobId)));
+                }
+
+                case "job.attach":
+                {
+                    var request = DeserializeRequired<JobIdArgs>(op, args);
+                    var attached = jobManager.Attach(request.JobId);
+                    return Success(op, new JobAttachResult(ToPublic(attached.Job), attached.StdoutCursor, attached.StderrCursor));
                 }
 
                 case "artifact.info":
@@ -238,6 +264,22 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         }
     }
 
+
+    private static void ValidateJobStartRequest(JobStartArgs request)
+    {
+        if (request.Columns is < 1 or > short.MaxValue)
+            throw new ArgumentException($"columns must be between 1 and {short.MaxValue}.");
+        if (request.Rows is < 1 or > short.MaxValue)
+            throw new ArgumentException($"rows must be between 1 and {short.MaxValue}.");
+    }
+    private static RunRequest ToRunRequest(JobStartArgs request) => new()
+    {
+        Context = request.Context,
+        FileName = request.FileName,
+        Arguments = request.Arguments ?? [],
+        WorkingDirectory = request.WorkingDirectory,
+        TimeoutMs = request.TimeoutMs
+    };
     private static void ValidateRunRequest(RunRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.FileName))
@@ -260,6 +302,9 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         job.Incarnation,
         job.State,
         job.Context,
+        job.Terminal,
+        job.Columns,
+        job.Rows,
         job.Pid,
         job.EffectiveIdentity,
         job.CreatedAt,
@@ -293,9 +338,9 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
 
     private static EyeEffectClass? GetEffectClass(string op) => op switch
     {
-        "system.status" or "capabilities" or "job.status" or "job.read" or "job.wait" or "job.result" or
+        "system.status" or "capabilities" or "job.status" or "job.read" or "job.wait" or "job.result" or "job.attach" or
         "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" => EyeEffectClass.Inspect,
-        "run" or "job.start" or "job.cancel" => EyeEffectClass.Run,
+        "run" or "job.start" or "job.write" or "job.resize" or "job.cancel" => EyeEffectClass.Run,
         "artifact.export" or "artifact.delete" => EyeEffectClass.Change,
         _ => null
     };

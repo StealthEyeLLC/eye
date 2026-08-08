@@ -75,6 +75,9 @@
               "incarnation": { "type": "integer", "minimum": 1 },
               "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] },
               "context": { "type": "string", "enum": ["system", "user", "wsl"] },
+              "terminal": { "type": "boolean" },
+              "columns": { "type": "integer", "minimum": 1, "maximum": 32767 },
+              "rows": { "type": "integer", "minimum": 1, "maximum": 32767 },
               "pid": { "type": "integer", "minimum": 0 },
               "effective_identity": { "type": "string" },
               "created_at": { "type": "string", "format": "date-time" },
@@ -85,7 +88,7 @@
               "failure_code": { "type": "string" },
               "failure_message": { "type": "string" }
             },
-            "required": ["job_id", "incarnation", "state", "context", "created_at", "timed_out"],
+            "required": ["job_id", "incarnation", "state", "context", "terminal", "created_at", "timed_out"],
             "additionalProperties": false
           }
         },
@@ -140,6 +143,9 @@
               "incarnation": { "type": "integer", "minimum": 1 },
               "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] },
               "context": { "type": "string", "enum": ["system", "user", "wsl"] },
+              "terminal": { "type": "boolean" },
+              "columns": { "type": "integer", "minimum": 1, "maximum": 32767 },
+              "rows": { "type": "integer", "minimum": 1, "maximum": 32767 },
               "pid": { "type": "integer", "minimum": 0 },
               "effective_identity": { "type": "string" },
               "created_at": { "type": "string", "format": "date-time" },
@@ -150,7 +156,7 @@
               "failure_code": { "type": "string" },
               "failure_message": { "type": "string" }
             },
-            "required": ["job_id", "incarnation", "state", "context", "created_at", "timed_out"],
+            "required": ["job_id", "incarnation", "state", "context", "terminal", "created_at", "timed_out"],
             "additionalProperties": false
           },
               "wait_timed_out": { "type": "boolean" }
@@ -175,6 +181,9 @@
               "incarnation": { "type": "integer", "minimum": 1 },
               "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] },
               "context": { "type": "string", "enum": ["system", "user", "wsl"] },
+              "terminal": { "type": "boolean" },
+              "columns": { "type": "integer", "minimum": 1, "maximum": 32767 },
+              "rows": { "type": "integer", "minimum": 1, "maximum": 32767 },
               "pid": { "type": "integer", "minimum": 0 },
               "effective_identity": { "type": "string" },
               "created_at": { "type": "string", "format": "date-time" },
@@ -185,12 +194,53 @@
               "failure_code": { "type": "string" },
               "failure_message": { "type": "string" }
             },
-            "required": ["job_id", "incarnation", "state", "context", "created_at", "timed_out"],
+            "required": ["job_id", "incarnation", "state", "context", "terminal", "created_at", "timed_out"],
             "additionalProperties": false
           }
         }
       ,
         {
+          "id": "job.attach",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": { "job_id": { "type": "string", "minLength": 1 } },
+            "required": ["job_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "job": {
+                "type": "object",
+                "properties": {
+                  "job_id": { "type": "string", "minLength": 1 },
+                  "incarnation": { "type": "integer", "minimum": 1 },
+                  "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] },
+                  "context": { "type": "string", "enum": ["system", "user", "wsl"] },
+                  "terminal": { "type": "boolean" },
+                  "columns": { "type": "integer", "minimum": 1, "maximum": 32767 },
+                  "rows": { "type": "integer", "minimum": 1, "maximum": 32767 },
+                  "pid": { "type": "integer", "minimum": 0 },
+                  "effective_identity": { "type": "string" },
+                  "created_at": { "type": "string", "format": "date-time" },
+                  "started_at": { "type": "string", "format": "date-time" },
+                  "completed_at": { "type": "string", "format": "date-time" },
+                  "exit_code": { "type": "integer" },
+                  "timed_out": { "type": "boolean" },
+                  "failure_code": { "type": "string" },
+                  "failure_message": { "type": "string" }
+                },
+                "required": ["job_id", "incarnation", "state", "context", "terminal", "created_at", "timed_out"],
+                "additionalProperties": false
+              },
+              "stdout_cursor": { "type": "integer", "minimum": 0 },
+              "stderr_cursor": { "type": "integer", "minimum": 0 }
+            },
+            "required": ["job", "stdout_cursor", "stderr_cursor"],
+            "additionalProperties": false
+          }
+        },        {
           "id": "artifact.info",
           "args_required": true,
           "args_schema": {
@@ -360,7 +410,10 @@
               "file_name": { "type": "string", "minLength": 1 },
               "arguments": { "type": "array", "items": { "type": "string" }, "default": [] },
               "working_directory": { "type": "string" },
-              "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 86400000, "default": 30000 }
+              "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 86400000, "default": 30000 },
+              "terminal": { "type": "boolean", "default": false },
+              "columns": { "type": "integer", "minimum": 1, "maximum": 32767, "default": 120 },
+              "rows": { "type": "integer", "minimum": 1, "maximum": 32767, "default": 30 }
             },
             "required": ["file_name"],
             "additionalProperties": false
@@ -377,6 +430,53 @@
           }
         },
         {
+          "id": "job.write",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string", "minLength": 1 },
+              "text": { "type": "string", "maxLength": 262144 }
+            },
+            "required": ["job_id", "text"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string" },
+              "bytes_written": { "type": "integer", "minimum": 0 },
+              "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] }
+            },
+            "required": ["job_id", "bytes_written", "state"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "job.resize",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string", "minLength": 1 },
+              "columns": { "type": "integer", "minimum": 1, "maximum": 32767 },
+              "rows": { "type": "integer", "minimum": 1, "maximum": 32767 }
+            },
+            "required": ["job_id", "columns", "rows"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string" },
+              "columns": { "type": "integer", "minimum": 1, "maximum": 32767 },
+              "rows": { "type": "integer", "minimum": 1, "maximum": 32767 },
+              "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] }
+            },
+            "required": ["job_id", "columns", "rows", "state"],
+            "additionalProperties": false
+          }
+        },        {
           "id": "job.cancel",
           "args_required": true,
           "args_schema": {

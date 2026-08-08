@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
 namespace StealthEye.Runtime;
@@ -51,8 +51,20 @@ public sealed class JobStore
         return new JobPaths(directory, stdout, stderr);
     }
 
-    public JobRecord Create(string jobId, RunRequest request, JobPaths paths)
+    public JobRecord Create(
+        string jobId,
+        RunRequest request,
+        JobPaths paths,
+        bool terminal = false,
+        int? columns = null,
+        int? rows = null)
     {
+        if (!terminal)
+        {
+            columns = null;
+            rows = null;
+        }
+
         var now = DateTimeOffset.UtcNow;
         lock (_gate)
         {
@@ -61,9 +73,9 @@ public sealed class JobStore
             command.CommandText = """
                 INSERT INTO jobs (
                     job_id, incarnation, state, context, file_name, arguments_json, working_directory,
-                    timeout_ms, created_utc, timed_out, stdout_path, stderr_path)
+                    timeout_ms, terminal, columns, rows, created_utc, timed_out, stdout_path, stderr_path)
                 VALUES ($job_id, 1, $state, $context, $file_name, $arguments, $working_directory,
-                    $timeout_ms, $created_utc, 0, $stdout_path, $stderr_path);
+                    $timeout_ms, $terminal, $columns, $rows, $created_utc, 0, $stdout_path, $stderr_path);
                 """;
             command.Parameters.AddWithValue("$job_id", jobId);
             command.Parameters.AddWithValue("$state", JobStates.Starting);
@@ -72,6 +84,9 @@ public sealed class JobStore
             command.Parameters.AddWithValue("$arguments", JsonSerializer.Serialize(request.Arguments));
             command.Parameters.AddWithValue("$working_directory", (object?)request.WorkingDirectory ?? DBNull.Value);
             command.Parameters.AddWithValue("$timeout_ms", request.TimeoutMs);
+            command.Parameters.AddWithValue("$terminal", terminal ? 1 : 0);
+            command.Parameters.AddWithValue("$columns", (object?)columns ?? DBNull.Value);
+            command.Parameters.AddWithValue("$rows", (object?)rows ?? DBNull.Value);
             command.Parameters.AddWithValue("$created_utc", now.ToString("O"));
             command.Parameters.AddWithValue("$stdout_path", paths.Stdout);
             command.Parameters.AddWithValue("$stderr_path", paths.Stderr);
@@ -99,6 +114,26 @@ public sealed class JobStore
             command.Parameters.AddWithValue("$job_id", jobId);
             RequireUpdated(command.ExecuteNonQuery(), jobId);
         }
+    }
+
+    public JobRecord UpdateTerminalSize(string jobId, int columns, int rows)
+    {
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                UPDATE jobs
+                SET columns = $columns, rows = $rows
+                WHERE job_id = $job_id AND terminal = 1;
+                """;
+            command.Parameters.AddWithValue("$columns", columns);
+            command.Parameters.AddWithValue("$rows", rows);
+            command.Parameters.AddWithValue("$job_id", jobId);
+            RequireUpdated(command.ExecuteNonQuery(), jobId);
+        }
+
+        return GetRequired(jobId);
     }
 
     public JobRecord Finish(string jobId, string state, ProcessRunResult? result = null, string? failureCode = null, string? failureMessage = null)
@@ -168,6 +203,9 @@ public sealed class JobStore
                         arguments_json TEXT NOT NULL,
                         working_directory TEXT NULL,
                         timeout_ms INTEGER NOT NULL,
+                        terminal INTEGER NOT NULL DEFAULT 0,
+                        columns INTEGER NULL,
+                        rows INTEGER NULL,
                         pid INTEGER NULL,
                         effective_identity TEXT NULL,
                         created_utc TEXT NOT NULL,
@@ -183,6 +221,10 @@ public sealed class JobStore
                     """;
                 command.ExecuteNonQuery();
             }
+
+            EnsureColumn(connection, "terminal", "terminal INTEGER NOT NULL DEFAULT 0");
+            EnsureColumn(connection, "columns", "columns INTEGER NULL");
+            EnsureColumn(connection, "rows", "rows INTEGER NULL");
 
             using var recover = connection.CreateCommand();
             recover.CommandText = """
@@ -219,6 +261,9 @@ public sealed class JobStore
             JsonSerializer.Deserialize<string[]>(reader.GetString(reader.GetOrdinal("arguments_json"))) ?? [],
             GetNullableString(reader, "working_directory"),
             reader.GetInt32(reader.GetOrdinal("timeout_ms")),
+            reader.GetInt32(reader.GetOrdinal("terminal")) != 0,
+            GetNullableInt(reader, "columns"),
+            GetNullableInt(reader, "rows"),
             GetNullableInt(reader, "pid"),
             GetNullableString(reader, "effective_identity"),
             DateTimeOffset.Parse(reader.GetString(reader.GetOrdinal("created_utc"))),
@@ -268,4 +313,3 @@ public sealed class JobStore
         }
     }
 }
-
