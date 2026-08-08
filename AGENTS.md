@@ -44,12 +44,23 @@ Before architectural work, read in this order:
 3. `docs/EYE_DECISIONS.md`
 4. `docs/MCP_CONTRACT.md`
 5. `contracts/eye-mcp-v2.json`
-6. `docs/RESEARCH.md`
-7. `docs/OSS_LANDSCAPE.md`
+6. `docs/EYE_OPERATOR_SKILL.md`
+7. `docs/RESEARCH.md`
+8. `docs/OSS_LANDSCAPE.md`
 
 A successful experiment, attractive dependency, or useful research idea is evidence, not automatically a canonical design change.
 
 When canon changes, update the source documents rather than leaving contradictory instructions in old notes.
+
+## Eye Operator skill rule
+
+`docs/EYE_OPERATOR_SKILL.md` is the canonical source for the ChatGPT-side **Eye Operator** operating doctrine.
+
+The skill is a first-class project deliverable, but it is not part of `eye.exe`, adds no authority of its own, and must never become a runtime dependency for Eye.
+
+The MCP contract and server instructions remain the correctness/routing boundary. The skill carries deeper operating procedure: modality choice, durable jobs, waits, artifacts, stable handles/cursors, Eye Live usage, Blackboard/Relay behavior, machine conventions, and recovery guidance.
+
+Do not let a generated/packaged skill redefine the public contract independently. When contract or canonical operating semantics change, update the canonical source first and keep the packaged skill aligned.
 
 ## Architecture stop rule
 
