@@ -10,38 +10,123 @@
       "name": "eye_inspect",
       "effect_class": "inspect",
       "description": "Read, search, observe, query, wait, subscribe, and diagnose StealthEye machine state.",
-      "machine_effects": "read-only-or-observational"
+      "machine_effects": "read-only-or-observational",
+      "operations": [
+        {
+          "id": "system.status",
+          "args_required": false,
+          "args_schema": { "type": "object", "additionalProperties": false },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "product": { "const": "StealthEye" },
+              "executable": { "const": "eye" },
+              "version": { "type": "string" },
+              "contract": { "const": "eye-mcp-v2" },
+              "process_id": { "type": "integer" },
+              "machine": { "type": "string" },
+              "identity": { "type": "string" },
+              "started_at": { "type": "string", "format": "date-time" }
+            },
+            "required": ["product", "executable", "version", "contract", "process_id", "machine", "identity", "started_at"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "capabilities",
+          "args_required": false,
+          "args_schema": { "type": "object", "additionalProperties": false },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "contract": { "const": "eye-mcp-v2" },
+              "facades": {
+                "type": "object",
+                "properties": {
+                  "eye_inspect": { "type": "array", "items": { "type": "string" } },
+                  "eye_run": { "type": "array", "items": { "type": "string" } },
+                  "eye_change": { "type": "array", "items": { "type": "string" } },
+                  "eye_interact": { "type": "array", "items": { "type": "string" } },
+                  "eye_external": { "type": "array", "items": { "type": "string" } },
+                  "eye_live": { "type": "array", "items": { "type": "string" } }
+                },
+                "required": ["eye_inspect", "eye_run", "eye_change", "eye_interact", "eye_external", "eye_live"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["contract", "facades"],
+            "additionalProperties": false
+          }
+        }
+      ]
     },
     {
       "name": "eye_run",
       "effect_class": "run",
       "description": "Run SYSTEM, active-user, WSL, process, PowerShell, terminal, and ConPTY execution operations.",
-      "machine_effects": "local-execution"
+      "machine_effects": "local-execution",
+      "operations": [
+        {
+          "id": "run",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "context": { "type": "string", "enum": ["system", "user"], "default": "system" },
+              "file_name": { "type": "string", "minLength": 1 },
+              "arguments": { "type": "array", "items": { "type": "string" }, "default": [] },
+              "working_directory": { "type": "string" },
+              "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 86400000, "default": 30000 }
+            },
+            "required": ["file_name"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "pid": { "type": "integer" },
+              "exit_code": { "type": "integer" },
+              "timed_out": { "type": "boolean" },
+              "stdout": { "type": "string" },
+              "stderr": { "type": "string" },
+              "context": { "type": "string" },
+              "effective_identity": { "type": "string" },
+              "duration_ms": { "type": "integer", "minimum": 0 }
+            },
+            "required": ["pid", "exit_code", "timed_out", "stdout", "stderr", "context", "effective_identity", "duration_ms"],
+            "additionalProperties": false
+          }
+        }
+      ]
     },
     {
       "name": "eye_change",
       "effect_class": "change",
       "description": "Apply precisely typed local file, machine, service, package, storage, snapshot, and configuration changes.",
-      "machine_effects": "local-write"
+      "machine_effects": "local-write",
+      "operations": []
     },
     {
       "name": "eye_interact",
       "effect_class": "interact",
       "description": "Interact with Windows applications, UI Automation, input, clipboard, and Chrome/CDP user interfaces.",
-      "machine_effects": "interactive"
+      "machine_effects": "interactive",
+      "operations": []
     },
     {
       "name": "eye_external",
       "effect_class": "external",
       "description": "Perform HTTP, upload, send, post, provider administration, remote transfer, and other effects leaving the laptop.",
-      "machine_effects": "open-world"
+      "machine_effects": "open-world",
+      "operations": []
     },
     {
       "name": "eye_live",
       "effect_class": "ui",
       "description": "Open the Eye Live mission, job, trigger, artifact, and relay component. This tool performs no machine operation itself.",
       "machine_effects": "none",
-      "ui_only": true
+      "ui_only": true,
+      "operations": []
     }
   ],
   "host_engine_protocol": {
@@ -109,6 +194,17 @@
     "output_schema_required": true,
     "raw_exception_details_model_visible": false,
     "large_results": "artifact-plus-useful-excerpt"
+  },
+  "error_schema": {
+    "type": "object",
+    "properties": {
+      "code": { "type": "string" },
+      "message": { "type": "string" },
+      "retryable": { "type": "boolean" },
+      "expected": { "type": "object" }
+    },
+    "required": ["code", "message", "retryable"],
+    "additionalProperties": false
   },
   "stable_identifiers": {
     "job_id": true,

@@ -5,11 +5,18 @@ using System.Text.Json.Serialization;
 
 namespace StealthEye.Contract;
 
+public sealed record EyeOperationDescriptor(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("args_required")] bool ArgsRequired,
+    [property: JsonPropertyName("args_schema")] JsonElement ArgsSchema,
+    [property: JsonPropertyName("result_schema")] JsonElement ResultSchema);
+
 public sealed record EyeToolDescriptor(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("effect_class")] string EffectClass,
     [property: JsonPropertyName("description")] string Description,
     [property: JsonPropertyName("machine_effects")] string MachineEffects,
+    [property: JsonPropertyName("operations")] EyeOperationDescriptor[] Operations,
     [property: JsonPropertyName("ui_only")] bool UiOnly = false);
 
 public sealed record ContractHashSemantics(
@@ -34,7 +41,8 @@ public sealed record EyeContractManifest(
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("publication_state")] string PublicationState,
     [property: JsonPropertyName("tools")] EyeToolDescriptor[] Tools,
-    [property: JsonPropertyName("host_engine_protocol")] HostEngineProtocolManifest HostEngineProtocol);
+    [property: JsonPropertyName("host_engine_protocol")] HostEngineProtocolManifest HostEngineProtocol,
+    [property: JsonPropertyName("error_schema")] JsonElement ErrorSchema);
 
 public sealed class EyeContractCatalog
 {
@@ -53,6 +61,10 @@ public sealed class EyeContractCatalog
     {
         Manifest = manifest;
         PublicContractHash = publicContractHash;
+        PublishedOperationIds = manifest.Tools
+            .SelectMany(x => x.Operations)
+            .Select(x => x.Id)
+            .ToHashSet(StringComparer.Ordinal);
         AllowedEngineOperationIds = manifest.HostEngineProtocol.EngineOperationIds.ToHashSet(StringComparer.Ordinal);
     }
 
@@ -61,7 +73,11 @@ public sealed class EyeContractCatalog
     public IReadOnlyList<EyeToolDescriptor> Descriptors => Manifest.Tools;
     public string EngineProtocolVersion => Manifest.HostEngineProtocol.Version;
     public string WorkerProtocolVersion => Manifest.HostEngineProtocol.WorkerProtocolVersion;
+    public IReadOnlySet<string> PublishedOperationIds { get; }
     public IReadOnlySet<string> AllowedEngineOperationIds { get; }
+
+    public EyeToolDescriptor GetToolForOperation(string operationId) =>
+        Manifest.Tools.Single(x => x.Operations.Any(op => string.Equals(op.Id, operationId, StringComparison.Ordinal)));
 
     public static EyeContractCatalog Load(Assembly? assembly = null)
     {
@@ -86,6 +102,7 @@ public sealed class EyeContractCatalog
             document.RootElement.WriteTo(writer);
         return Convert.ToHexStringLower(SHA256.HashData(canonical.ToArray()));
     }
+
     private static void Validate(EyeContractManifest manifest)
     {
         if (manifest.Contract != "stealtheye.eye.mcp" || manifest.Version != "2.0.0")
@@ -96,6 +113,17 @@ public sealed class EyeContractCatalog
             throw new InvalidOperationException("The canonical v2 six-tool surface does not match the frozen tool names.");
         if (manifest.Tools.Select(x => x.Name).Distinct(StringComparer.Ordinal).Count() != FrozenToolNames.Length)
             throw new InvalidOperationException("Duplicate public tool name in v2 contract.");
+
+        var operations = manifest.Tools.SelectMany(x => x.Operations).ToArray();
+        if (operations.Any(x => string.IsNullOrWhiteSpace(x.Id)))
+            throw new InvalidOperationException("Blank public operation ID in v2 contract.");
+        if (operations.Select(x => x.Id).Distinct(StringComparer.Ordinal).Count() != operations.Length)
+            throw new InvalidOperationException("Duplicate public operation ID in v2 contract.");
+        if (operations.Any(x => x.ArgsSchema.ValueKind != JsonValueKind.Object || x.ResultSchema.ValueKind != JsonValueKind.Object))
+            throw new InvalidOperationException("Every public operation requires object args/result schemas.");
+        if (manifest.ErrorSchema.ValueKind != JsonValueKind.Object)
+            throw new InvalidOperationException("The public error schema must be an object schema.");
+
         if (manifest.HostEngineProtocol.Version != "1.0.0")
             throw new InvalidOperationException("Unsupported host/engine protocol version.");
         if (manifest.HostEngineProtocol.Transport != "stream-json-rpc-over-named-pipes")
@@ -105,6 +133,8 @@ public sealed class EyeContractCatalog
         if (manifest.HostEngineProtocol.EngineOperationIds.Any(string.IsNullOrWhiteSpace) ||
             manifest.HostEngineProtocol.EngineOperationIds.Distinct(StringComparer.Ordinal).Count() != manifest.HostEngineProtocol.EngineOperationIds.Length)
             throw new InvalidOperationException("Invalid engine operation IDs in v2 contract.");
+        if (manifest.HostEngineProtocol.EngineOperationIds.Any(id => !operations.Any(op => string.Equals(op.Id, id, StringComparison.Ordinal))))
+            throw new InvalidOperationException("Engine operation IDs must refer to published v2 operations.");
 
         string[] requiredHandshakeFields =
         [
