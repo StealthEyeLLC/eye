@@ -1,49 +1,68 @@
 # EYE_PLATFORM.md
 
-**Status:** Canonical target platform roles plus previously validated machine evidence  
+**Status:** Canonical target platform roles plus current/verifiable machine boundaries  
 **Baseline date:** 2026-08-07  
 **Machine:** `STEALTHEYELLC`
 
-This document separates **target platform shape** from values that must be reverified on the live machine before deployment. Historical experiments remain evidence; they are not a promise that every package/configuration value is currently present.
+This document separates target platform shape from dynamic software state. Re-query Windows build, firmware, drivers, installed tools, WSL, storage, and service state whenever exact current values matter.
 
-## 1. Hardware baseline
+## 1. Machine baseline
 
-Dedicated HP OMEN 16-ap0xxx class laptop.
+Dedicated machine:
 
-Previously observed hardware included:
+```text
+Name: STEALTHEYELLC
+Manufacturer: HP
+Model family: OMEN Gaming Laptop 16-ap0xxx
+Windows: Windows 11 Home x64
+Interactive profile: C:\Users\StealthEye
+```
 
-- AMD Ryzen 9 8940HX, 16 cores / 32 threads;
-- 32 GB RAM;
-- NVIDIA RTX 5060 Laptop GPU, 8 GB nominal VRAM;
-- AMD integrated graphics;
-- internal Samsung ~1 TB NVMe;
-- 1920x1200 internal display;
-- MediaTek Wi-Fi 6E and built-in Realtek Ethernet.
+Physical baseline includes AMD Ryzen 9 8940HX (16C/32T), 32 GB RAM, NVIDIA RTX 5060 Laptop GPU (~8 GB VRAM), AMD Radeon 610M, Samsung ~1 TB NVMe, 1920x1200 internal display, MediaTek Wi-Fi 6E, and built-in Realtek GbE.
 
-See `HARDWARE.md` for the detailed observed snapshot. Re-query hardware/driver/firmware versions rather than assuming old point-in-time versions remain current.
+See `HARDWARE.md` for the detailed physical snapshot and current device-encryption posture.
 
-## 2. Target request path
+## 2. Standalone Eye path
+
+Remote ChatGPT access:
 
 ```text
 ChatGPT
   -> OpenAI Secure MCP Tunnel
   -> tunnel-client.exe on STEALTHEYELLC
   -> loopback MCP
-  -> eye.exe LocalSystem Windows service
+  -> stable Eye host (LocalSystem)
 ```
 
-HEC/VPS, Docker, Tailscale and SSH are not required parts of the steady-state Eye request path.
+The tunnel is transport only. Eye remains locally functional without a ChatGPT/tunnel connection.
 
-The tunnel remains external transport only.
+HEC/VPS, Docker, Kubernetes, Tailscale, Codex, ChatGPT Work, and a paid API controller are not required parts of steady-state Eye.
 
-## 3. Target storage roles
+## 3. Final runtime target
 
-Canonical layout:
+Exactly one permanent Windows SCM service:
 
 ```text
-C:  Windows / system / installed applications
-X:  physical ReFS Dev Drive / repos / build workspace
-E:  bulk StealthEye data / models / archives / large artifacts
+Windows SCM
+  -> eye.exe stable host (LocalSystem)
+       -> active supervised versioned capability-engine child process
+       -> previous engine retained for rollback
+       -> on-demand active-session workers
+       -> host-owned jobs / ConPTY / artifacts / triggers / state
+```
+
+The replaceable engine is a separate child process, not a DLL loaded into the stable host.
+
+No second Windows service, permanent user-session helper, permanent Node/browser daemon, or competing MCP server is part of the target.
+
+## 4. Target storage roles
+
+Canonical roles:
+
+```text
+C: Windows / applications / stable host state / encrypted secrets / engine metadata
+X: physical ReFS Dev Drive / repos / hot workspaces / job spool / temporary artifacts / block clones
+E: models / media / archives / large downloads / cold and durable bulk artifacts
 WSL Linux filesystem: Linux-native permission-sensitive work
 ```
 
@@ -53,43 +72,53 @@ Target development volume:
 X: approximately 300 GiB, physical internal-NVMe ReFS Dev Drive, trusted
 ```
 
-Do not use a VHD/VHDX as the normal development volume unless a concrete requirement changes the decision.
+Tiny authoritative host state must remain under a SYSTEM-owned path on `C:` and must not depend on `X:` existing.
 
-The external `E:` drive contains bulk data/archive roles and includes protected archive material. Treat destructive formatting/partition operations on `E:` as out of scope unless explicitly requested.
+The external `E:` device contains important bulk/archive material. Destructive format/partition operations involving `E:` are out of scope unless explicitly requested.
 
-## 4. Target repository location
-
-```text
-X:\Repos\eye
-```
-
-Repository:
+## 5. Repository and executable identity
 
 ```text
-StealthEyeLLC/eye
+Product: StealthEye
+Project: Eye
+Repository: StealthEyeLLC/eye
+Executable: eye.exe
+CLI: eye
+Windows service: StealthEye
+Local checkout target: X:\Repos\eye
 ```
 
-The local checkout is the normal build/workspace location once `X:` is provisioned.
+The previous `se` repository remains prototype/history material and must not be ported wholesale into Eye.
 
-Machine-side GitHub write authority is a separate decision from the ChatGPT GitHub control path. Match any future machine credential to the intended authority.
+## 6. Windows login/account boundary
 
-## 5. Windows interactive identity boundary
-
-The intended dedicated interactive account name is:
+Dedicated interactive account/profile:
 
 ```text
-StealthEye
+Account: StealthEye
+Profile: C:\Users\StealthEye
 ```
 
-Do not record its password or other recovery material in source.
+Login/account/autologon architecture is not a current Eye implementation target. Leave the active arrangement alone unless the owner explicitly requests a change.
 
-Login/account/autologon architecture is **not a current Eye implementation target**. Leave the active login/account arrangement alone unless the owner explicitly requests a change.
+Do not store the account password or recovery material in repository files.
 
-Eye should query the real active-session state and launch session-bound work through native service-owned APIs.
+Eye queries actual active-session/lock state and uses native service-owned launch APIs when interactive-user work is required.
 
-## 6. WSL target
+## 7. Current device-encryption posture
 
-Target baseline:
+The current OS-volume configuration has been explicitly verified as fully decrypted with BitLocker protection off and no key protectors.
+
+Automatic device encryption is currently disabled through:
+
+```text
+HKLM\SYSTEM\CurrentControlSet\Control\BitLocker
+PreventDeviceEncryption = 1
+```
+
+Treat this as current configured state and re-query `manage-bde -status` before encryption-sensitive operations.
+
+## 8. WSL target
 
 ```text
 Distribution: Ubuntu-24.04
@@ -99,64 +128,35 @@ systemd: enabled
 Default Linux user: root
 ```
 
-WSL is launched through active-user execution from the Eye service rather than through a permanent user daemon.
+WSL runs through active-user execution from the stable host. A permanent WSL/user helper is not required.
 
-Linux-native permission-sensitive workloads should live in the distro filesystem rather than relying on ReFS metadata semantics.
+Linux-native permission-sensitive workloads belong in the distro filesystem rather than depending on ReFS metadata semantics.
 
-## 7. Developer/tooling baseline
+## 9. Developer/tooling baseline
 
-Install or verify only the useful baseline, adding other tools on demand:
+Verify/install only the useful baseline and add specialized tools on demand:
 
 - Git;
 - GitHub CLI;
-- current .NET SDK required by Eye;
+- .NET SDK required by Eye;
 - PowerShell;
-- Node/npm only for tasks that require them, not a permanent Eye service;
+- Node/npm only for tasks requiring it;
 - CMake;
 - Ninja;
 - FFmpeg;
 - VS Code;
 - `uv` / `uvx`;
 - ripgrep;
-- NVIDIA/CUDA stack appropriate to the installed GPU;
+- NVIDIA/CUDA stack appropriate to the GPU;
 - WSL.
 
-Windows Developer Mode and long-path support are useful platform settings where still applicable.
+Developer Mode and long-path support are useful Windows settings where applicable.
 
-Do not rebuild broad old-profile package inventories merely because they existed historically.
-
-## 8. Power/availability target
-
-The dedicated machine is intended to remain available for unattended Eye operation where practical.
-
-Desired posture includes avoiding automatic sleep/hibernation/lid-triggered shutdown that would unnecessarily remove the machine from service.
-
-Apply power configuration deliberately and verify it on the live installation rather than relying on old state.
-
-## 9. Prototype/runtime boundary
-
-The repository already contains an early v2 service/process implementation.
-
-Do not reproduce the historical prototype topology as the desired final state.
-
-Final runtime target:
-
-```text
-Windows SCM
-  -> eye.exe LocalSystem service
-       -> native SYSTEM operations
-       -> active-user process launch on demand
-       -> short-lived desktop workers on demand
-       -> WSL execution on demand
-       -> installed Chrome / loopback CDP
-       -> focused external engines on demand
-```
-
-No permanent user-session helper is part of the target.
+Do not rebuild historical package inventories merely because they once existed.
 
 ## 10. Public MCP boundary
 
-The canonical public surface is now five effect-class facades:
+Canonical target v2 surface:
 
 ```text
 eye_inspect
@@ -164,46 +164,62 @@ eye_run
 eye_change
 eye_interact
 eye_external
+eye_live
 ```
 
-The old single model-facing `eye({ op, args })` design is no longer canonical.
+The first five are effect-class capability facades. `eye_live` is UI-only and performs no machine operation.
 
-All facades route to one internal operation registry/dispatcher. The split is metadata/schema/effect organization, not a privilege hierarchy.
+`wait` and `transfer` remain operation families beneath those facades rather than extra top-level tools.
 
-See `MCP_CONTRACT.md`.
+See `MCP_CONTRACT.md` and `contracts/eye-mcp-v2.json`.
 
-## 11. Previously validated architecture experiments
+## 11. Host-owned repair boundary
 
-The following experiments were previously demonstrated on `STEALTHEYELLC` and remain useful evidence to reproduce/verify during v2 implementation:
+Even when the versioned feature engine is unavailable, the stable host must retain enough capability to diagnose and repair Eye:
+
+- system/capability status;
+- engine status/restart/activate/rollback;
+- raw SYSTEM/user/WSL execution;
+- durable jobs/terminals;
+- artifact reads;
+- mission/trigger state;
+- minimal Eye Live monitoring.
+
+This boundary is the reason rapid feature code stays in a separate engine process.
+
+## 12. Previously validated architecture evidence
+
+Prior disposable experiments on this machine established that:
 
 1. `CreateProcessAsUser` from a genuine LocalSystem SCM service can launch the active interactive user.
 2. stdout/stderr capture can work through inherited pipes.
-3. user processes can be placed in service-owned Job Objects.
+3. user children can be placed in service-owned Job Objects.
 4. WSL can be invoked through the active-user execution path.
 5. short-lived desktop workers can be launched into the interactive session.
 6. Per-Monitor V2 workers can operate in physical display coordinates.
-7. installed Chrome can be launched as the user and controlled from SYSTEM over loopback CDP with a dedicated profile.
+7. installed Chrome can run under the user and be controlled from SYSTEM over loopback CDP using a dedicated profile.
 8. native cross-session ConPTY works.
 9. `ReleasePseudoConsole` was exported on the tested Windows build.
-10. DPAPI-NG `LOCAL=user`, called as LocalSystem, protected a throwaway blob across reboot while the interactive user could not decrypt it.
+10. DPAPI-NG `LOCAL=user`, called as LocalSystem, protected throwaway material across reboot while the interactive user could not decrypt it.
 
-These are implementation evidence, not reasons to preserve historical prototype code.
+These are implementation evidence, not reasons to preserve historical prototype topology.
 
-## 12. Machine secret target
+## 13. Machine secret target
 
-Local credentials that `eye.exe` must retain should use the previously validated DPAPI-NG design:
+Locally retained Eye credentials use the validated pattern:
 
 ```text
-LocalSystem -> DPAPI-NG descriptor LOCAL=user -> encrypted blob under SYSTEM-owned machine storage
+LocalSystem
+  -> DPAPI-NG descriptor LOCAL=user
+  -> encrypted blob + non-secret metadata
+  -> SYSTEM-owned machine storage
 ```
 
-Persist only encrypted blobs and non-secret metadata.
+Never commit secret values, passwords, private keys, recovery material, or plaintext provider credentials.
 
-Never commit secret values, passwords, private keys, BitLocker/recovery material, or plaintext provider credentials.
+## 14. External identity
 
-## 13. External identity
-
-Operational Eye Google identity:
+Operational Google identity:
 
 ```text
 StealthEye <stealtheye.eye@gmail.com>
@@ -215,24 +231,18 @@ Separate mailbox:
 stealtheye@stealtheye.io
 ```
 
-Keep those identities distinct unless the owner explicitly changes the arrangement.
+Keep those identities distinct unless explicitly changed.
 
-## 14. Platform verification gate before final cutover
+## 15. Power/availability target
 
-Before declaring a new Eye runtime production-ready, verify the live platform rather than assuming this document's historical observations:
+The dedicated machine is intended to remain available for unattended Eye operation where practical.
 
-- Windows and current drivers/firmware are stable;
-- storage roles exist as intended;
-- `X:` is a trusted ReFS Dev Drive;
-- WSL baseline is healthy;
-- required developer tools are installed;
-- Secure MCP Tunnel reaches loopback Eye;
-- Eye service survives reboot;
-- active-user execution works;
-- terminal/WSL works;
-- desktop worker works;
-- browser/CDP works;
-- secret persistence works;
-- external `E:` data remains isolated from destructive provisioning steps.
+Avoid unnecessary sleep/hibernation/lid-triggered shutdown, and use Windows power requests for long host-owned work where appropriate.
 
-Only then remove transitional/prototype runtime pieces.
+Power configuration is dynamic machine state and should be explicitly verified rather than assumed.
+
+## 16. Platform verification principle
+
+Eye should eventually expose live machine manifests so ChatGPT does not depend on stale documentation for dynamic state.
+
+Before destructive, firmware-sensitive, resource-sensitive, or final-cutover operations, query current truth for the relevant Windows build, storage, encryption, WSL, driver, service, tunnel, session, GPU, and tool state.
