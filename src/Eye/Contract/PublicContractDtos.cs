@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace StealthEye.Contract;
 
@@ -24,6 +24,72 @@ public sealed record JobWaitArgs(
     [property: JsonPropertyName("job_id")] string JobId,
     [property: JsonPropertyName("wait_ms")] int WaitMs = 30000);
 
+public sealed record ArtifactIdArgs(
+    [property: JsonPropertyName("artifact_id")] string ArtifactId);
+
+public sealed record ArtifactPreviewArgs(
+    [property: JsonPropertyName("artifact_id")] string ArtifactId,
+    [property: JsonPropertyName("max_chars")] int MaxChars = 4000);
+
+public sealed record ArtifactReadRangeArgs(
+    [property: JsonPropertyName("artifact_id")] string ArtifactId,
+    [property: JsonPropertyName("offset")] long Offset = 0,
+    [property: JsonPropertyName("max_bytes")] int MaxBytes = 65536);
+
+public sealed record ArtifactDiffArgs(
+    [property: JsonPropertyName("left_artifact_id")] string LeftArtifactId,
+    [property: JsonPropertyName("right_artifact_id")] string RightArtifactId);
+
+public sealed record ArtifactExportArgs(
+    [property: JsonPropertyName("artifact_id")] string ArtifactId,
+    [property: JsonPropertyName("destination")] string Destination,
+    [property: JsonPropertyName("overwrite")] bool Overwrite = false);
+
+public sealed record ArtifactInfoResult(
+    [property: JsonPropertyName("artifact_id")] string ArtifactId,
+    [property: JsonPropertyName("incarnation")] long Incarnation,
+    [property: JsonPropertyName("kind")] string Kind,
+    [property: JsonPropertyName("mime_type"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? MimeType,
+    [property: JsonPropertyName("size_bytes")] long SizeBytes,
+    [property: JsonPropertyName("sha256")] string Sha256,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("storage_tier")] string StorageTier,
+    [property: JsonPropertyName("provenance")] string Provenance,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
+
+public sealed record ArtifactPreviewPublicResult(
+    [property: JsonPropertyName("artifact_id")] string ArtifactId,
+    [property: JsonPropertyName("text_available")] bool TextAvailable,
+    [property: JsonPropertyName("text"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Text,
+    [property: JsonPropertyName("truncated")] bool Truncated);
+
+public sealed record ArtifactReadRangeResult(
+    [property: JsonPropertyName("artifact_id")] string ArtifactId,
+    [property: JsonPropertyName("offset")] long Offset,
+    [property: JsonPropertyName("bytes_read")] int BytesRead,
+    [property: JsonPropertyName("next_offset")] long NextOffset,
+    [property: JsonPropertyName("eof")] bool Eof,
+    [property: JsonPropertyName("data_base64")] string DataBase64);
+
+public sealed record ArtifactExportResult(
+    [property: JsonPropertyName("artifact_id")] string ArtifactId,
+    [property: JsonPropertyName("destination")] string Destination,
+    [property: JsonPropertyName("size_bytes")] long SizeBytes,
+    [property: JsonPropertyName("sha256")] string Sha256);
+
+public sealed record ArtifactDeleteResult(
+    [property: JsonPropertyName("artifact_id")] string ArtifactId,
+    [property: JsonPropertyName("deleted")] bool Deleted);
+
+public sealed record ArtifactDiffPublicResult(
+    [property: JsonPropertyName("left_artifact_id")] string LeftArtifactId,
+    [property: JsonPropertyName("right_artifact_id")] string RightArtifactId,
+    [property: JsonPropertyName("equal")] bool Equal,
+    [property: JsonPropertyName("left_size_bytes")] long LeftSizeBytes,
+    [property: JsonPropertyName("right_size_bytes")] long RightSizeBytes,
+    [property: JsonPropertyName("left_sha256")] string LeftSha256,
+    [property: JsonPropertyName("right_sha256")] string RightSha256,
+    [property: JsonPropertyName("first_difference_offset"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? FirstDifferenceOffset);
 public sealed record SystemStatusResult(
     [property: JsonPropertyName("product")] string Product,
     [property: JsonPropertyName("executable")] string Executable,

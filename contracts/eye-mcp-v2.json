@@ -189,6 +189,113 @@
             "additionalProperties": false
           }
         }
+      ,
+        {
+          "id": "artifact.info",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": { "artifact_id": { "type": "string", "minLength": 1 } },
+            "required": ["artifact_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "artifact_id": { "type": "string", "minLength": 1 },
+              "incarnation": { "type": "integer", "minimum": 1 },
+              "kind": { "type": "string", "minLength": 1 },
+              "mime_type": { "type": "string", "minLength": 1 },
+              "size_bytes": { "type": "integer", "minimum": 0 },
+              "sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
+              "name": { "type": "string", "minLength": 1 },
+              "storage_tier": { "type": "string", "enum": ["hot", "cold"] },
+              "provenance": { "type": "string", "minLength": 1 },
+              "created_at": { "type": "string", "format": "date-time" }
+            },
+            "required": ["artifact_id", "incarnation", "kind", "size_bytes", "sha256", "name", "storage_tier", "provenance", "created_at"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "artifact.preview",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "artifact_id": { "type": "string", "minLength": 1 },
+              "max_chars": { "type": "integer", "minimum": 1, "maximum": 20000, "default": 4000 }
+            },
+            "required": ["artifact_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "artifact_id": { "type": "string" },
+              "text_available": { "type": "boolean" },
+              "text": { "type": "string" },
+              "truncated": { "type": "boolean" }
+            },
+            "required": ["artifact_id", "text_available", "truncated"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "artifact.read_range",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "artifact_id": { "type": "string", "minLength": 1 },
+              "offset": { "type": "integer", "minimum": 0, "default": 0 },
+              "max_bytes": { "type": "integer", "minimum": 1, "maximum": 262144, "default": 65536 }
+            },
+            "required": ["artifact_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "artifact_id": { "type": "string" },
+              "offset": { "type": "integer", "minimum": 0 },
+              "bytes_read": { "type": "integer", "minimum": 0 },
+              "next_offset": { "type": "integer", "minimum": 0 },
+              "eof": { "type": "boolean" },
+              "data_base64": { "type": "string" }
+            },
+            "required": ["artifact_id", "offset", "bytes_read", "next_offset", "eof", "data_base64"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "artifact.diff",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "left_artifact_id": { "type": "string", "minLength": 1 },
+              "right_artifact_id": { "type": "string", "minLength": 1 }
+            },
+            "required": ["left_artifact_id", "right_artifact_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "left_artifact_id": { "type": "string" },
+              "right_artifact_id": { "type": "string" },
+              "equal": { "type": "boolean" },
+              "left_size_bytes": { "type": "integer", "minimum": 0 },
+              "right_size_bytes": { "type": "integer", "minimum": 0 },
+              "left_sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
+              "right_sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
+              "first_difference_offset": { "type": "integer", "minimum": 0 }
+            },
+            "required": ["left_artifact_id", "right_artifact_id", "equal", "left_size_bytes", "right_size_bytes", "left_sha256", "right_sha256"],
+            "additionalProperties": false
+          }
+        }
       ]
     },
     {
@@ -295,7 +402,52 @@
       "effect_class": "change",
       "description": "Apply precisely typed local file, machine, service, package, storage, snapshot, and configuration changes.",
       "machine_effects": "local-write",
-      "operations": []
+      "operations": [
+        {
+          "id": "artifact.export",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "artifact_id": { "type": "string", "minLength": 1 },
+              "destination": { "type": "string", "minLength": 1 },
+              "overwrite": { "type": "boolean", "default": false }
+            },
+            "required": ["artifact_id", "destination"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "artifact_id": { "type": "string" },
+              "destination": { "type": "string" },
+              "size_bytes": { "type": "integer", "minimum": 0 },
+              "sha256": { "type": "string", "minLength": 64, "maxLength": 64 }
+            },
+            "required": ["artifact_id", "destination", "size_bytes", "sha256"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "artifact.delete",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": { "artifact_id": { "type": "string", "minLength": 1 } },
+            "required": ["artifact_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "artifact_id": { "type": "string" },
+              "deleted": { "type": "boolean" }
+            },
+            "required": ["artifact_id", "deleted"],
+            "additionalProperties": false
+          }
+        }
+      ]
     },
     {
       "name": "eye_interact",

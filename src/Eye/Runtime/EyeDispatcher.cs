@@ -13,7 +13,7 @@ public enum EyeEffectClass
     External
 }
 
-public sealed class EyeDispatcher(JobManager jobManager)
+public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore)
 {
     private const int FastCompletionWindowMs = 1000;
     private const long InlineOutputLimitBytes = 262_144;
@@ -54,9 +54,9 @@ public sealed class EyeDispatcher(JobManager jobManager)
                     return Success(op, new CapabilitiesResult(
                         "eye-mcp-v2",
                         new CapabilityFacades(
-                            ["system.status", "capabilities", "job.status", "job.read", "job.wait", "job.result"],
+                            ["system.status", "capabilities", "job.status", "job.read", "job.wait", "job.result", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff"],
                             ["run", "job.start", "job.cancel"],
-                            [],
+                            ["artifact.export", "artifact.delete"],
                             [],
                             [],
                             [])));
@@ -144,6 +144,78 @@ public sealed class EyeDispatcher(JobManager jobManager)
                     return Success(op, ToPublic(jobManager.Result(request.JobId)));
                 }
 
+                case "artifact.info":
+                {
+                    var request = DeserializeRequired<ArtifactIdArgs>(op, args);
+                    return Success(op, ToPublic(artifactStore.Info(request.ArtifactId)));
+                }
+
+                case "artifact.preview":
+                {
+                    var request = DeserializeRequired<ArtifactPreviewArgs>(op, args);
+                    var preview = await artifactStore.PreviewAsync(request.ArtifactId, request.MaxChars, cancellationToken);
+                    return Success(op, new ArtifactPreviewPublicResult(
+                        preview.ArtifactId,
+                        preview.TextAvailable,
+                        preview.Text,
+                        preview.Truncated));
+                }
+
+                case "artifact.read_range":
+                {
+                    var request = DeserializeRequired<ArtifactReadRangeArgs>(op, args);
+                    var range = await artifactStore.ReadRangeAsync(
+                        request.ArtifactId,
+                        request.Offset,
+                        request.MaxBytes,
+                        cancellationToken);
+                    return Success(op, new ArtifactReadRangeResult(
+                        range.ArtifactId,
+                        range.Offset,
+                        range.BytesRead,
+                        range.NextOffset,
+                        range.Eof,
+                        range.DataBase64));
+                }
+
+                case "artifact.diff":
+                {
+                    var request = DeserializeRequired<ArtifactDiffArgs>(op, args);
+                    var diff = await artifactStore.DiffAsync(
+                        request.LeftArtifactId,
+                        request.RightArtifactId,
+                        cancellationToken);
+                    return Success(op, new ArtifactDiffPublicResult(
+                        diff.LeftArtifactId,
+                        diff.RightArtifactId,
+                        diff.Equal,
+                        diff.LeftSizeBytes,
+                        diff.RightSizeBytes,
+                        diff.LeftSha256,
+                        diff.RightSha256,
+                        diff.FirstDifferenceOffset));
+                }
+
+                case "artifact.export":
+                {
+                    var request = DeserializeRequired<ArtifactExportArgs>(op, args);
+                    var artifact = await artifactStore.ExportAsync(
+                        request.ArtifactId,
+                        request.Destination,
+                        request.Overwrite,
+                        cancellationToken);
+                    return Success(op, new ArtifactExportResult(
+                        artifact.ArtifactId,
+                        Path.GetFullPath(request.Destination),
+                        artifact.SizeBytes,
+                        artifact.Sha256));
+                }
+
+                case "artifact.delete":
+                {
+                    var request = DeserializeRequired<ArtifactIdArgs>(op, args);
+                    return Success(op, new ArtifactDeleteResult(request.ArtifactId, artifactStore.Delete(request.ArtifactId)));
+                }
                 default:
                     return Failure(
                         op,
@@ -198,6 +270,17 @@ public sealed class EyeDispatcher(JobManager jobManager)
         job.FailureCode,
         job.FailureMessage);
 
+    private static ArtifactInfoResult ToPublic(ArtifactRecord artifact) => new(
+        artifact.ArtifactId,
+        artifact.Incarnation,
+        artifact.Kind,
+        artifact.MimeType,
+        artifact.SizeBytes,
+        artifact.Sha256,
+        artifact.Name,
+        artifact.StorageTier,
+        artifact.Provenance,
+        artifact.CreatedAt);
     private static EyeSuccess<T> Success<T>(string op, T result) => new(true, op, result);
 
     private static EyeFailure Failure(
@@ -210,8 +293,10 @@ public sealed class EyeDispatcher(JobManager jobManager)
 
     private static EyeEffectClass? GetEffectClass(string op) => op switch
     {
-        "system.status" or "capabilities" or "job.status" or "job.read" or "job.wait" or "job.result" => EyeEffectClass.Inspect,
+        "system.status" or "capabilities" or "job.status" or "job.read" or "job.wait" or "job.result" or
+        "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" => EyeEffectClass.Inspect,
         "run" or "job.start" or "job.cancel" => EyeEffectClass.Run,
+        "artifact.export" or "artifact.delete" => EyeEffectClass.Change,
         _ => null
     };
 

@@ -12,6 +12,7 @@ builder.WebHost.UseUrls(urls);
 
 builder.Services.AddSingleton<ProcessRunner>();
 builder.Services.AddSingleton<JobStore>();
+builder.Services.AddSingleton<ArtifactStore>();
 builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EyeDispatcher>();
 builder.Services
@@ -21,6 +22,7 @@ builder.Services
 
 var app = builder.Build();
 _ = app.Services.GetRequiredService<JobStore>();
+_ = app.Services.GetRequiredService<ArtifactStore>();
 
 app.MapGet("/health", () => Results.Json(new
 {

@@ -12,7 +12,7 @@ public sealed class JobDispatcherTests : IDisposable
     public JobDispatcherTests()
     {
         var store = new JobStore(Path.Combine(_root, "state"), Path.Combine(_root, "spool"));
-        _dispatcher = new EyeDispatcher(new JobManager(store, new ProcessRunner()));
+        _dispatcher = new EyeDispatcher(new JobManager(store, new ProcessRunner()), new ArtifactStore(store));
     }
 
     [Fact]
