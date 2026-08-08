@@ -2,11 +2,11 @@
 
 **Status:** Canonical public-interface design  
 **Baseline date:** 2026-08-07  
-**Contract version:** v1
+**Canonical target contract:** v2
 
 ## Purpose
 
-Eye keeps one internal capability engine while exposing five model-facing MCP facades grouped by effect class. The split exists for schema accuracy, tool selection, result consistency, and truthful effect metadata. It is not a privilege hierarchy.
+Eye exposes five effect-class capability tools plus one UI-only tool over one stable host and one replaceable capability engine.
 
 ```text
 ChatGPT
@@ -15,84 +15,95 @@ ChatGPT
   -> eye_change
   -> eye_interact
   -> eye_external
+  -> eye_live
        |
        v
-  generated contract layer
+  generated contract layer in stable host
        |
-       v
-  one operation registry / dispatcher
+       +--> host-owned primitives
        |
-       v
-  Eye LocalSystem service and on-demand workers
+       +--> supervised versioned capability engine
 ```
 
-All five facades ultimately route to the same owner-authorized Eye capability substrate. `eye_run` remains the unrestricted local execution escape hatch when a more precise typed operation does not exist.
+The effect-class split exists for schema accuracy, tool selection, result consistency, and truthful metadata. It is not a privilege hierarchy. `eye_run` remains the broad local execution escape hatch.
+
+`eye_live` is different: it exists to mount the optional Eye Live MCP Apps component and performs no machine operation itself.
 
 ## Public tools
 
 | Tool | Purpose | Effect class |
 | --- | --- | --- |
-| `eye_inspect` | Local observation: status, files, processes, windows, UIA state, screenshots, diagnostics | Read-only/local |
-| `eye_run` | Windows/WSL/process/PowerShell/ConPTY execution | Raw execution escape hatch |
-| `eye_change` | Precisely typed local machine, file, service, storage, and configuration mutations | Local write |
-| `eye_interact` | Desktop input, application interaction, browser navigation and UI actions | Interactive |
-| `eye_external` | Uploading, posting, sending, remote-provider administration, or other effects that leave the machine | Open-world/external |
+| `eye_inspect` | Read/search/observe/query/subscribe/wait/diagnose | Inspect / observational |
+| `eye_run` | SYSTEM/user/WSL/process/PowerShell/terminal/ConPTY execution | Local execution |
+| `eye_change` | Precisely typed local file/machine/service/package/storage/configuration mutations | Local write |
+| `eye_interact` | Windows applications/UIA/input/clipboard/Chrome-CDP interaction | Interactive |
+| `eye_external` | HTTP/uploads/sends/posts/provider administration/remote transfers | Open-world/external |
+| `eye_live` | Open Eye Live mission/job/trigger/artifact/relay UI | UI only; no machine effect |
 
-The tools classify effects for the model-facing contract. They do not intentionally reduce the authority granted to Eye.
+`wait` and `transfer` are operation families distributed beneath the appropriate facades. They are not top-level tools.
 
-## Internal compatibility
+## Contract versions
 
-Internally Eye retains a stable operation registry and dispatcher. The CLI and implementation may continue to represent an invocation as:
+`contracts/eye-mcp-v1.json` records the retired five-capability-tool design and is immutable historical material.
 
-```text
-(op, args)
-```
-
-The public MCP facades are generated views over that registry rather than five independent implementations.
-
-## Canonical source
-
-The versioned public contract lives at:
+The canonical target source is:
 
 ```text
-contracts/eye-mcp-v1.json
+contracts/eye-mcp-v2.json
 ```
 
-That contract is the source for generated artifacts:
+The six v2 tool names are frozen.
+
+The checked-in implementation may lag the target contract while the stable host/generator/UI are built. Do not advertise v2 as live until the activation gates in `eye-mcp-v2.json` are satisfied.
+
+## Generated contract rule
+
+One canonical contract source generates or validates:
 
 ```text
 contract
-  -> MCP tool descriptors
-  -> C# request/result types
-  -> operation-to-facade registration
+  -> MCP descriptors
+  -> C# request/result DTOs
+  -> stable-host validation
+  -> operation/facade registration
   -> capability metadata
-  -> public contract documentation
+  -> server initialization instructions
+  -> public documentation
   -> normalized tools/list snapshot
 ```
 
-Ordinary implementation work must not silently change the public contract.
+Generated artifacts never become an independent source of truth.
 
-## Schema rules
+## Schema profile
 
-Published operations should use exact input schemas:
+Use exact per-operation variants and intentionally boring JSON Schema:
 
-- operation names are closed enums/const values rather than unrestricted text;
-- argument objects use explicit property types;
-- required properties are declared;
-- defaults and practical limits are declared;
-- `additionalProperties: false` is the default;
-- routine domain failures are structured results rather than transport exceptions;
-- an exact output schema is published for every operation/facade result.
+- shallow objects;
+- primitives;
+- arrays;
+- enums/consts;
+- bounds;
+- required fields;
+- `additionalProperties: false` by default.
 
-The initial hand-written MCP facade is transitional. The generated contract layer replaces reflection-only `string op + arbitrary JSON` metadata as an early v2 milestone.
+Avoid deep composition, recursive schema structures, conditionals, clever nullable unions, and unnecessary schema indirection.
 
-## Stable result envelope
+Omit optional values instead of sending `null` where practical.
 
-Eye operations return one stable envelope shape:
+Each structured operation result declares an exact `outputSchema`.
+
+Routine domain errors return typed structured errors. Do not leak arbitrary exception types, stack traces, or implementation internals into model-visible results.
+
+## Result semantics
+
+The logical result envelope contains a stable operation/status identity and the typed result, job, artifact, stream, or error information needed for continuation.
+
+Conceptually:
 
 ```json
 {
   "ok": true,
+  "operation": "...",
   "result": {}
 }
 ```
@@ -102,38 +113,117 @@ or:
 ```json
 {
   "ok": false,
+  "operation": "...",
   "error": {
     "code": "invalid_argument",
-    "message": "run.file_name is required",
-    "retryable": true,
-    "expected": {
-      "required": ["file_name"]
-    }
+    "message": "...",
+    "retryable": false,
+    "expected": {}
   }
 }
 ```
 
-Operation-specific result payloads are typed inside `result`.
+Operation-specific generated schemas determine which fields are legal. The public wire contract should not rely on `Task<object>` or arbitrary result blobs.
 
-## Compatibility and versioning
+Large output becomes an artifact plus a useful inline excerpt rather than an enormous result payload.
 
-- Breaking public changes create a new contract version rather than silently mutating v1.
-- The server may accept documented legacy aliases internally when doing so is cheap and unambiguous.
-- Generated artifacts must never become an independent source of truth.
-- A normalized `tools/list` snapshot test must fail when a normal implementation change alters a public tool name, description, annotation, input schema, output schema, or operation assignment.
+## Stable identifiers
 
-## Contract-change rule
+Published stateful resources use stable typed IDs and cursors, including:
 
-A public contract revision requires explicit owner authorization. Adding an internal capability does not implicitly publish or reclassify it.
+```text
+job_id
+artifact_id
+stream_id
+stable object ID
+incarnation generation
+observation cursor
+```
 
-The repository-level guardrail is also recorded in `AGENTS.md`.
+The identity rule is:
+
+```text
+stable object ID + incarnation generation + observation cursor
+```
+
+This lets Eye distinguish ordinary state changes from destruction/replacement or OS identifier reuse.
+
+## Host-owned operation families
+
+The stable host must publish enough operation capability to keep Eye repairable without a healthy feature engine.
+
+Required categories include:
+
+- system/capability status;
+- engine status/restart/activate/rollback;
+- raw SYSTEM/user/WSL execution;
+- durable job/terminal control;
+- artifact reads;
+- mission/trigger state;
+- minimal Eye Live monitoring.
+
+Exact operation names and schemas are added to the v2 contract only through explicit contract revisions.
+
+## `eye_live` UI rules
+
+Eye Live is optional UI over ordinary Eye operations.
+
+For new UI implementations:
+
+- link the tool to its UI resource with `_meta.ui.resourceUri`;
+- use the MCP Apps `ui/*` JSON-RPC bridge;
+- use `ui/message` for a UI-initiated follow-up message;
+- keep helper tools app-only with `_meta.ui.visibility: ["app"]` when they are not intended for model selection;
+- keep ordinary MCP parity so Eye remains usable when the UI is absent.
+
+Do not attach the component to every Eye capability operation. `eye_live` exists specifically so the UI mounts only when continuation/supervision is useful.
+
+## File bridge
+
+Where a public operation accepts a ChatGPT-provided file, use supported top-level file fields and `_meta["openai/fileParams"]` so ChatGPT can pass a file object directly rather than forcing the user to invent a laptop path.
+
+Imported files become Eye artifacts or are materialized to an explicitly requested destination.
+
+Large outbound data should use artifact/export/file-reference mechanisms rather than inline base64 or giant JSON payloads.
+
+## Server instructions
+
+The stable host supplies compact MCP initialization instructions teaching the shared routing rules, including:
+
+- which facade owns each effect;
+- `eye_run` as the universal local fallback;
+- automatic durable-job behavior;
+- native waits instead of manual polling;
+- artifact continuation;
+- stable-handle reuse;
+- Eye Live continuation;
+- contract discipline.
+
+Keep the first 512 characters self-contained.
+
+The detailed operator modality hierarchy belongs in the Eye Operator skill, not in giant tool descriptions.
 
 ## Metadata style
 
-Descriptions and annotations should be precise and neutral. Describe what an operation does and where its effects occur. Avoid theatrical descriptions of authority; they add no capability and make model/tool classification less precise.
+Descriptions should be precise, neutral, and action-oriented. Describe the operation and where its effect occurs. Avoid theatrical descriptions of authority that add no capability and make classification less accurate.
+
+Use truthful effect annotations. Eye itself does not add approval layers merely because a tool is broad, but host-platform confirmations/policies remain outside Eye's control.
+
+## Compatibility and revision policy
+
+- v1 remains immutable historical material.
+- The six v2 top-level names are frozen.
+- Ordinary feature work must not silently alter public metadata/schema.
+- An additive public operation/schema change requires an explicit owner-authorized v2 contract revision.
+- A breaking change to the six-tool surface requires a new major contract version.
+- Internal implementation/engine changes that preserve the public contract do not require a public revision.
+- The server may accept documented legacy aliases internally when cheap and unambiguous.
+- A normalized `tools/list` snapshot must fail when unintended public drift occurs.
 
 ## Growth rule
 
-Do not pre-populate the public contract with speculative capabilities merely to make the schema look complete. Add operations when implementations or near-term measured workloads justify them.
+Do not publish speculative capability variants merely to make the schema look complete.
 
-The five facade names are stable; their operation sets can grow through explicit contract revisions.
+New capabilities should fit beneath the existing six-tool surface. Publish exact operation variants when the implementation or near-term workload justifies them.
+
+Architectural expansion beyond the six-tool design requires explicit owner authorization.
