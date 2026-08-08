@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>eye-engine</AssemblyName>
+    <RootNamespace>StealthEye.Engine</RootNamespace>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Eye\Contract\EngineHandshake.cs" Link="Contract\EngineHandshake.cs" />
+    <Compile Include="..\Eye\Contract\EngineRpc.cs" Link="Contract\EngineRpc.cs" />
+    <Compile Include="..\Eye\Contract\EyeContractCatalog.cs" Link="Contract\EyeContractCatalog.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\contracts\eye-mcp-v2.json" LogicalName="StealthEye.Contract.eye-mcp-v2.json" />
+  </ItemGroup>
+</Project>
