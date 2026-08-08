@@ -9,6 +9,8 @@ internal static class NativeMethods
     internal const uint CREATE_SUSPENDED = 0x00000004;
     internal const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
     internal const uint CREATE_NO_WINDOW = 0x08000000;
+    internal const uint EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
+    internal static readonly IntPtr PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = new(0x00020016);
     internal const uint STARTF_USESTDHANDLES = 0x00000100;
     internal const uint HANDLE_FLAG_INHERIT = 0x00000001;
     internal const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
@@ -67,6 +69,43 @@ internal static class NativeMethods
         internal IntPtr hStdInput;
         internal IntPtr hStdOutput;
         internal IntPtr hStdError;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct STARTUPINFO_NATIVE
+    {
+        internal uint cb;
+        internal IntPtr lpReserved;
+        internal IntPtr lpDesktop;
+        internal IntPtr lpTitle;
+        internal uint dwX;
+        internal uint dwY;
+        internal uint dwXSize;
+        internal uint dwYSize;
+        internal uint dwXCountChars;
+        internal uint dwYCountChars;
+        internal uint dwFillAttribute;
+        internal uint dwFlags;
+        internal ushort wShowWindow;
+        internal ushort cbReserved2;
+        internal IntPtr lpReserved2;
+        internal IntPtr hStdInput;
+        internal IntPtr hStdOutput;
+        internal IntPtr hStdError;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct STARTUPINFOEX_NATIVE
+    {
+        internal STARTUPINFO_NATIVE StartupInfo;
+        internal IntPtr lpAttributeList;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct COORD
+    {
+        internal short X;
+        internal short Y;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -159,6 +198,58 @@ internal static class NativeMethods
         string? lpCurrentDirectory,
         ref STARTUPINFO lpStartupInfo,
         out PROCESS_INFORMATION lpProcessInformation);
+
+    [DllImport("advapi32.dll", EntryPoint = "CreateProcessAsUserW", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool CreateProcessAsUserExW(
+        SafeAccessTokenHandle hToken,
+        string? lpApplicationName,
+        StringBuilder lpCommandLine,
+        IntPtr lpProcessAttributes,
+        IntPtr lpThreadAttributes,
+        [MarshalAs(UnmanagedType.Bool)] bool bInheritHandles,
+        uint dwCreationFlags,
+        IntPtr lpEnvironment,
+        string? lpCurrentDirectory,
+        ref STARTUPINFOEX_NATIVE lpStartupInfo,
+        out PROCESS_INFORMATION lpProcessInformation);
+
+    [DllImport("kernel32.dll", EntryPoint = "CreateProcessW", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool CreateProcessExW(
+        string? lpApplicationName,
+        StringBuilder lpCommandLine,
+        IntPtr lpProcessAttributes,
+        IntPtr lpThreadAttributes,
+        [MarshalAs(UnmanagedType.Bool)] bool bInheritHandles,
+        uint dwCreationFlags,
+        IntPtr lpEnvironment,
+        string? lpCurrentDirectory,
+        ref STARTUPINFOEX_NATIVE lpStartupInfo,
+        out PROCESS_INFORMATION lpProcessInformation);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool InitializeProcThreadAttributeList(IntPtr lpAttributeList, int dwAttributeCount, uint dwFlags, ref nuint lpSize);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool UpdateProcThreadAttribute(IntPtr lpAttributeList, uint dwFlags, IntPtr attribute, IntPtr lpValue, nuint cbSize, IntPtr lpPreviousValue, IntPtr lpReturnSize);
+
+    [DllImport("kernel32.dll")]
+    internal static extern void DeleteProcThreadAttributeList(IntPtr lpAttributeList);
+
+    [DllImport("kernel32.dll")]
+    internal static extern int CreatePseudoConsole(COORD size, SafeFileHandle hInput, SafeFileHandle hOutput, uint dwFlags, out IntPtr phPC);
+
+    [DllImport("kernel32.dll")]
+    internal static extern int ResizePseudoConsole(IntPtr hPC, COORD size);
+
+    [DllImport("kernel32.dll")]
+    internal static extern int ReleasePseudoConsole(IntPtr hPC);
+
+    [DllImport("kernel32.dll")]
+    internal static extern void ClosePseudoConsole(IntPtr hPC);
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern IntPtr CreateJobObjectW(IntPtr lpJobAttributes, string? lpName);

@@ -311,7 +311,7 @@ public sealed class ProcessRunner
         }, CancellationToken.None);
     }
 
-    private static int FindActiveSessionId()
+    internal static int FindActiveSessionId()
     {
         if (!NativeMethods.WTSEnumerateSessionsW(IntPtr.Zero, 0, 1, out var buffer, out var count))
             ThrowWin32("WTSEnumerateSessions");
@@ -348,7 +348,7 @@ public sealed class ProcessRunner
             ThrowWin32("SetHandleInformation");
     }
 
-    private static SafeFileHandle CreateKillOnCloseJob()
+    internal static SafeFileHandle CreateKillOnCloseJob()
     {
         var raw = NativeMethods.CreateJobObjectW(IntPtr.Zero, null);
         if (raw == IntPtr.Zero)
@@ -371,7 +371,7 @@ public sealed class ProcessRunner
         return job;
     }
 
-    private static void TerminateJob(SafeFileHandle jobHandle)
+    internal static void TerminateJob(SafeFileHandle jobHandle)
     {
         if (!NativeMethods.TerminateJobObject(jobHandle, 1))
             ThrowWin32("TerminateJobObject");
@@ -421,7 +421,7 @@ public sealed class ProcessRunner
         }
     }
 
-    private static string? ResolveExecutable(string fileName)
+    internal static string? ResolveExecutable(string fileName)
     {
         if (fileName.Contains('\\') || fileName.Contains('/'))
             return fileName;
@@ -431,7 +431,7 @@ public sealed class ProcessRunner
         return length > 0 && length < buffer.Capacity ? buffer.ToString() : null;
     }
 
-    private static string GetProfileDirectory(SafeAccessTokenHandle token)
+    internal static string GetProfileDirectory(SafeAccessTokenHandle token)
     {
         uint size = 0;
         NativeMethods.GetUserProfileDirectoryW(token, null, ref size);
@@ -445,10 +445,10 @@ public sealed class ProcessRunner
         return buffer.ToString();
     }
 
-    private static string BuildCommandLine(string fileName, IEnumerable<string> arguments)
+    internal static string BuildCommandLine(string fileName, IEnumerable<string> arguments)
         => string.Join(" ", new[] { QuoteArgument(fileName) }.Concat(arguments.Select(QuoteArgument)));
 
-    private static string QuoteArgument(string argument)
+    internal static string QuoteArgument(string argument)
     {
         if (argument.Length == 0)
             return "\"\"";
@@ -485,6 +485,6 @@ public sealed class ProcessRunner
         return result.ToString();
     }
 
-    private static void ThrowWin32(string operation)
+    internal static void ThrowWin32(string operation)
         => throw new InvalidOperationException($"{operation} failed with Win32 error {Marshal.GetLastWin32Error()}.");
 }
