@@ -1,6 +1,5 @@
 using System.IO.Pipes;
-using System.Text;
-using System.Text.Json;
+using StreamJsonRpc;
 using StealthEye.Contract;
 
 var pipeName = RequiredArgument(args, "--pipe");
@@ -15,50 +14,16 @@ var handshake = new EngineHandshake(
 
 await using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
 await pipe.ConnectAsync(10_000);
-using var reader = new StreamReader(pipe, new UTF8Encoding(false), false, 4096, leaveOpen: true);
-using var writer = new StreamWriter(pipe, new UTF8Encoding(false), 4096, leaveOpen: true) { AutoFlush = true };
-
-while (true)
+var target = new EngineRpcTarget(handshake, new EnginePingResult(engineVersion, Environment.ProcessId));
+using var rpc = new JsonRpc(EngineRpcTransport.CreateMessageHandler(pipe), target);
+rpc.StartListening();
+try
 {
-    var line = await reader.ReadLineAsync();
-    if (line is null)
-        break;
-
-    EngineRpcRequest? request;
-    try
-    {
-        request = JsonSerializer.Deserialize<EngineRpcRequest>(line);
-    }
-    catch (JsonException)
-    {
-        continue;
-    }
-
-    if (request is null || request.JsonRpc != "2.0")
-        continue;
-
-    object response;
-    var stop = false;
-    switch (request.Method)
-    {
-        case EngineRpcMethods.Handshake:
-            response = new EngineRpcResponse<EngineHandshake>("2.0", request.Id, handshake);
-            break;
-        case EngineRpcMethods.Ping:
-            response = new EngineRpcResponse<EnginePingResult>("2.0", request.Id, new EnginePingResult(engineVersion, Environment.ProcessId));
-            break;
-        case EngineRpcMethods.Shutdown:
-            response = new EngineRpcResponse<EngineShutdownResult>("2.0", request.Id, new EngineShutdownResult(true));
-            stop = true;
-            break;
-        default:
-            response = new EngineRpcResponse<object>("2.0", request.Id, Error: new EngineRpcError("method_not_found", $"Unknown engine method: {request.Method}"));
-            break;
-    }
-
-    await writer.WriteLineAsync(JsonSerializer.Serialize(response));
-    if (stop)
-        break;
+    await rpc.Completion;
+}
+catch (ConnectionLostException)
+{
+    // The stable host closes the control pipe after the shutdown acknowledgement.
 }
 
 static string RequiredArgument(string[] arguments, string name)
@@ -70,4 +35,16 @@ static string RequiredArgument(string[] arguments, string name)
     }
 
     throw new ArgumentException($"Missing required argument: {name}");
+}
+
+sealed class EngineRpcTarget(EngineHandshake handshake, EnginePingResult ping)
+{
+    [JsonRpcMethod(EngineRpcMethods.Handshake)]
+    public EngineHandshake Handshake() => handshake;
+
+    [JsonRpcMethod(EngineRpcMethods.Ping)]
+    public EnginePingResult Ping() => ping;
+
+    [JsonRpcMethod(EngineRpcMethods.Shutdown)]
+    public EngineShutdownResult Shutdown() => new(true);
 }

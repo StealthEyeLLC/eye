@@ -16,4 +16,7 @@
   <ItemGroup>
     <EmbeddedResource Include="..\..\contracts\eye-mcp-v2.json" LogicalName="StealthEye.Contract.eye-mcp-v2.json" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="StreamJsonRpc" Version="2.25.29" />
+  </ItemGroup>
 </Project>

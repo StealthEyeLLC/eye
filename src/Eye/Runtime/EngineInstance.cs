@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using System.IO.Pipes;
-using System.Text;
-using System.Text.Json;
 using Microsoft.Win32.SafeHandles;
+using StreamJsonRpc;
 using StealthEye.Contract;
 
 namespace StealthEye.Runtime;
@@ -19,32 +18,29 @@ public sealed class EngineInstance : IAsyncDisposable
     private readonly Process _process;
     private readonly SafeFileHandle _jobHandle;
     private readonly NamedPipeServerStream _pipe;
-    private readonly StreamReader _reader;
-    private readonly StreamWriter _writer;
-    private readonly SemaphoreSlim _rpcGate = new(1, 1);
-    private long _nextRequestId;
+    private readonly JsonRpc _rpc;
     private int _disposed;
 
     private EngineInstance(
         Process process,
         SafeFileHandle jobHandle,
         NamedPipeServerStream pipe,
-        StreamReader reader,
-        StreamWriter writer,
+        JsonRpc rpc,
         string executablePath)
     {
         _process = process;
         _jobHandle = jobHandle;
         _pipe = pipe;
-        _reader = reader;
-        _writer = writer;
+        _rpc = rpc;
         ExecutablePath = executablePath;
     }
+
     public string ExecutablePath { get; }
     public EngineHandshake Handshake { get; private set; } = null!;
     public EnginePingResult Ping { get; private set; } = null!;
     public int ProcessId => _process.Id;
     public bool HasExited => _process.HasExited;
+    public int? ExitCode => _process.HasExited ? _process.ExitCode : null;
     public Task ExitTask => _process.WaitForExitAsync();
     public EngineInstanceInfo Info => new(
         Handshake.EngineVersion,
@@ -75,8 +71,7 @@ public sealed class EngineInstance : IAsyncDisposable
 
         Process? process = null;
         SafeFileHandle? jobHandle = null;
-        StreamReader? reader = null;
-        StreamWriter? writer = null;
+        JsonRpc? rpc = null;
         try
         {
             var startInfo = new ProcessStartInfo(executablePath)
@@ -103,9 +98,9 @@ public sealed class EngineInstance : IAsyncDisposable
                 throw new InvalidOperationException($"Eye engine exited before connecting with code {process.ExitCode}.");
             await connectTask;
 
-            reader = new StreamReader(pipe, new UTF8Encoding(false), false, 4096, leaveOpen: true);
-            writer = new StreamWriter(pipe, new UTF8Encoding(false), 4096, leaveOpen: true) { AutoFlush = true };
-            var instance = new EngineInstance(process, jobHandle, pipe, reader, writer, executablePath);
+            rpc = new JsonRpc(EngineRpcTransport.CreateMessageHandler(pipe));
+            rpc.StartListening();
+            var instance = new EngineInstance(process, jobHandle, pipe, rpc, executablePath);
 
             var handshake = await instance.CallAsync<EngineHandshake>(EngineRpcMethods.Handshake, timeout.Token);
             var validation = EngineHandshakeValidator.Validate(contract, handshake);
@@ -118,12 +113,12 @@ public sealed class EngineInstance : IAsyncDisposable
             instance.SetIdentity(handshake, ping);
             process = null;
             jobHandle = null;
-            reader = null;
-            writer = null;
+            rpc = null;
             return instance;
         }
         catch
         {
+            rpc?.Dispose();
             if (jobHandle is not null)
             {
                 try { ProcessRunner.TerminateJob(jobHandle); } catch { }
@@ -132,8 +127,6 @@ public sealed class EngineInstance : IAsyncDisposable
             {
                 try { process.Kill(entireProcessTree: true); } catch { }
             }
-            reader?.Dispose();
-            writer?.Dispose();
             jobHandle?.Dispose();
             process?.Dispose();
             await pipe.DisposeAsync();
@@ -147,34 +140,12 @@ public sealed class EngineInstance : IAsyncDisposable
         Ping = ping;
     }
 
-    public async Task<T> CallAsync<T>(string method, CancellationToken cancellationToken = default)
+    public Task<T> CallAsync<T>(string method, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
-        await _rpcGate.WaitAsync(cancellationToken);
-        try
-        {
-            if (_process.HasExited)
-                throw new InvalidOperationException($"Eye engine process exited with code {_process.ExitCode}.");
-
-            var id = Interlocked.Increment(ref _nextRequestId);
-            var request = new EngineRpcRequest("2.0", id, method);
-            await _writer.WriteLineAsync(JsonSerializer.Serialize(request).AsMemory(), cancellationToken);
-            var line = await _reader.ReadLineAsync(cancellationToken)
-                ?? throw new EndOfStreamException("Eye engine closed the control pipe.");
-            var response = JsonSerializer.Deserialize<EngineRpcResponse<T>>(line)
-                ?? throw new InvalidOperationException("Unable to deserialize Eye engine response.");
-            if (response.Id != id || response.JsonRpc != "2.0")
-                throw new InvalidOperationException("Eye engine response identity mismatch.");
-            if (response.Error is not null)
-                throw new InvalidOperationException($"Eye engine error {response.Error.Code}: {response.Error.Message}");
-            if (response.Result is null)
-                throw new InvalidOperationException("Eye engine returned no result.");
-            return response.Result;
-        }
-        finally
-        {
-            _rpcGate.Release();
-        }
+        if (_process.HasExited)
+            throw new InvalidOperationException($"Eye engine process exited with code {_process.ExitCode}.");
+        return InvokeCoreAsync<T>(method, cancellationToken);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
@@ -190,7 +161,9 @@ public sealed class EngineInstance : IAsyncDisposable
                 stopTimeout.CancelAfter(TimeSpan.FromSeconds(2));
                 try
                 {
-                    await CallCoreAsync<EngineShutdownResult>(EngineRpcMethods.Shutdown, stopTimeout.Token);
+                    await InvokeCoreAsync<EngineShutdownResult>(EngineRpcMethods.Shutdown, stopTimeout.Token);
+                    _rpc.Dispose();
+                    await _pipe.DisposeAsync();
                     await _process.WaitForExitAsync(stopTimeout.Token);
                 }
                 catch
@@ -202,39 +175,17 @@ public sealed class EngineInstance : IAsyncDisposable
         }
         finally
         {
-            _reader.Dispose();
-            _writer.Dispose();
+            _rpc.Dispose();
             await _pipe.DisposeAsync();
             _jobHandle.Dispose();
             _process.Dispose();
-            _rpcGate.Dispose();
         }
     }
 
     public ValueTask DisposeAsync() => new(StopAsync());
 
-    private async Task<T> CallCoreAsync<T>(string method, CancellationToken cancellationToken)
-    {
-        await _rpcGate.WaitAsync(cancellationToken);
-        try
-        {
-            var id = Interlocked.Increment(ref _nextRequestId);
-            await _writer.WriteLineAsync(JsonSerializer.Serialize(new EngineRpcRequest("2.0", id, method)).AsMemory(), cancellationToken);
-            var line = await _reader.ReadLineAsync(cancellationToken)
-                ?? throw new EndOfStreamException("Eye engine closed the control pipe.");
-            var response = JsonSerializer.Deserialize<EngineRpcResponse<T>>(line)
-                ?? throw new InvalidOperationException("Unable to deserialize Eye engine response.");
-            if (response.Error is not null)
-                throw new InvalidOperationException($"Eye engine error {response.Error.Code}: {response.Error.Message}");
-            if (response.Id != id || response.Result is null)
-                throw new InvalidOperationException("Eye engine response identity mismatch.");
-            return response.Result;
-        }
-        finally
-        {
-            _rpcGate.Release();
-        }
-    }
+    private Task<T> InvokeCoreAsync<T>(string method, CancellationToken cancellationToken) =>
+        _rpc.InvokeWithCancellationAsync<T>(method, Array.Empty<object>(), cancellationToken);
 
     private void ThrowIfDisposed()
     {
