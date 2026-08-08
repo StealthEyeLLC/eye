@@ -1,37 +1,29 @@
 # CUTOVER.md
 
-**Status:** v2 implementation and runtime cutover checklist  
+**Status:** Canonical implementation and runtime cutover checklist  
 **Machine:** `STEALTHEYELLC`  
 **Baseline date:** 2026-08-07
 
-This checklist now covers the path from the current early v2 repository to the final Eye runtime. It intentionally does not preserve obsolete platform-migration procedure as the active plan.
+This checklist implements `docs/BUILD_BLUEPRINT.md`. It intentionally avoids preserving obsolete migration procedure as the active plan.
 
-## Phase 0 — verify machine foundation
+## Phase 0 — machine foundation
 
-Before changing Eye runtime ownership:
+Before runtime ownership changes:
 
-- [ ] Windows boots and operates normally through repeated reboots.
-- [ ] Current encryption/storage state is explicitly known rather than assumed.
-- [ ] `C:` is the Windows/application volume.
+- [ ] Windows boots normally through repeated reboots.
+- [ ] Device-encryption/BitLocker state is explicitly known and matches the owner's chosen posture.
+- [ ] `C:` is healthy as Windows/application/system-state storage.
 - [ ] `X:` is provisioned as the intended physical trusted ReFS Dev Drive, approximately 300 GiB.
-- [ ] `E:` bulk/archive storage is visible and excluded from destructive provisioning operations.
-- [ ] `X:\Repos\eye` exists as the clean active checkout.
-- [ ] required .NET/Git/build tooling is present.
+- [ ] `E:` bulk/archive storage is visible and excluded from destructive provisioning work.
+- [ ] `X:\Repos\eye` is the clean active checkout.
+- [ ] required .NET/Git/build tooling is healthy.
 - [ ] WSL2 Ubuntu 24.04 baseline is healthy with systemd.
-- [ ] NVIDIA/CUDA stack is healthy where needed.
-- [ ] login/account/autologon configuration is left alone unless the owner explicitly requests a change.
+- [ ] NVIDIA/CUDA stack is healthy where required.
+- [ ] Windows login/account/autologon configuration is left alone unless explicitly changed by the owner.
 
-## Phase 1 — reconcile repository
+## Phase 1 — contract v2 and host/engine protocol
 
-- [ ] Fetch current `main` from `StealthEyeLLC/eye`.
-- [ ] Preserve/reapply only meaningful local work not already committed.
-- [ ] Do not reintroduce CRLF/EOL-only churn.
-- [ ] Do not import old `se` wholesale.
-- [ ] Confirm current architecture docs agree with `EYE_CANON.md`, `EYE_DECISIONS.md`, `MCP_CONTRACT.md` and `OSS_LANDSCAPE.md`.
-
-## Phase 2 — freeze/generated public contract
-
-Canonical public tools:
+Canonical target tools:
 
 ```text
 eye_inspect
@@ -39,134 +31,162 @@ eye_run
 eye_change
 eye_interact
 eye_external
+eye_live
 ```
 
-Checklist:
-
-- [ ] `contracts/eye-mcp-v1.json` is the canonical public-contract source.
-- [ ] tool descriptors are generated from it.
-- [ ] C# request/result types are generated from it.
-- [ ] operation/facade registration is generated from it.
-- [ ] capability metadata is generated from it.
-- [ ] exact output schemas are generated/published.
+- [ ] `contracts/eye-mcp-v1.json` remains immutable historical material.
+- [ ] `contracts/eye-mcp-v2.json` is the canonical target contract.
+- [ ] exact descriptors/DTOs/host validation/registration/capabilities/server instructions/docs are generated from the contract source.
+- [ ] exact output schemas are published.
 - [ ] normalized `tools/list` snapshot test exists.
-- [ ] ordinary implementation changes fail tests if they accidentally mutate the public contract.
-- [ ] `AGENTS.md` contract-freeze rule is honored.
+- [ ] ordinary implementation changes fail if they accidentally mutate the public contract.
+- [ ] `eye_live` is UI-only; helper tools are app-only and absent from model selection.
+- [ ] wait/transfer are operation families, not extra top-level tools.
+- [ ] host/engine protocol is versioned separately from MCP contract.
+- [ ] engine handshake includes protocol version, build version, public contract hash, supported operation IDs, and worker protocol version.
+- [ ] incompatible engine cannot become active.
 
-The five facades are effect classifications, not privilege tiers. They all route to one internal operation registry/dispatcher.
+Do not advertise v2 as live until its activation gate is met.
 
-## Phase 3 — native interop foundation
+## Phase 2 — stable host core
 
-- [ ] Introduce CsWin32 generation.
-- [ ] Replace suitable handwritten Win32 declarations/SafeHandle patterns incrementally.
-- [ ] Keep handwritten declarations only for demonstrated gaps.
-- [ ] Preserve working active-session launch behavior during migration.
-
-## Phase 4 — process and terminal substrate
-
-- [ ] LocalSystem execution works.
-- [ ] active-user execution works through `WTSQueryUserToken` / `CreateEnvironmentBlock` / `CreateProcessAsUser`.
+- [ ] one LocalSystem SCM service owns the stable host.
+- [ ] stable host serves loopback MCP.
+- [ ] host provides raw SYSTEM execution.
+- [ ] host provides active-user execution through `WTSQueryUserToken` / `CreateEnvironmentBlock` / `CreateProcessAsUser`.
+- [ ] host provides WSL execution through the active-user path.
+- [ ] CsWin32-generated bindings/SafeHandles replace suitable handwritten interop.
 - [ ] explicit inherited-handle lists are used.
-- [ ] stdout/stderr capture is asynchronous and reliable.
-- [ ] actual child processes are service-owned through Job Objects.
-- [ ] descendants are cleaned up correctly.
-- [ ] timeout and cancellation semantics are explicit.
-- [ ] native ConPTY is wired into the dispatcher.
-- [ ] terminal resize/input/output/exit lifecycle works.
-- [ ] current ConPTY lifetime behavior including `ReleasePseudoConsole` is handled correctly where available.
-- [ ] WSL execution uses the active-user path and does not require a permanent user helper.
+- [ ] Job Objects own launched process trees.
+- [ ] host owns native ConPTY handles/lifecycle.
+- [ ] cancellation consistently terminates owned process trees.
+- [ ] short operations can complete synchronously.
+- [ ] long operations automatically become durable jobs.
+- [ ] output is cursor-based and spooled rather than retained indefinitely in RAM.
+- [ ] tiny authoritative SQLite state is stored under SYSTEM-owned `C:\ProgramData\StealthEye` state.
 
-## Phase 5 — service/worker IPC
+## Phase 3 — artifacts and identity model
 
-- [ ] short-lived active-session worker can be launched on demand.
-- [ ] StreamJsonRpc named-pipe control path works bidirectionally.
-- [ ] events and cancellation work across the worker boundary.
-- [ ] multiplexed bulk channels handle stdout/stderr/VT/image/audio/file data.
-- [ ] worker crash/exit does not require restarting the LocalSystem service.
-- [ ] no permanent desktop/session daemon is introduced without measured justification.
+- [ ] host artifact registry exists.
+- [ ] artifact metadata includes stable ID, kind, MIME type, size, hash/name as applicable, storage tier, and provenance.
+- [ ] artifact preview/range-read/export/delete/diff paths exist where applicable.
+- [ ] large results return artifact + useful excerpt.
+- [ ] ChatGPT top-level file inputs can be imported directly as artifacts where supported.
+- [ ] stable identity model is implemented as `stable ID + incarnation + observation cursor`.
+- [ ] PID/HWND/path reuse cannot silently alias a replaced object.
+- [ ] stdout/stderr/terminal/file/UI/browser readers support cursor/delta semantics.
 
-## Phase 6 — desktop observation/control
+## Phase 4 — supervised versioned engine
 
-- [ ] HWND/process/window inventory is available.
-- [ ] UIA uses cache requests for only needed properties/patterns.
-- [ ] UIA event subscriptions provide changed-state observation.
-- [ ] UIA Remote Operations are used where they reduce cross-process round trips.
-- [ ] Windows.Graphics.Capture supports efficient window/screen capture.
-- [ ] dirty-region updates are used where practical.
+- [ ] capability engine is a separate child process, never a DLL inside stable host.
+- [ ] active and previous engine versions live side by side.
+- [ ] host supervises engine health/crash behavior.
+- [ ] staged engine starts and handshakes before activation.
+- [ ] activation routing switches atomically.
+- [ ] previous engine remains available for rollback.
+- [ ] handshake failure cannot replace the working engine.
+- [ ] crash-loop behavior triggers rollback.
+- [ ] host-owned jobs/terminals/artifacts/triggers/mission state survive engine replacement/crash.
+- [ ] degraded mode without an engine retains status, raw SYSTEM/user/WSL repair execution, jobs/terminals, artifact reads, mission/trigger state, and rollback controls.
+
+## Phase 5 — workers, streams, Trigger Broker, waits
+
+- [ ] StreamJsonRpc named-pipe control path works for host/engine/worker interactions.
+- [ ] multiplexed binary streams handle stdout/stderr/VT/image/audio/file traffic.
+- [ ] host launches short-lived active-session workers on demand.
+- [ ] host owns worker lifetime, IPC, identities, and cleanup.
+- [ ] worker behavior is version-matched to the active engine.
+- [ ] worker crash does not require restarting the stable host.
+- [ ] Trigger Broker durable queues are host-owned.
+- [ ] engine UIA/CDP watchers can feed host queues.
+- [ ] native waits exist for initial high-value conditions such as job/process exit, file events, service/port/session state.
+- [ ] wait sources expand with desktop/browser implementation rather than through polling loops.
+
+## Phase 6 — Eye Live and operator guidance
+
+- [ ] `eye_live` returns an MCP Apps UI resource only when continuation/supervision is useful.
+- [ ] core Eye operation does not depend on UI being rendered.
+- [ ] Eye Live can display mission, jobs/terminals, live output, triggers, artifacts, relay state, and compact machine/context status.
+- [ ] Eye Live can call app-only helpers without exposing them to model tool selection.
+- [ ] UI follow-up messaging works through supported bridge behavior.
+- [ ] Eye Operator skill exists and teaches modality hierarchy, jobs, waits, artifacts, handles/cursors, and contract discipline.
+- [ ] MCP server initialization instructions provide compact routing rules with self-contained first 512 characters.
+
+## Phase 7 — desktop and browser capability engine
+
+### Desktop
+
+- [ ] HWND/process/window inventory exists.
+- [ ] UIA uses cache requests/events and Remote Operations where useful.
+- [ ] stable UIA/window identities and deltas work.
+- [ ] Windows.Graphics.Capture provides efficient window/screen capture.
+- [ ] dirty-region observation is used where practical.
 - [ ] Per-Monitor V2 DPI awareness is established before coordinate-sensitive work.
-- [ ] OCR/visual grounding remains a fallback rather than the primary UI representation.
+- [ ] OCR/visual grounding remains fallback rather than primary state representation.
 - [ ] secure desktop/lock state is reported accurately.
 
-## Phase 7 — browser
+### Browser
 
-- [ ] installed Chrome launches as active user.
+- [ ] installed Chrome launches under active user.
 - [ ] dedicated Eye profile/data directory is used.
-- [ ] CDP binds only where intended, normally loopback.
-- [ ] typed CDP bindings are generated from the protocol schema.
-- [ ] target/tab/navigation/evaluation/input/network/download/upload/screenshot primitives work.
-- [ ] browser remains usable without Playwright installed.
-- [ ] optional Playwright .NET path can be used for tasks where it materially improves reliability.
-- [ ] no permanent Node daemon or bundled browser fleet is required.
+- [ ] CDP is loopback-bound where appropriate.
+- [ ] typed CDP bindings are generated.
+- [ ] stable target/frame/node identities and event waits work.
+- [ ] downloads become artifacts.
+- [ ] browser remains fully usable without Playwright installed.
+- [ ] optional Playwright .NET path is available only where it materially improves behavior.
+- [ ] no permanent Node daemon or bundled browser fleet exists.
 
-## Phase 8 — high-value Windows-native capabilities
+## Phase 8 — Blackboard, Relay, context capture, and adapters
 
-Add each only with a concrete workload and an explicit contract revision where publication is required.
+### Blackboard / Relay
 
-Potential capability families:
+- [ ] fixed compact Blackboard schema stores objective, facts/decisions, jobs/triggers, artifacts, unresolved questions, next action, relay messages.
+- [ ] no transcript archive, task taxonomy, receipt system, generic DAG/workflow model, or scheduler language is introduced.
+- [ ] Eye Live can associate available chats with missions/optional roles and relay compact messages.
+- [ ] absent/closed chats preserve relay queues without claiming spontaneous MCP wakeup.
 
-- [ ] BITS transfers: `transfer.start/status/wait/cancel`.
-- [ ] VSS consistent snapshots/reads.
-- [ ] Restart Manager locker inspection/coordination.
-- [ ] ReFS block-clone workspace snapshots/clones.
-- [ ] CopyFile2 progress/cancel-aware copies.
-- [ ] Process Snapshotting diagnostics.
-- [ ] Virtual Disk attach/detach/inspect.
-- [ ] ProjFS only if a large lazy-materialization workload appears.
+### Context capture
 
-## Phase 9 — code/document/data/media adapters
+- [ ] one-shot context helper can capture available active-app/window, selection, clipboard, UIA, screenshot, Chrome context, and path data.
+- [ ] Explorer/Chrome handoff can reuse the same context pipeline where useful.
 
-Add based on actual tasks, not completeness theater.
+### Capability adapters
 
-- [ ] ripgrep baseline.
-- [ ] Tree-sitter and/or ast-grep when syntax-aware operations are needed.
-- [ ] on-demand LSP adapters for symbols/references/rename/diagnostics.
-- [ ] MarkItDown/PdfPig/Open XML/ClosedXML for document work.
-- [ ] Docling only for heavier extraction needs.
-- [ ] DuckDB for structured local data queries.
-- [ ] NAudio for native audio capture.
-- [ ] whisper.cpp for on-demand transcription.
-- [ ] PaddleOCR/Tesseract and ONNX/OpenCV for on-demand vision/OCR.
-- [ ] no always-running local model unless a measured workload later proves the need.
+Add based on real tasks, not completeness theater:
 
-## Phase 10 — updates and measurement
+- [ ] machine/session/volume/software/operation manifests.
+- [ ] BITS/VSS/Restart Manager/ReFS clone/CopyFile2/Process Snapshotting/Virtual Disk capabilities.
+- [ ] ripgrep + Tree-sitter/ast-grep + on-demand language servers.
+- [ ] MarkItDown/PdfPig/Open XML/ClosedXML; Docling only when needed.
+- [ ] DuckDB.
+- [ ] NAudio/whisper.cpp.
+- [ ] OCR/ONNX/OpenCV on demand.
+- [ ] deterministic adapters for Git/GitHub CLI, PowerShell/WSL, winget, FFmpeg, services/Task Scheduler, and other actually installed software.
+- [ ] resource-aware execution considers GPU memory/thermals/power/storage tier where useful.
 
-- [ ] staged/atomic update path exists.
-- [ ] failed update can roll back cleanly.
-- [ ] service-aware restart/cutover is reliable.
-- [ ] EyeBench contains a small representative set of real tasks.
-- [ ] measure task success, elapsed time, Eye calls, retries/restarts, bytes transferred and required user intervention.
+## Phase 9 — final runtime cutover
 
-## Phase 11 — final runtime cutover
+Only cut over when the new runtime independently operates and repairs the machine.
 
-Only perform after v2 independently operates the machine.
-
-- [ ] v2 service survives cold reboot.
-- [ ] Secure MCP Tunnel reconnects to v2 loopback endpoint.
-- [ ] `eye_inspect` works.
-- [ ] `eye_run` works in SYSTEM/user/WSL contexts.
-- [ ] active-session worker can be created/destroyed repeatedly.
+- [ ] stable host survives cold reboot.
+- [ ] Secure MCP Tunnel reconnects to the host.
+- [ ] v2 generated public contract is the served surface.
+- [ ] SYSTEM/user/WSL execution works.
+- [ ] durable jobs/terminal continuity across MCP/tunnel disconnects works.
+- [ ] artifacts and cursor reads work.
+- [ ] engine activation/rollback works.
+- [ ] deliberate engine failure leaves degraded-mode repair path intact.
+- [ ] desktop worker can be created/destroyed repeatedly.
 - [ ] desktop observation/control works.
 - [ ] browser/CDP works.
-- [ ] file/code operations work.
-- [ ] structured errors and cancellation behave correctly.
+- [ ] Eye Live failure does not block ordinary MCP operation.
+- [ ] structured errors/cancellation behave correctly.
 - [ ] machine-secret persistence works.
-- [ ] worker/service/tunnel failure recovery is understood.
-- [ ] switch the production tunnel target to v2.
+- [ ] switch production tunnel target only after these checks pass.
 - [ ] observe normal operation before removing compatibility mechanisms.
-- [ ] remove obsolete prototype service/runtime pieces.
-- [ ] remove transitional session helper/task if still present.
-- [ ] remove temporary compatibility paths.
-- [ ] reboot from cold state and prove the final architecture end to end.
+- [ ] remove obsolete prototype runtime/session-helper residue.
+- [ ] cold reboot and prove final architecture end to end.
 
 ## Final success state
 
@@ -175,23 +195,25 @@ ChatGPT
    |
 OpenAI Secure MCP Tunnel
    |
-Eye LocalSystem Service
+Stable Eye Host (one LocalSystem SCM service)
    |
-   +-- five generated MCP facades
-   +-- one internal operation registry/dispatcher
-   +-- native SYSTEM capabilities
-   +-- active-user process execution
-   +-- on-demand desktop worker
-   +-- installed Chrome / typed CDP
+   +-- six generated MCP tools
+   +-- raw repair execution
+   +-- host-owned jobs / ConPTY / artifacts / triggers / state
+   +-- supervised active versioned capability engine
+   |      +-- desktop/UIA/WGC
+   |      +-- Chrome/CDP
+   |      +-- file/code/doc/data/media/provider adapters
+   |
+   +-- on-demand active-session workers
    +-- WSL
-   +-- Windows native facilities
-   +-- on-demand specialized engines
+   +-- external/on-demand specialized tools
 ```
 
-No VPS dependency.  
-No HEC dependency.  
-No permanent session daemon.  
-No generic agent runtime.  
+No required VPS/HEC dependency.  
 No Docker/Kubernetes base.  
-No permanent Node automation service.  
-No competing MCP servers.
+No Codex/Work/paid-API controller dependency.  
+No second autonomous agent brain.  
+No permanent user/session or Node automation daemon.  
+No competing MCP servers.  
+No generic workflow engine.
