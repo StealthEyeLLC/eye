@@ -58,6 +58,137 @@
             "additionalProperties": false
           }
         }
+      ,
+        {
+          "id": "job.status",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": { "job_id": { "type": "string", "minLength": 1 } },
+            "required": ["job_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string", "minLength": 1 },
+              "incarnation": { "type": "integer", "minimum": 1 },
+              "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] },
+              "context": { "type": "string", "enum": ["system", "user", "wsl"] },
+              "pid": { "type": "integer", "minimum": 0 },
+              "effective_identity": { "type": "string" },
+              "created_at": { "type": "string", "format": "date-time" },
+              "started_at": { "type": "string", "format": "date-time" },
+              "completed_at": { "type": "string", "format": "date-time" },
+              "exit_code": { "type": "integer" },
+              "timed_out": { "type": "boolean" },
+              "failure_code": { "type": "string" },
+              "failure_message": { "type": "string" }
+            },
+            "required": ["job_id", "incarnation", "state", "context", "created_at", "timed_out"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "job.read",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string", "minLength": 1 },
+              "stream": { "type": "string", "enum": ["stdout", "stderr"], "default": "stdout" },
+              "cursor": { "type": "integer", "minimum": 0, "default": 0 },
+              "max_bytes": { "type": "integer", "minimum": 1, "maximum": 1048576, "default": 65536 }
+            },
+            "required": ["job_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string" },
+              "stream": { "type": "string", "enum": ["stdout", "stderr"] },
+              "cursor": { "type": "integer", "minimum": 0 },
+              "text": { "type": "string" },
+              "next_cursor": { "type": "integer", "minimum": 0 },
+              "eof": { "type": "boolean" },
+              "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] }
+            },
+            "required": ["job_id", "stream", "cursor", "text", "next_cursor", "eof", "state"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "job.wait",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string", "minLength": 1 },
+              "wait_ms": { "type": "integer", "minimum": 0, "maximum": 86400000, "default": 30000 }
+            },
+            "required": ["job_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "job": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string", "minLength": 1 },
+              "incarnation": { "type": "integer", "minimum": 1 },
+              "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] },
+              "context": { "type": "string", "enum": ["system", "user", "wsl"] },
+              "pid": { "type": "integer", "minimum": 0 },
+              "effective_identity": { "type": "string" },
+              "created_at": { "type": "string", "format": "date-time" },
+              "started_at": { "type": "string", "format": "date-time" },
+              "completed_at": { "type": "string", "format": "date-time" },
+              "exit_code": { "type": "integer" },
+              "timed_out": { "type": "boolean" },
+              "failure_code": { "type": "string" },
+              "failure_message": { "type": "string" }
+            },
+            "required": ["job_id", "incarnation", "state", "context", "created_at", "timed_out"],
+            "additionalProperties": false
+          },
+              "wait_timed_out": { "type": "boolean" }
+            },
+            "required": ["job", "wait_timed_out"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "job.result",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": { "job_id": { "type": "string", "minLength": 1 } },
+            "required": ["job_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string", "minLength": 1 },
+              "incarnation": { "type": "integer", "minimum": 1 },
+              "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] },
+              "context": { "type": "string", "enum": ["system", "user", "wsl"] },
+              "pid": { "type": "integer", "minimum": 0 },
+              "effective_identity": { "type": "string" },
+              "created_at": { "type": "string", "format": "date-time" },
+              "started_at": { "type": "string", "format": "date-time" },
+              "completed_at": { "type": "string", "format": "date-time" },
+              "exit_code": { "type": "integer" },
+              "timed_out": { "type": "boolean" },
+              "failure_code": { "type": "string" },
+              "failure_message": { "type": "string" }
+            },
+            "required": ["job_id", "incarnation", "state", "context", "created_at", "timed_out"],
+            "additionalProperties": false
+          }
+        }
       ]
     },
     {
@@ -94,6 +225,52 @@
               "duration_ms": { "type": "integer", "minimum": 0 }
             },
             "required": ["pid", "exit_code", "timed_out", "stdout", "stderr", "context", "effective_identity", "duration_ms"],
+            "additionalProperties": false
+          }
+        }
+      ,
+        {
+          "id": "job.start",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "context": { "type": "string", "enum": ["system", "user", "wsl"], "default": "system" },
+              "file_name": { "type": "string", "minLength": 1 },
+              "arguments": { "type": "array", "items": { "type": "string" }, "default": [] },
+              "working_directory": { "type": "string" },
+              "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 86400000, "default": 30000 }
+            },
+            "required": ["file_name"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string", "minLength": 1 },
+              "incarnation": { "type": "integer", "minimum": 1 },
+              "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] }
+            },
+            "required": ["job_id", "incarnation", "state"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "job.cancel",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": { "job_id": { "type": "string", "minLength": 1 } },
+            "required": ["job_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "job_id": { "type": "string" },
+              "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] }
+            },
+            "required": ["job_id", "state"],
             "additionalProperties": false
           }
         }

@@ -8,8 +8,10 @@
     <Version>0.1.0</Version>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.10" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.10" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.1.0" />
+    <PackageReference Include="SQLitePCLRaw.provider.winsqlite3" Version="2.1.11" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\..\contracts\eye-mcp-v2.json" LogicalName="StealthEye.Contract.eye-mcp-v2.json" />

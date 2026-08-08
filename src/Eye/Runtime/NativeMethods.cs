@@ -169,7 +169,7 @@ internal static class NativeMethods
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool AssignProcessToJobObject(SafeFileHandle hJob, SafeFileHandle hProcess);
+    internal static extern bool AssignProcessToJobObject(SafeFileHandle hJob, IntPtr hProcess);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern uint ResumeThread(SafeFileHandle hThread);

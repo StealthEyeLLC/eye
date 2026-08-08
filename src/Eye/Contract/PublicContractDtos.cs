@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace StealthEye.Contract;
 
@@ -10,6 +10,19 @@ public sealed record RunArgs(
     [property: JsonPropertyName("arguments")] string[]? Arguments = null,
     [property: JsonPropertyName("working_directory"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? WorkingDirectory = null,
     [property: JsonPropertyName("timeout_ms")] int TimeoutMs = 30000);
+
+public sealed record JobIdArgs(
+    [property: JsonPropertyName("job_id")] string JobId);
+
+public sealed record JobReadArgs(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("stream")] string Stream = "stdout",
+    [property: JsonPropertyName("cursor")] long Cursor = 0,
+    [property: JsonPropertyName("max_bytes")] int MaxBytes = 65536);
+
+public sealed record JobWaitArgs(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("wait_ms")] int WaitMs = 30000);
 
 public sealed record SystemStatusResult(
     [property: JsonPropertyName("product")] string Product,
@@ -42,6 +55,43 @@ public sealed record RunOperationResult(
     [property: JsonPropertyName("context")] string Context,
     [property: JsonPropertyName("effective_identity")] string EffectiveIdentity,
     [property: JsonPropertyName("duration_ms")] long DurationMs);
+
+public sealed record JobReferenceResult(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("incarnation")] long Incarnation,
+    [property: JsonPropertyName("state")] string State);
+
+public sealed record JobStatusResult(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("incarnation")] long Incarnation,
+    [property: JsonPropertyName("state")] string State,
+    [property: JsonPropertyName("context")] string Context,
+    [property: JsonPropertyName("pid"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Pid,
+    [property: JsonPropertyName("effective_identity"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? EffectiveIdentity,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("started_at"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? StartedAt,
+    [property: JsonPropertyName("completed_at"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? CompletedAt,
+    [property: JsonPropertyName("exit_code"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? ExitCode,
+    [property: JsonPropertyName("timed_out")] bool TimedOut,
+    [property: JsonPropertyName("failure_code"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? FailureCode,
+    [property: JsonPropertyName("failure_message"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? FailureMessage);
+
+public sealed record JobReadPublicResult(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("stream")] string Stream,
+    [property: JsonPropertyName("cursor")] long Cursor,
+    [property: JsonPropertyName("text")] string Text,
+    [property: JsonPropertyName("next_cursor")] long NextCursor,
+    [property: JsonPropertyName("eof")] bool Eof,
+    [property: JsonPropertyName("state")] string State);
+
+public sealed record JobWaitPublicResult(
+    [property: JsonPropertyName("job")] JobStatusResult Job,
+    [property: JsonPropertyName("wait_timed_out")] bool WaitTimedOut);
+
+public sealed record JobCancelResult(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("state")] string State);
 
 public sealed record EyeError(
     [property: JsonPropertyName("code")] string Code,

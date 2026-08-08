@@ -11,6 +11,8 @@ var urls = Environment.GetEnvironmentVariable("EYE_URLS")
 builder.WebHost.UseUrls(urls);
 
 builder.Services.AddSingleton<ProcessRunner>();
+builder.Services.AddSingleton<JobStore>();
+builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EyeDispatcher>();
 builder.Services
     .AddMcpServer()
@@ -18,6 +20,7 @@ builder.Services
     .WithTools<EyeTool>();
 
 var app = builder.Build();
+_ = app.Services.GetRequiredService<JobStore>();
 
 app.MapGet("/health", () => Results.Json(new
 {

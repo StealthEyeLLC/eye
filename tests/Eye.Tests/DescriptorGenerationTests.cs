@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using StealthEye.Contract;
@@ -8,16 +8,18 @@ namespace Eye.Tests;
 public sealed class DescriptorGenerationTests
 {
     [Fact]
-    public void PublishedOperations_AreOnlyCurrentHostOperations()
+    public void PublishedOperations_AreOnlyImplementedHostOperations()
     {
         var contract = EyeContractCatalog.Load();
 
         Assert.Equal(
-            ["capabilities", "run", "system.status"],
+            ["capabilities", "job.cancel", "job.read", "job.result", "job.start", "job.status", "job.wait", "run", "system.status"],
             contract.PublishedOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Empty(contract.AllowedEngineOperationIds);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("system.status").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("job.status").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("run").Name);
+        Assert.Equal("eye_run", contract.GetToolForOperation("job.start").Name);
     }
 
     [Fact]
@@ -28,32 +30,69 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(["eye_inspect", "eye_run"], descriptors.Select(x => x.Name).ToArray());
 
         var inspect = descriptors.Single(x => x.Name == "eye_inspect");
-        Assert.Equal(2, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(4, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(6, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(12, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var run = descriptors.Single(x => x.Name == "eye_run");
-        Assert.Equal("run", run.InputSchema.GetProperty("properties").GetProperty("op").GetProperty("const").GetString());
-        Assert.Contains("args", run.InputSchema.GetProperty("required").EnumerateArray().Select(x => x.GetString()));
-        Assert.Equal(2, run.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(3, run.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(6, run.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Contains(
+            "job.start",
+            run.InputSchema.GetProperty("oneOf").EnumerateArray()
+                .Select(x => x.GetProperty("properties").GetProperty("op").GetProperty("const").GetString()));
     }
 
     [Fact]
     public void PublicDtos_MatchCurrentContractPropertySets()
     {
         var contract = EyeContractCatalog.Load();
-        var status = Operation(contract, "system.status");
+        var systemStatus = Operation(contract, "system.status");
         var capabilities = Operation(contract, "capabilities");
         var run = Operation(contract, "run");
+        var jobStart = Operation(contract, "job.start");
+        var jobStatus = Operation(contract, "job.status");
+        var jobRead = Operation(contract, "job.read");
+        var jobWait = Operation(contract, "job.wait");
+        var jobCancel = Operation(contract, "job.cancel");
+        var jobResult = Operation(contract, "job.result");
 
-        AssertPropertySet<SystemStatusResult>(status.ResultSchema);
+        AssertPropertySet<SystemStatusResult>(systemStatus.ResultSchema);
         AssertPropertySet<CapabilitiesResult>(capabilities.ResultSchema);
         AssertPropertySet<CapabilityFacades>(capabilities.ResultSchema.GetProperty("properties").GetProperty("facades"));
         AssertPropertySet<RunArgs>(run.ArgsSchema);
+        AssertPropertySet<RunOperationResult>(run.ResultSchema);
+        AssertPropertySet<RunArgs>(jobStart.ArgsSchema);
+        AssertPropertySet<JobReferenceResult>(jobStart.ResultSchema);
+        AssertPropertySet<JobIdArgs>(jobStatus.ArgsSchema);
+        AssertPropertySet<JobStatusResult>(jobStatus.ResultSchema);
+        AssertPropertySet<JobReadArgs>(jobRead.ArgsSchema);
+        AssertPropertySet<JobReadPublicResult>(jobRead.ResultSchema);
+        AssertPropertySet<JobWaitArgs>(jobWait.ArgsSchema);
+        AssertPropertySet<JobWaitPublicResult>(jobWait.ResultSchema);
+        AssertPropertySet<JobStatusResult>(jobWait.ResultSchema.GetProperty("properties").GetProperty("job"));
+        AssertPropertySet<JobIdArgs>(jobCancel.ArgsSchema);
+        AssertPropertySet<JobCancelResult>(jobCancel.ResultSchema);
+        AssertPropertySet<JobIdArgs>(jobResult.ArgsSchema);
+        AssertPropertySet<JobStatusResult>(jobResult.ResultSchema);
+
         Assert.Equal(
             ["system", "user", "wsl"],
             run.ArgsSchema.GetProperty("properties").GetProperty("context").GetProperty("enum")
                 .EnumerateArray().Select(x => x.GetString()!).ToArray());
-        AssertPropertySet<RunOperationResult>(run.ResultSchema);
+    }
+
+    [Fact]
+    public void PublicContract_DoesNotExposeJobStorageInternalsOrUnimplementedTerminalOps()
+    {
+        var contract = EyeContractCatalog.Load();
+        var serialized = JsonSerializer.Serialize(contract.Manifest);
+
+        Assert.DoesNotContain("stdout_path", serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain("stderr_path", serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain("arguments_json", serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain("job.write", contract.PublishedOperationIds);
+        Assert.DoesNotContain("job.resize", contract.PublishedOperationIds);
+        Assert.DoesNotContain("job.attach", contract.PublishedOperationIds);
     }
 
     private static EyeOperationDescriptor Operation(EyeContractCatalog contract, string id) =>

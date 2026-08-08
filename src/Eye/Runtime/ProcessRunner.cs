@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
@@ -8,21 +8,27 @@ namespace StealthEye.Runtime;
 
 public sealed class ProcessRunner
 {
-    public Task<ProcessRunResult> RunAsync(RunRequest request, CancellationToken cancellationToken = default)
+    public Task<ProcessRunResult> RunAsync(
+        RunRequest request,
+        CancellationToken cancellationToken = default,
+        ProcessRunHooks? hooks = null)
     {
         if (string.IsNullOrWhiteSpace(request.FileName))
             throw new ArgumentException("file_name is required.", nameof(request));
 
         return request.Context.ToLowerInvariant() switch
         {
-            "system" => RunSystemAsync(request, cancellationToken),
-            "user" => RunActiveUserAsync(request, cancellationToken),
-            "wsl" => RunWslAsync(request, cancellationToken),
+            "system" => RunSystemAsync(request, cancellationToken, hooks),
+            "user" => RunActiveUserAsync(request, cancellationToken, hooks),
+            "wsl" => RunWslAsync(request, cancellationToken, hooks),
             _ => throw new ArgumentException($"Unknown process context: {request.Context}", nameof(request))
         };
     }
 
-    private static async Task<ProcessRunResult> RunSystemAsync(RunRequest request, CancellationToken cancellationToken)
+    private static async Task<ProcessRunResult> RunSystemAsync(
+        RunRequest request,
+        CancellationToken cancellationToken,
+        ProcessRunHooks? hooks)
     {
         var started = Stopwatch.StartNew();
         var psi = new ProcessStartInfo(request.FileName)
@@ -41,29 +47,40 @@ public sealed class ProcessRunner
             psi.WorkingDirectory = request.WorkingDirectory;
 
         using var process = Process.Start(psi) ?? throw new InvalidOperationException("Process.Start returned null.");
-        process.StandardInput.Close();
+        using var jobHandle = CreateKillOnCloseJob();
+        if (!NativeMethods.AssignProcessToJobObject(jobHandle, process.Handle))
+            ThrowWin32("AssignProcessToJobObject");
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        process.StandardInput.Close();
+        var identity = WindowsIdentity.GetCurrent().Name;
+        hooks?.Started?.Invoke(process.Id, identity);
+
+        var stdoutTask = ReadTextAsync(process.StandardOutput, ProcessOutputChannel.Stdout, hooks);
+        var stderrTask = ReadTextAsync(process.StandardError, ProcessOutputChannel.Stderr, hooks);
         var timedOut = false;
+
+        using var timeout = request.TimeoutMs > 0
+            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
+            : null;
+        if (timeout is not null)
+            timeout.CancelAfter(request.TimeoutMs);
+        var waitToken = timeout?.Token ?? cancellationToken;
 
         try
         {
-            if (request.TimeoutMs > 0)
-            {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeout.CancelAfter(request.TimeoutMs);
-                await process.WaitForExitAsync(timeout.Token);
-            }
-            else
-            {
-                await process.WaitForExitAsync(cancellationToken);
-            }
+            await process.WaitForExitAsync(waitToken);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            TerminateJob(jobHandle);
+            await process.WaitForExitAsync(CancellationToken.None);
+            await DrainOutputAsync(stdoutTask, stderrTask);
+            throw;
+        }
+        catch (OperationCanceledException)
         {
             timedOut = true;
-            process.Kill(entireProcessTree: true);
+            TerminateJob(jobHandle);
             await process.WaitForExitAsync(CancellationToken.None);
         }
 
@@ -78,11 +95,14 @@ public sealed class ProcessRunner
             stdout,
             stderr,
             "system",
-            WindowsIdentity.GetCurrent().Name,
+            identity,
             started.ElapsedMilliseconds);
     }
 
-    private static async Task<ProcessRunResult> RunWslAsync(RunRequest request, CancellationToken cancellationToken)
+    private static async Task<ProcessRunResult> RunWslAsync(
+        RunRequest request,
+        CancellationToken cancellationToken,
+        ProcessRunHooks? hooks)
     {
         var arguments = new List<string>();
         if (!string.IsNullOrWhiteSpace(request.WorkingDirectory))
@@ -103,7 +123,7 @@ public sealed class ProcessRunner
             TimeoutMs = request.TimeoutMs
         };
 
-        var result = await RunActiveUserAsync(wslRequest, cancellationToken, "wsl");
+        var result = await RunActiveUserAsync(wslRequest, cancellationToken, hooks, "wsl");
         return result with
         {
             Stdout = NormalizeWslText(result.Stdout),
@@ -114,7 +134,11 @@ public sealed class ProcessRunner
     private static string NormalizeWslText(string value) =>
         value.Contains('\0') ? value.Replace("\0", string.Empty) : value;
 
-    private static async Task<ProcessRunResult> RunActiveUserAsync(RunRequest request, CancellationToken cancellationToken, string resultContext = "user")
+    private static async Task<ProcessRunResult> RunActiveUserAsync(
+        RunRequest request,
+        CancellationToken cancellationToken,
+        ProcessRunHooks? hooks,
+        string resultContext = "user")
     {
         var started = Stopwatch.StartNew();
         var sessionId = FindActiveSessionId();
@@ -187,7 +211,7 @@ public sealed class ProcessRunner
                 using var threadHandle = new SafeFileHandle(pi.hThread, ownsHandle: true);
                 using var jobHandle = CreateKillOnCloseJob();
 
-                if (!NativeMethods.AssignProcessToJobObject(jobHandle, processHandle))
+                if (!NativeMethods.AssignProcessToJobObject(jobHandle, processHandle.DangerousGetHandle()))
                     ThrowWin32("AssignProcessToJobObject");
 
                 stdoutWriteHandle.Dispose();
@@ -195,26 +219,29 @@ public sealed class ProcessRunner
                 stdinReadHandle.Dispose();
                 stdinWriteHandle.Dispose();
 
-                var stdoutTask = ReadPipeAsync(stdoutReadHandle, cancellationToken);
-                var stderrTask = ReadPipeAsync(stderrReadHandle, cancellationToken);
+                var stdoutTask = ReadPipeAsync(stdoutReadHandle, ProcessOutputChannel.Stdout, hooks);
+                var stderrTask = ReadPipeAsync(stderrReadHandle, ProcessOutputChannel.Stderr, hooks);
 
                 if (NativeMethods.ResumeThread(threadHandle) == uint.MaxValue)
                     ThrowWin32("ResumeThread");
 
-                var timedOut = false;
-                var waitMs = request.TimeoutMs > 0 ? (uint)request.TimeoutMs : NativeMethods.INFINITE;
-                var waitResult = await Task.Run(() => NativeMethods.WaitForSingleObject(processHandle, waitMs), CancellationToken.None);
+                hooks?.Started?.Invoke((int)pi.dwProcessId, identity.Name);
 
-                if (waitResult == NativeMethods.WAIT_TIMEOUT)
+                var timedOut = false;
+                var waitResult = await WaitForProcessAsync(processHandle, request.TimeoutMs, cancellationToken);
+                if (waitResult == WaitOutcome.Cancelled)
+                {
+                    TerminateJob(jobHandle);
+                    NativeMethods.WaitForSingleObject(processHandle, NativeMethods.INFINITE);
+                    await DrainOutputAsync(stdoutTask, stderrTask);
+                    throw new OperationCanceledException(cancellationToken);
+                }
+
+                if (waitResult == WaitOutcome.TimedOut)
                 {
                     timedOut = true;
-                    if (!NativeMethods.TerminateJobObject(jobHandle, 1))
-                        ThrowWin32("TerminateJobObject");
+                    TerminateJob(jobHandle);
                     NativeMethods.WaitForSingleObject(processHandle, NativeMethods.INFINITE);
-                }
-                else if (waitResult != NativeMethods.WAIT_OBJECT_0)
-                {
-                    ThrowWin32("WaitForSingleObject");
                 }
 
                 if (!NativeMethods.GetExitCodeProcess(processHandle, out var rawExitCode))
@@ -225,7 +252,7 @@ public sealed class ProcessRunner
                 started.Stop();
 
                 return new ProcessRunResult(
-                    pi.dwProcessId,
+                    (int)pi.dwProcessId,
                     unchecked((int)rawExitCode),
                     timedOut,
                     stdout,
@@ -239,6 +266,40 @@ public sealed class ProcessRunner
                 NativeMethods.DestroyEnvironmentBlock(environment);
             }
         }
+    }
+
+    private enum WaitOutcome
+    {
+        Exited,
+        TimedOut,
+        Cancelled
+    }
+
+    private static Task<WaitOutcome> WaitForProcessAsync(
+        SafeFileHandle processHandle,
+        int timeoutMs,
+        CancellationToken cancellationToken)
+    {
+        return Task.Run(() =>
+        {
+            using var processWait = new EventWaitHandle(false, EventResetMode.ManualReset);
+            processWait.SafeWaitHandle = new SafeWaitHandle(processHandle.DangerousGetHandle(), ownsHandle: false);
+            var waitMilliseconds = timeoutMs > 0 ? timeoutMs : Timeout.Infinite;
+
+            if (!cancellationToken.CanBeCanceled)
+                return WaitHandle.WaitAny([processWait], waitMilliseconds) == WaitHandle.WaitTimeout
+                    ? WaitOutcome.TimedOut
+                    : WaitOutcome.Exited;
+
+            var index = WaitHandle.WaitAny([processWait, cancellationToken.WaitHandle], waitMilliseconds);
+            return index switch
+            {
+                0 => WaitOutcome.Exited,
+                1 => WaitOutcome.Cancelled,
+                WaitHandle.WaitTimeout => WaitOutcome.TimedOut,
+                _ => throw new InvalidOperationException($"Unexpected process wait result: {index}.")
+            };
+        }, CancellationToken.None);
     }
 
     private static int FindActiveSessionId()
@@ -301,11 +362,54 @@ public sealed class ProcessRunner
         return job;
     }
 
-    private static async Task<string> ReadPipeAsync(SafeFileHandle handle, CancellationToken cancellationToken)
+    private static void TerminateJob(SafeFileHandle jobHandle)
+    {
+        if (!NativeMethods.TerminateJobObject(jobHandle, 1))
+            ThrowWin32("TerminateJobObject");
+    }
+
+    private static async Task<string> ReadPipeAsync(
+        SafeFileHandle handle,
+        ProcessOutputChannel channel,
+        ProcessRunHooks? hooks)
     {
         using var stream = new FileStream(handle, FileAccess.Read, 4096, isAsync: false);
         using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        return await reader.ReadToEndAsync(cancellationToken);
+        return await ReadTextAsync(reader, channel, hooks);
+    }
+
+    private static async Task<string> ReadTextAsync(
+        StreamReader reader,
+        ProcessOutputChannel channel,
+        ProcessRunHooks? hooks)
+    {
+        var captured = hooks?.CaptureOutput == false ? null : new StringBuilder();
+        var buffer = new char[4096];
+        while (true)
+        {
+            var count = await reader.ReadAsync(buffer.AsMemory(), CancellationToken.None);
+            if (count == 0)
+                break;
+
+            var chunk = new string(buffer, 0, count);
+            captured?.Append(chunk);
+            if (hooks?.Output is not null)
+                await hooks.Output(channel, chunk);
+        }
+
+        return captured?.ToString() ?? string.Empty;
+    }
+
+    private static async Task DrainOutputAsync(Task<string> stdoutTask, Task<string> stderrTask)
+    {
+        try
+        {
+            await Task.WhenAll(stdoutTask, stderrTask);
+        }
+        catch
+        {
+            // Preserve the cancellation path; output failures are secondary once the job is terminated.
+        }
     }
 
     private static string? ResolveExecutable(string fileName)
