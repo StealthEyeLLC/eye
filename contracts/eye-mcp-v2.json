@@ -1,0 +1,141 @@
+{
+  "contract": "stealtheye.eye.mcp",
+  "version": "2.0.0",
+  "status": "canonical-target",
+  "publication_state": "not-live-until-generated",
+  "supersedes": "contracts/eye-mcp-v1.json",
+  "summary": "Five effect-class capability tools plus one UI-only Eye Live tool over one stable host and one supervised versioned capability engine.",
+  "tools": [
+    {
+      "name": "eye_inspect",
+      "effect_class": "inspect",
+      "description": "Read, search, observe, query, wait, subscribe, and diagnose StealthEye machine state.",
+      "machine_effects": "read-only-or-observational"
+    },
+    {
+      "name": "eye_run",
+      "effect_class": "run",
+      "description": "Run SYSTEM, active-user, WSL, process, PowerShell, terminal, and ConPTY execution operations.",
+      "machine_effects": "local-execution"
+    },
+    {
+      "name": "eye_change",
+      "effect_class": "change",
+      "description": "Apply precisely typed local file, machine, service, package, storage, snapshot, and configuration changes.",
+      "machine_effects": "local-write"
+    },
+    {
+      "name": "eye_interact",
+      "effect_class": "interact",
+      "description": "Interact with Windows applications, UI Automation, input, clipboard, and Chrome/CDP user interfaces.",
+      "machine_effects": "interactive"
+    },
+    {
+      "name": "eye_external",
+      "effect_class": "external",
+      "description": "Perform HTTP, upload, send, post, provider administration, remote transfer, and other effects leaving the laptop.",
+      "machine_effects": "open-world"
+    },
+    {
+      "name": "eye_live",
+      "effect_class": "ui",
+      "description": "Open the Eye Live mission, job, trigger, artifact, and relay component. This tool performs no machine operation itself.",
+      "machine_effects": "none",
+      "ui_only": true
+    }
+  ],
+  "architectural_primitives": {
+    "observe": "Structured machine, UI, browser, process, file, job, artifact, and event state.",
+    "act": "Raw execution or precise typed changes/interactions/external effects.",
+    "wait": "Event-driven condition waiting exposed as typed operations, primarily through eye_inspect rather than a separate top-level tool.",
+    "transfer": "Artifact and file movement exposed as typed operations in the appropriate effect facade rather than a separate top-level tool."
+  },
+  "host_guarantees_when_engine_unavailable": [
+    "system.status",
+    "capabilities",
+    "engine.status",
+    "engine.restart",
+    "engine.activate",
+    "engine.rollback",
+    "raw SYSTEM execution",
+    "raw active-user execution",
+    "raw WSL execution",
+    "job status/read/wait/write/resize/cancel/result",
+    "terminal access",
+    "artifact info/read",
+    "mission state",
+    "trigger state",
+    "minimal Eye Live monitoring"
+  ],
+  "schema_profile": {
+    "operation_variants": "closed-and-generated",
+    "preferred_constructs": [
+      "objects",
+      "primitives",
+      "arrays",
+      "enums",
+      "bounds",
+      "required",
+      "additionalProperties:false"
+    ],
+    "avoid": [
+      "deep-recursion",
+      "deep-composition",
+      "conditionals",
+      "nullable-unions",
+      "schema-cleverness"
+    ],
+    "optional_values": "omit-rather-than-null",
+    "output_schema_required": true,
+    "raw_exception_details_model_visible": false,
+    "large_results": "artifact-plus-useful-excerpt"
+  },
+  "stable_identifiers": {
+    "job_id": true,
+    "artifact_id": true,
+    "stream_id": true,
+    "stable_object_id": true,
+    "incarnation_generation": true,
+    "observation_cursor": true
+  },
+  "ui": {
+    "eye_live": {
+      "resource_link": "_meta.ui.resourceUri",
+      "portable_bridge": "MCP Apps ui/* JSON-RPC",
+      "follow_up_message": "ui/message",
+      "helpers": "app-only via _meta.ui.visibility:[app]",
+      "must_not_be_required_for_core_operation": true
+    },
+    "file_inputs": {
+      "chatgpt_bridge": "top-level file parameters via _meta[openai/fileParams] where applicable"
+    }
+  },
+  "generation": {
+    "single_source": true,
+    "targets": [
+      "mcp_tool_descriptors",
+      "csharp_request_result_types",
+      "host_contract_validation",
+      "operation_to_facade_registration",
+      "capabilities",
+      "server_instructions",
+      "documentation",
+      "normalized_tools_list_snapshot"
+    ]
+  },
+  "activation_gate": [
+    "generated exact descriptors exist",
+    "host fallback operations exist",
+    "host-engine protocol and contract-hash handshake exist",
+    "eye_live UI resource exists",
+    "normalized tools/list snapshot passes"
+  ],
+  "revision_policy": {
+    "v1_is_historical_and_immutable": true,
+    "six_tool_names_are_frozen_for_v2": true,
+    "ordinary_implementation_changes_must_not_modify_public_contract": true,
+    "public_operation_or_schema_changes_require_explicit_owner_authorized_contract_revision": true,
+    "additive_operation_revisions_may_remain_within_major_v2": true,
+    "breaking_surface_changes_require_new_major_version": true
+  }
+}
