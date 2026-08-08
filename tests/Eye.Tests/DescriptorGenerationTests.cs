@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using StealthEye.Contract;
@@ -15,12 +15,13 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(
             [
                 "artifact.delete", "artifact.diff", "artifact.export", "artifact.info", "artifact.preview", "artifact.read_range",
-                "capabilities", "job.attach", "job.cancel", "job.read", "job.resize", "job.result", "job.start", "job.status",
-                "job.wait", "job.write", "run", "system.status"
+                "capabilities", "engine.activate", "engine.restart", "engine.rollback", "engine.status", "job.attach", "job.cancel", "job.read",
+                "job.resize", "job.result", "job.start", "job.status", "job.wait", "job.write", "run", "system.status"
             ],
             contract.PublishedOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Empty(contract.AllowedEngineOperationIds);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("system.status").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("engine.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("job.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("job.attach").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("artifact.info").Name);
@@ -28,6 +29,7 @@ public sealed class DescriptorGenerationTests
         Assert.Equal("eye_run", contract.GetToolForOperation("job.start").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("job.write").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("job.resize").Name);
+        Assert.Equal("eye_change", contract.GetToolForOperation("engine.activate").Name);
         Assert.Equal("eye_change", contract.GetToolForOperation("artifact.export").Name);
     }
 
@@ -39,8 +41,8 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(["eye_inspect", "eye_run", "eye_change"], descriptors.Select(x => x.Name).ToArray());
 
         var inspect = descriptors.Single(x => x.Name == "eye_inspect");
-        Assert.Equal(11, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(22, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(12, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(24, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var run = descriptors.Single(x => x.Name == "eye_run");
         Assert.Equal(5, run.InputSchema.GetProperty("oneOf").GetArrayLength());
@@ -55,8 +57,8 @@ public sealed class DescriptorGenerationTests
                 .Select(x => x.GetProperty("properties").GetProperty("op").GetProperty("const").GetString()));
 
         var change = descriptors.Single(x => x.Name == "eye_change");
-        Assert.Equal(2, change.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(4, change.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(5, change.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(10, change.OutputSchema.GetProperty("oneOf").GetArrayLength());
     }
 
     [Fact]
@@ -64,6 +66,10 @@ public sealed class DescriptorGenerationTests
     {
         var contract = EyeContractCatalog.Load();
         var systemStatus = Operation(contract, "system.status");
+        var engineStatus = Operation(contract, "engine.status");
+        var engineActivate = Operation(contract, "engine.activate");
+        var engineRestart = Operation(contract, "engine.restart");
+        var engineRollback = Operation(contract, "engine.rollback");
         var capabilities = Operation(contract, "capabilities");
         var run = Operation(contract, "run");
         var jobStart = Operation(contract, "job.start");
@@ -83,6 +89,14 @@ public sealed class DescriptorGenerationTests
         var artifactDelete = Operation(contract, "artifact.delete");
 
         AssertPropertySet<SystemStatusResult>(systemStatus.ResultSchema);
+        AssertPropertySet<EmptyArgs>(engineStatus.ArgsSchema);
+        AssertPropertySet<EngineStatusResult>(engineStatus.ResultSchema);
+        AssertPropertySet<EngineActivateArgs>(engineActivate.ArgsSchema);
+        AssertPropertySet<EngineStatusResult>(engineActivate.ResultSchema);
+        AssertPropertySet<EmptyArgs>(engineRestart.ArgsSchema);
+        AssertPropertySet<EngineStatusResult>(engineRestart.ResultSchema);
+        AssertPropertySet<EmptyArgs>(engineRollback.ArgsSchema);
+        AssertPropertySet<EngineStatusResult>(engineRollback.ResultSchema);
         AssertPropertySet<CapabilitiesResult>(capabilities.ResultSchema);
         AssertPropertySet<CapabilityFacades>(capabilities.ResultSchema.GetProperty("properties").GetProperty("facades"));
         AssertPropertySet<RunArgs>(run.ArgsSchema);
@@ -152,7 +166,9 @@ public sealed class DescriptorGenerationTests
 
     private static void AssertPropertySet<T>(JsonElement schema)
     {
-        var schemaNames = schema.GetProperty("properties").EnumerateObject().Select(x => x.Name).Order(StringComparer.Ordinal).ToArray();
+        var schemaNames = schema.TryGetProperty("properties", out var properties)
+            ? properties.EnumerateObject().Select(x => x.Name).Order(StringComparer.Ordinal).ToArray()
+            : [];
         var dtoNames = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Select(x => x.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? x.Name)
             .Order(StringComparer.Ordinal)

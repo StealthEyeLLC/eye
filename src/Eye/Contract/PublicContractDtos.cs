@@ -197,6 +197,17 @@ public sealed record JobAttachResult(
     [property: JsonPropertyName("stdout_cursor")] long StdoutCursor,
     [property: JsonPropertyName("stderr_cursor")] long StderrCursor);
 
+public sealed record EngineActivateArgs(
+    [property: JsonPropertyName("version")] string Version);
+
+public sealed record EngineStatusResult(
+    [property: JsonPropertyName("state")] string State,
+    [property: JsonPropertyName("active_version"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ActiveVersion,
+    [property: JsonPropertyName("previous_version"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PreviousVersion,
+    [property: JsonPropertyName("engine_version"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? EngineVersion,
+    [property: JsonPropertyName("process_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? ProcessId,
+    [property: JsonPropertyName("last_error"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? LastError);
+
 public sealed record EyeError(
     [property: JsonPropertyName("code")] string Code,
     [property: JsonPropertyName("message")] string Message,

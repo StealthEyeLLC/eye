@@ -40,7 +40,15 @@ public sealed class EngineSupervisor : IAsyncDisposable
 
         Directory.CreateDirectory(StateRoot);
         Directory.CreateDirectory(EngineRoot);
-        _selection = LoadSelection();
+        try
+        {
+            _selection = LoadSelection();
+        }
+        catch (Exception ex)
+        {
+            _selection = new EngineSelectionState(null, null);
+            _lastError = ex.Message;
+        }
     }
 
     public string StateRoot { get; }
@@ -63,7 +71,7 @@ public sealed class EngineSupervisor : IAsyncDisposable
         }
 
         if (_selection.ActiveVersion is null)
-            return new EngineSupervisorStatus("not_configured", null, _selection.PreviousVersion, null, null, _lastError);
+            return new EngineSupervisorStatus(_lastError is null ? "not_configured" : "unavailable", null, _selection.PreviousVersion, null, null, _lastError);
 
         return new EngineSupervisorStatus(
             "unavailable",

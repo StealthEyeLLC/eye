@@ -75,6 +75,23 @@ public sealed class EngineSupervisorTests : IDisposable
         Assert.NotNull(status.LastError);
     }
 
+    [Fact]
+    public async Task CorruptSelector_LeavesHostUnavailableNotCrashed()
+    {
+        var state = Path.Combine(_root, "state-corrupt");
+        var engines = Path.Combine(_root, "engines-corrupt");
+        Directory.CreateDirectory(state);
+        Directory.CreateDirectory(engines);
+        await File.WriteAllTextAsync(Path.Combine(state, "engine-state.json"), "{not-json");
+
+        await using var supervisor = new EngineSupervisor(state, engines);
+        var status = await supervisor.InitializeAsync();
+        Assert.Equal("unavailable", status.State);
+        Assert.Null(status.ActiveVersion);
+        Assert.Null(status.ProcessId);
+        Assert.NotNull(status.LastError);
+    }
+
     private static bool ProcessGone(int pid)
     {
         try
@@ -93,7 +110,7 @@ public sealed class EngineSupervisorTests : IDisposable
         var source = EngineOutputDirectory();
         var destination = Path.Combine(engineRoot, version);
         Directory.CreateDirectory(destination);
-        foreach (var file in Directory.GetFiles(source, "eye-engine.*"))
+        foreach (var file in Directory.GetFiles(source))
             File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
     }
 

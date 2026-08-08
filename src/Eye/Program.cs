@@ -14,6 +14,7 @@ builder.Services.AddSingleton<ProcessRunner>();
 builder.Services.AddSingleton<JobStore>();
 builder.Services.AddSingleton<ArtifactStore>();
 builder.Services.AddSingleton<JobManager>();
+builder.Services.AddSingleton<EngineSupervisor>();
 builder.Services.AddSingleton<EyeDispatcher>();
 builder.Services
     .AddMcpServer()
@@ -23,6 +24,8 @@ builder.Services
 var app = builder.Build();
 _ = app.Services.GetRequiredService<JobStore>();
 _ = app.Services.GetRequiredService<ArtifactStore>();
+var engineSupervisor = app.Services.GetRequiredService<EngineSupervisor>();
+await engineSupervisor.InitializeAsync();
 
 app.MapGet("/health", () => Results.Json(new
 {

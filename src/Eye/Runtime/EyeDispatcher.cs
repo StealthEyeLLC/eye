@@ -13,7 +13,7 @@ public enum EyeEffectClass
     External
 }
 
-public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore)
+public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null)
 {
     private const int FastCompletionWindowMs = 1000;
     private const long InlineOutputLimitBytes = 262_144;
@@ -39,6 +39,8 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
 
             switch (op)
             {
+                case "engine.status":
+                    return Success(op, ToPublic(RequireEngineSupervisor().Status()));
                 case "system.status":
                     return Success(op, new SystemStatusResult(
                         "StealthEye",
@@ -54,9 +56,9 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                     return Success(op, new CapabilitiesResult(
                         "eye-mcp-v2",
                         new CapabilityFacades(
-                            ["system.status", "capabilities", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff"],
+                            ["system.status", "capabilities", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff"],
                             ["run", "job.start", "job.write", "job.resize", "job.cancel"],
-                            ["artifact.export", "artifact.delete"],
+                            ["engine.activate", "engine.restart", "engine.rollback", "artifact.export", "artifact.delete"],
                             [],
                             [],
                             [])));
@@ -222,6 +224,17 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                         diff.FirstDifferenceOffset));
                 }
 
+                case "engine.activate":
+                {
+                    var request = DeserializeRequired<EngineActivateArgs>(op, args);
+                    return Success(op, ToPublic(await RequireEngineSupervisor().ActivateAsync(request.Version, cancellationToken)));
+                }
+
+                case "engine.restart":
+                    return Success(op, ToPublic(await RequireEngineSupervisor().RestartAsync(cancellationToken)));
+
+                case "engine.rollback":
+                    return Success(op, ToPublic(await RequireEngineSupervisor().RollbackAsync(cancellationToken)));
                 case "artifact.export":
                 {
                     var request = DeserializeRequired<ArtifactExportArgs>(op, args);
@@ -315,6 +328,16 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         job.FailureCode,
         job.FailureMessage);
 
+    private static EngineStatusResult ToPublic(EngineSupervisorStatus status) => new(
+        status.State,
+        status.ActiveVersion,
+        status.PreviousVersion,
+        status.EngineVersion,
+        status.ProcessId,
+        status.LastError);
+
+    private EngineSupervisor RequireEngineSupervisor() =>
+        engineSupervisor ?? throw new InvalidOperationException("Engine supervisor is not configured.");
     private static ArtifactInfoResult ToPublic(ArtifactRecord artifact) => new(
         artifact.ArtifactId,
         artifact.Incarnation,
@@ -338,10 +361,10 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
 
     private static EyeEffectClass? GetEffectClass(string op) => op switch
     {
-        "system.status" or "capabilities" or "job.status" or "job.read" or "job.wait" or "job.result" or "job.attach" or
+        "system.status" or "capabilities" or "engine.status" or "job.status" or "job.read" or "job.wait" or "job.result" or "job.attach" or
         "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" => EyeEffectClass.Inspect,
         "run" or "job.start" or "job.write" or "job.resize" or "job.cancel" => EyeEffectClass.Run,
-        "artifact.export" or "artifact.delete" => EyeEffectClass.Change,
+        "engine.activate" or "engine.restart" or "engine.rollback" or "artifact.export" or "artifact.delete" => EyeEffectClass.Change,
         _ => null
     };
 

@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Eye\Eye.csproj" />
+    <ProjectReference Include="..\..\src\Eye.Engine\Eye.Engine.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>

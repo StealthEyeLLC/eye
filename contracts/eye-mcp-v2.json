@@ -60,6 +60,23 @@
         }
       ,
         {
+          "id": "engine.status",
+          "args_required": false,
+          "args_schema": { "type": "object", "additionalProperties": false },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "state": { "type": "string", "enum": ["not_configured", "healthy", "unavailable"] },
+              "active_version": { "type": "string", "minLength": 1 },
+              "previous_version": { "type": "string", "minLength": 1 },
+              "engine_version": { "type": "string", "minLength": 1 },
+              "process_id": { "type": "integer", "minimum": 0 },
+              "last_error": { "type": "string", "minLength": 1 }
+            },
+            "required": ["state"],
+            "additionalProperties": false
+          }
+        },        {
           "id": "job.status",
           "args_required": true,
           "args_schema": {
@@ -504,6 +521,64 @@
       "machine_effects": "local-write",
       "operations": [
         {
+          "id": "engine.activate",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": { "version": { "type": "string", "minLength": 1, "maxLength": 128 } },
+            "required": ["version"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "state": { "type": "string", "enum": ["not_configured", "healthy", "unavailable"] },
+              "active_version": { "type": "string", "minLength": 1 },
+              "previous_version": { "type": "string", "minLength": 1 },
+              "engine_version": { "type": "string", "minLength": 1 },
+              "process_id": { "type": "integer", "minimum": 0 },
+              "last_error": { "type": "string", "minLength": 1 }
+            },
+            "required": ["state"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "engine.restart",
+          "args_required": false,
+          "args_schema": { "type": "object", "additionalProperties": false },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "state": { "type": "string", "enum": ["not_configured", "healthy", "unavailable"] },
+              "active_version": { "type": "string", "minLength": 1 },
+              "previous_version": { "type": "string", "minLength": 1 },
+              "engine_version": { "type": "string", "minLength": 1 },
+              "process_id": { "type": "integer", "minimum": 0 },
+              "last_error": { "type": "string", "minLength": 1 }
+            },
+            "required": ["state"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "engine.rollback",
+          "args_required": false,
+          "args_schema": { "type": "object", "additionalProperties": false },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "state": { "type": "string", "enum": ["not_configured", "healthy", "unavailable"] },
+              "active_version": { "type": "string", "minLength": 1 },
+              "previous_version": { "type": "string", "minLength": 1 },
+              "engine_version": { "type": "string", "minLength": 1 },
+              "process_id": { "type": "integer", "minimum": 0 },
+              "last_error": { "type": "string", "minLength": 1 }
+            },
+            "required": ["state"],
+            "additionalProperties": false
+          }
+        },        {
           "id": "artifact.export",
           "args_required": true,
           "args_schema": {
