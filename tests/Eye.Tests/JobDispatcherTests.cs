@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using StealthEye.Contract;
 using StealthEye.Runtime;
 
@@ -12,7 +12,7 @@ public sealed class JobDispatcherTests : IDisposable
     public JobDispatcherTests()
     {
         var store = new JobStore(Path.Combine(_root, "state"), Path.Combine(_root, "spool"));
-        _dispatcher = new EyeDispatcher(new ProcessRunner(), new JobManager(store, new ProcessRunner()));
+        _dispatcher = new EyeDispatcher(new JobManager(store, new ProcessRunner()));
     }
 
     [Fact]
@@ -54,6 +54,43 @@ public sealed class JobDispatcherTests : IDisposable
         Assert.Equal(JobStates.Completed, result.GetProperty("result").GetProperty("state").GetString());
     }
 
+    [Fact]
+    public async Task Dispatcher_RunCompletesFastInline_AndPromotesSlowWorkToJob()
+    {
+        var fast = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Run,
+            "run",
+            JsonSerializer.SerializeToElement(new RunRequest
+            {
+                Context = "system",
+                FileName = "cmd.exe",
+                Arguments = ["/c", "echo fast-inline-ok"],
+                TimeoutMs = 10000
+            })));
+        Assert.True(fast.GetProperty("ok").GetBoolean());
+        Assert.Contains("fast-inline-ok", fast.GetProperty("result").GetProperty("stdout").GetString(), StringComparison.OrdinalIgnoreCase);
+        Assert.False(fast.GetProperty("result").TryGetProperty("job_id", out _));
+
+        var slow = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Run,
+            "run",
+            JsonSerializer.SerializeToElement(new RunRequest
+            {
+                Context = "system",
+                FileName = "powershell.exe",
+                Arguments = ["-NoProfile", "-Command", "Start-Sleep 30"],
+                TimeoutMs = 60000
+            })));
+        Assert.True(slow.GetProperty("ok").GetBoolean());
+        var jobId = slow.GetProperty("result").GetProperty("job_id").GetString()!;
+        Assert.StartsWith("job_", jobId, StringComparison.Ordinal);
+
+        var cancelled = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Run,
+            "job.cancel",
+            JsonSerializer.SerializeToElement(new JobIdArgs(jobId))));
+        Assert.Equal(JobStates.Cancelled, cancelled.GetProperty("result").GetProperty("state").GetString());
+    }
     [Fact]
     public async Task Dispatcher_EnforcesFacadeAndRunSchemaBounds()
     {

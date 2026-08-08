@@ -150,6 +150,34 @@ decoded:
         var eof = JobStates.IsTerminal(current.State) && nextCursor >= new FileInfo(path).Length;
         return new JobReadResult(jobId, stream, cursor, text, nextCursor, eof, current.State);
     }
+    public async Task<ProcessRunResult?> TryGetInlineProcessResultAsync(
+        JobRecord job,
+        long maxOutputBytes,
+        CancellationToken cancellationToken = default)
+    {
+        if (job.State is not (JobStates.Completed or JobStates.TimedOut) ||
+            job.Pid is null || job.ExitCode is null || job.EffectiveIdentity is null || job.CompletedAt is null)
+            return null;
+
+        var stdoutLength = new FileInfo(job.StdoutPath).Length;
+        var stderrLength = new FileInfo(job.StderrPath).Length;
+        if (stdoutLength + stderrLength > maxOutputBytes)
+            return null;
+
+        var stdout = await File.ReadAllTextAsync(job.StdoutPath, cancellationToken);
+        var stderr = await File.ReadAllTextAsync(job.StderrPath, cancellationToken);
+        var startedAt = job.StartedAt ?? job.CreatedAt;
+        var durationMs = Math.Max(0, (long)(job.CompletedAt.Value - startedAt).TotalMilliseconds);
+        return new ProcessRunResult(
+            job.Pid.Value,
+            job.ExitCode.Value,
+            job.TimedOut,
+            stdout,
+            stderr,
+            job.Context,
+            job.EffectiveIdentity,
+            durationMs);
+    }
     private async Task RunJobAsync(JobRecord record, RunRequest request, ActiveJob active)
     {
         try

@@ -213,6 +213,8 @@
             "additionalProperties": false
           },
           "result_schema": {
+            "oneOf": [
+              {
             "type": "object",
             "properties": {
               "pid": { "type": "integer" },
@@ -226,6 +228,18 @@
             },
             "required": ["pid", "exit_code", "timed_out", "stdout", "stderr", "context", "effective_identity", "duration_ms"],
             "additionalProperties": false
+          },
+              {
+              "type": "object",
+              "properties": {
+                "job_id": { "type": "string", "minLength": 1 },
+                "incarnation": { "type": "integer", "minimum": 1 },
+                "state": { "type": "string", "enum": ["starting", "running", "completed", "timed_out", "cancelled", "failed", "interrupted"] }
+              },
+              "required": ["job_id", "incarnation", "state"],
+              "additionalProperties": false
+            }
+            ]
           }
         }
       ,

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
@@ -123,7 +123,16 @@ public sealed class ProcessRunner
             TimeoutMs = request.TimeoutMs
         };
 
-        var result = await RunActiveUserAsync(wslRequest, cancellationToken, hooks, "wsl");
+        ProcessRunHooks? wslHooks = hooks is null ? null : new ProcessRunHooks
+        {
+            CaptureOutput = hooks.CaptureOutput,
+            Started = hooks.Started,
+            Output = hooks.Output is null
+                ? null
+                : (channel, text) => hooks.Output(channel, NormalizeWslText(text))
+        };
+
+        var result = await RunActiveUserAsync(wslRequest, cancellationToken, wslHooks, "wsl");
         return result with
         {
             Stdout = NormalizeWslText(result.Stdout),

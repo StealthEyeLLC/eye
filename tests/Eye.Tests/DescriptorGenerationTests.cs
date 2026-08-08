@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using StealthEye.Contract;
@@ -60,7 +60,9 @@ public sealed class DescriptorGenerationTests
         AssertPropertySet<CapabilitiesResult>(capabilities.ResultSchema);
         AssertPropertySet<CapabilityFacades>(capabilities.ResultSchema.GetProperty("properties").GetProperty("facades"));
         AssertPropertySet<RunArgs>(run.ArgsSchema);
-        AssertPropertySet<RunOperationResult>(run.ResultSchema);
+        Assert.Equal(2, run.ResultSchema.GetProperty("oneOf").GetArrayLength());
+        AssertPropertySet<RunOperationResult>(run.ResultSchema.GetProperty("oneOf")[0]);
+        AssertPropertySet<JobReferenceResult>(run.ResultSchema.GetProperty("oneOf")[1]);
         AssertPropertySet<RunArgs>(jobStart.ArgsSchema);
         AssertPropertySet<JobReferenceResult>(jobStart.ResultSchema);
         AssertPropertySet<JobIdArgs>(jobStatus.ArgsSchema);

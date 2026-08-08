@@ -13,8 +13,11 @@ public enum EyeEffectClass
     External
 }
 
-public sealed class EyeDispatcher(ProcessRunner processRunner, JobManager jobManager)
+public sealed class EyeDispatcher(JobManager jobManager)
 {
+    private const int FastCompletionWindowMs = 1000;
+    private const long InlineOutputLimitBytes = 262_144;
+
     public async Task<object> ExecuteAsync(
         EyeEffectClass effectClass,
         string op,
@@ -62,16 +65,30 @@ public sealed class EyeDispatcher(ProcessRunner processRunner, JobManager jobMan
                 {
                     var request = DeserializeRequired<RunRequest>(op, args);
                     ValidateRunRequest(request);
-                    var result = await processRunner.RunAsync(request, cancellationToken);
-                    return Success(op, new RunOperationResult(
-                        result.Pid,
-                        result.ExitCode,
-                        result.TimedOut,
-                        result.Stdout,
-                        result.Stderr,
-                        result.Context,
-                        result.EffectiveIdentity,
-                        result.DurationMs));
+                    var job = jobManager.Start(request);
+                    var waited = await jobManager.WaitAsync(job.JobId, FastCompletionWindowMs, cancellationToken);
+                    if (!waited.WaitTimedOut)
+                    {
+                        var inline = await jobManager.TryGetInlineProcessResultAsync(
+                            waited.Job,
+                            InlineOutputLimitBytes,
+                            cancellationToken);
+                        if (inline is not null)
+                        {
+                            return Success(op, new RunOperationResult(
+                                inline.Pid,
+                                inline.ExitCode,
+                                inline.TimedOut,
+                                inline.Stdout,
+                                inline.Stderr,
+                                inline.Context,
+                                inline.EffectiveIdentity,
+                                inline.DurationMs));
+                        }
+                    }
+
+                    var current = waited.Job;
+                    return Success(op, new JobReferenceResult(current.JobId, current.Incarnation, current.State));
                 }
 
                 case "job.start":
