@@ -17,11 +17,15 @@ public sealed record EngineSupervisorStatus(
 
 public sealed class EngineSupervisor : IAsyncDisposable
 {
+    private static readonly TimeSpan CrashLoopWindow = TimeSpan.FromSeconds(30);
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly EyeContractCatalog _contract;
     private EngineSelectionState _selection;
     private EngineInstance? _active;
     private string? _lastError;
+    private DateTimeOffset _activeStartedAt;
+    private int _rapidCrashCount;
+    private long _activeGeneration;
     private int _disposed;
 
     public EngineSupervisor(
@@ -78,7 +82,7 @@ public sealed class EngineSupervisor : IAsyncDisposable
             _selection.ActiveVersion,
             _selection.PreviousVersion,
             active?.Handshake.EngineVersion,
-            active is null || active.HasExited ? null : active.ProcessId,
+            null,
             _lastError);
     }
 
@@ -95,7 +99,8 @@ public sealed class EngineSupervisor : IAsyncDisposable
 
             try
             {
-                _active = await StartVersionAsync(_selection.ActiveVersion, cancellationToken);
+                var active = await StartVersionAsync(_selection.ActiveVersion, cancellationToken);
+                InstallActiveLocked(active, resetCrashCount: true);
                 _lastError = null;
             }
             catch (Exception ex)
@@ -130,7 +135,7 @@ public sealed class EngineSupervisor : IAsyncDisposable
 
             PersistSelection(next);
             previousInstance = _active;
-            _active = candidate;
+            InstallActiveLocked(candidate, resetCrashCount: true);
             candidate = null;
             _selection = next;
             _lastError = null;
@@ -164,7 +169,7 @@ public sealed class EngineSupervisor : IAsyncDisposable
                 ?? throw new InvalidOperationException("No active engine version is configured.");
             candidate = await StartVersionAsync(version, cancellationToken);
             previousInstance = _active;
-            _active = candidate;
+            InstallActiveLocked(candidate, resetCrashCount: true);
             candidate = null;
             _lastError = null;
         }
@@ -206,16 +211,110 @@ public sealed class EngineSupervisor : IAsyncDisposable
         await _gate.WaitAsync();
         try
         {
-            if (_active is not null)
-            {
-                await _active.DisposeAsync();
-                _active = null;
-            }
+            ++_activeGeneration;
+            var active = _active;
+            _active = null;
+            if (active is not null)
+                await active.DisposeAsync();
         }
         finally
         {
             _gate.Release();
             _gate.Dispose();
+        }
+    }
+
+    private void InstallActiveLocked(EngineInstance instance, bool resetCrashCount)
+    {
+        _active = instance;
+        _activeStartedAt = DateTimeOffset.UtcNow;
+        if (resetCrashCount)
+            _rapidCrashCount = 0;
+        var generation = ++_activeGeneration;
+        _ = MonitorActiveAsync(instance, generation);
+    }
+
+    private async Task MonitorActiveAsync(EngineInstance instance, long generation)
+    {
+        try
+        {
+            await instance.ExitTask;
+        }
+        catch
+        {
+        }
+
+        if (Volatile.Read(ref _disposed) != 0)
+            return;
+
+        EngineInstance? replacement = null;
+        try
+        {
+            await _gate.WaitAsync();
+            try
+            {
+                if (Volatile.Read(ref _disposed) != 0 ||
+                    generation != _activeGeneration ||
+                    !ReferenceEquals(_active, instance))
+                    return;
+
+                var failedVersion = _selection.ActiveVersion;
+                if (failedVersion is null)
+                    return;
+
+                var rapid = DateTimeOffset.UtcNow - _activeStartedAt <= CrashLoopWindow;
+                _rapidCrashCount = rapid ? _rapidCrashCount + 1 : 1;
+                _active = null;
+                _lastError = $"Engine {failedVersion} exited unexpectedly.";
+
+                if (_rapidCrashCount < 2)
+                {
+                    try
+                    {
+                        replacement = await StartVersionAsync(failedVersion, CancellationToken.None);
+                        InstallActiveLocked(replacement, resetCrashCount: false);
+                        replacement = null;
+                        _lastError = $"Engine {failedVersion} exited unexpectedly and was restarted.";
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        _lastError = $"Engine {failedVersion} restart failed: {ex.Message}";
+                    }
+                }
+
+                var fallback = _selection.PreviousVersion;
+                if (fallback is null)
+                {
+                    _lastError ??= $"Engine {failedVersion} entered a crash loop and no previous version is available.";
+                    return;
+                }
+
+                try
+                {
+                    replacement = await StartVersionAsync(fallback, CancellationToken.None);
+                    var next = new EngineSelectionState(fallback, failedVersion);
+                    PersistSelection(next);
+                    _selection = next;
+                    InstallActiveLocked(replacement, resetCrashCount: true);
+                    replacement = null;
+                    _lastError = $"Engine {failedVersion} entered a crash loop; rolled back to {fallback}.";
+                }
+                catch (Exception ex)
+                {
+                    _lastError = $"Engine {failedVersion} failed and rollback to {fallback} also failed: {ex.Message}";
+                }
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+        finally
+        {
+            if (replacement is not null)
+                await replacement.DisposeAsync();
+            await instance.DisposeAsync();
         }
     }
 

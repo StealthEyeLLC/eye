@@ -92,6 +92,61 @@ public sealed class EngineSupervisorTests : IDisposable
         Assert.NotNull(status.LastError);
     }
 
+    [Fact]
+    public async Task RapidEngineCrashes_RestartOnceThenRollbackPrevious()
+    {
+        var state = Path.Combine(_root, "state-crash-loop");
+        var engines = Path.Combine(_root, "engines-crash-loop");
+        Stage(engines, "A");
+        Stage(engines, "B");
+
+        await using var supervisor = new EngineSupervisor(state, engines);
+        await supervisor.ActivateAsync("A");
+        var b = await supervisor.ActivateAsync("B");
+        var firstPid = b.ProcessId!.Value;
+
+        using (var first = Process.GetProcessById(firstPid))
+        {
+            first.Kill(entireProcessTree: true);
+            await first.WaitForExitAsync();
+        }
+
+        var restarted = await WaitForStatusAsync(
+            supervisor,
+            x => x.State == "healthy" && x.ActiveVersion == "B" && x.ProcessId is not null && x.ProcessId != firstPid);
+        var secondPid = restarted.ProcessId!.Value;
+
+        using (var second = Process.GetProcessById(secondPid))
+        {
+            second.Kill(entireProcessTree: true);
+            await second.WaitForExitAsync();
+        }
+
+        var rolledBack = await WaitForStatusAsync(
+            supervisor,
+            x => x.State == "healthy" && x.ActiveVersion == "A" && x.PreviousVersion == "B");
+        Assert.NotNull(rolledBack.LastError);
+        Assert.Contains("rolled back", rolledBack.LastError, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task<EngineSupervisorStatus> WaitForStatusAsync(
+        EngineSupervisor supervisor,
+        Func<EngineSupervisorStatus, bool> predicate)
+    {
+        var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(10);
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            var status = supervisor.Status();
+            if (predicate(status))
+                return status;
+            await Task.Delay(50);
+        }
+
+        var final = supervisor.Status();
+        Assert.Fail($"Engine supervisor did not reach expected state. Final: {final}");
+        return final;
+    }
+
     private static bool ProcessGone(int pid)
     {
         try
