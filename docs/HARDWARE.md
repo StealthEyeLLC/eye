@@ -1,19 +1,20 @@
 # HARDWARE.md
 
-**Status:** Live-observed hardware/runtime snapshot  
-**Observed:** 2026-08-07  
+**Status:** Physical hardware baseline plus currently verified platform facts  
+**Baseline date:** 2026-08-07  
 **Machine:** `STEALTHEYELLC`
 
-This file records what Eye observed directly from the laptop. Hardware and volume facts may change after upgrades, repartitioning, driver changes, or device replacement.
+This file distinguishes stable physical hardware identity from dynamic software/driver/volume state. Re-query firmware, drivers, Windows build, installed tools, and provisioned volumes when exact current values matter.
 
-## System
+## System identity
 
 - Manufacturer: **HP**
-- Model: **OMEN Gaming Laptop 16-ap0xxx**
-- Architecture: x64
-- Windows: **Windows 11 Home**
-- Windows version/build observed: **10.0.26200 / build 26200**
-- BIOS: AMI **F.13**
+- Model family: **OMEN Gaming Laptop 16-ap0xxx**
+- Architecture: **x64**
+- Windows edition: **Windows 11 Home**
+- Machine name: **`STEALTHEYELLC`**
+- Interactive profile target/current identity: **`C:\Users\StealthEye`**
+- BIOS previously observed: AMI **F.13**; firmware version is dynamic and should be re-queried before firmware-sensitive work.
 
 ## CPU
 
@@ -25,66 +26,67 @@ This file records what Eye observed directly from the laptop. Hardware and volum
 
 - Total installed: **32 GB**
 - 2 x 16 GB Samsung modules
-- Module part number observed: `M425R2GA3EB0-CWMOD`
-- Rated speed reported: 5600 MT/s
-- Configured clock reported: 5200 MT/s
+- Module part number previously observed: `M425R2GA3EB0-CWMOD`
+- Rated memory speed previously reported: 5600 MT/s
+- Configured clock previously reported: 5200 MT/s
 
 ## Graphics
 
 ### Discrete GPU
 
 - **NVIDIA GeForce RTX 5060 Laptop GPU**
-- NVIDIA memory reported by `nvidia-smi`: **8151 MiB**
-- NVIDIA driver observed: **592.82**
+- VRAM previously reported by `nvidia-smi`: **8151 MiB** (~8 GB)
+
+NVIDIA driver versions are dynamic and are deliberately not treated as permanent project identity.
 
 ### Integrated GPU
 
 - **AMD Radeon(TM) 610M**
 
-## Display / interactive session
+## Display
 
-- One active monitor observed
-- Physical DPI-aware desktop bounds: **1920 x 1200**
-- Primary interactive Windows profile after cutover: `C:\Users\StealthEye`
+Previously observed interactive display baseline:
 
-## Internal storage
+- one active internal display;
+- physical DPI-aware desktop bounds **1920 x 1200**.
 
-Physical disk:
+Exact monitor topology is runtime state and must be queried by Eye rather than assumed.
+
+## Internal storage device
+
+Physical internal SSD previously observed:
 
 - **SAMSUNG MZVL81T0HFLB-00BH1**
-- NVMe SSD
-- ~1 TB raw capacity
+- NVMe
+- approximately 1 TB raw capacity
 - GPT
-- Health observed: Healthy / OK
 
-Current physical volume layout after cutover:
+Canonical storage role target:
 
-- `C:` — NTFS, label `Windows`, filesystem size ~652.7 GiB
-- `X:` — ReFS Dev Drive, label `Eye Dev`, exactly 300 GiB
+```text
+C: Windows / applications / stable host state / encrypted secrets / engine metadata
+X: approximately 300 GiB physical trusted ReFS Dev Drive / repos / hot workspaces / job spool / temporary artifacts / ReFS clones
+```
 
-`X:` is a real partition on the Samsung NVMe and reports as a trusted developer volume.
+The exact live partition layout is dynamic and must be queried before any partitioning or destructive operation.
 
-The former ~400 GB `C:\Sovereign Node.vhdx` fixed virtual disk was deleted after its important contents and Git history were independently archived.
+## External storage device
 
-The temporary `C:\StealthEye-Dev.vhdx` fallback was also deleted after the physical Dev Drive succeeded.
+External device previously observed:
 
-Current pagefile is on `C:`; the former ~192 GB `X:` pagefile is gone.
+- **Realtek RTL9210 NVME** USB bridge/device
+- approximately 2 TB raw capacity
+- normal drive role: **`E:`**
 
-## External storage
+Canonical role:
 
-Physical external disk:
+```text
+E: models / media / archives / large downloads / cold and durable bulk artifacts
+```
 
-- **Realtek RTL9210 NVME** bridge/device
-- USB-attached SSD/NVMe
-- ~2 TB raw capacity
-- Health observed: Healthy / OK
+`E:` contains important bulk/archive data and must not be included in destructive provisioning operations unless the owner explicitly requests it.
 
-Current volume:
-
-- `E:` — exFAT, label `StealthEye`
-- used for bulk data, archives, models, artifacts and related large payloads
-
-## Network
+## Network hardware
 
 ### Wi-Fi
 
@@ -93,62 +95,91 @@ Current volume:
 ### Ethernet
 
 - **Realtek Gaming GbE Family Controller**
+- built-in RJ-45 Ethernet is available.
 
 ## Battery
 
-Battery full-charged capacity telemetry observed around **63.4 Wh**.
+Battery full-charged-capacity telemetry was previously observed around **63.4 Wh**.
 
-Battery/AC firmware telemetry has shown internally inconsistent charge/discharge state, so treat it as operational telemetry rather than a precise health benchmark until independently validated.
+Battery/AC telemetry can be dynamic and internally inconsistent; Eye should query current power state rather than treat that number as a permanent health benchmark.
 
-## WSL
+## Current device-encryption posture
 
-Fresh WSL environment under the StealthEye Windows account:
-
-- Distribution: **Ubuntu 24.04.4 LTS**
-- Kernel: **6.6.87.2-microsoft-standard-WSL2**
-- Default Linux identity: **root (UID 0)**
-- systemd: **running**
-
-## Current Eye runtime
-
-Live prototype runtime observed:
-
-- Eye version: `0.5.1`
-- Process identity: `NT AUTHORITY\SYSTEM`
-- Mode: Windows service
-- Framework: **.NET 10.0.5**
-- Loopback MCP endpoint: `http://127.0.0.1:37921/mcp`
-
-This runtime is the prototype used to inspect and prepare the machine. It is not the final `StealthEyeLLC/eye` implementation.
-
-## Machine-wide development tooling
-
-Known machine-wide tools:
-
-- Git
-- GitHub CLI
-- .NET
-- Node / npm
-- CUDA tooling
-- CMake
-- Ninja
-- FFmpeg
-- VS Code
-- `uv` / `uvx`
-- ripgrep
-
-Windows Developer Mode and long-path support are enabled.
-
-## Current storage roles
+Current configured Windows OS-volume posture was explicitly verified after the present Windows setup:
 
 ```text
-C:  Windows / system / installed applications
-X:  physical trusted ReFS Dev Drive / repositories / build workspace
-E:  bulk StealthEye data / models / archives / large artifacts
-WSL Linux filesystem: Linux-native workloads requiring Unix permission semantics
+C: Fully Decrypted
+BitLocker Version: None
+Percentage Encrypted: 0.0%
+Encryption Method: None
+Protection Status: Off
+Key Protectors: None
 ```
 
-Permanent Eye repository location:
+Automatic Windows device encryption is currently disabled through:
+
+```text
+HKLM\SYSTEM\CurrentControlSet\Control\BitLocker
+PreventDeviceEncryption = 1 (REG_DWORD)
+```
+
+This is a current configured posture, not a substitute for querying `manage-bde -status` before encryption-sensitive work.
+
+## WSL target
+
+Canonical Linux target after provisioning:
+
+```text
+Distribution: Ubuntu-24.04
+Release family: Ubuntu 24.04 LTS
+WSL version: WSL2
+systemd: enabled
+Default Linux user: root
+```
+
+A prior installation demonstrated Ubuntu 24.04.4 LTS on WSL2 with kernel `6.6.87.2-microsoft-standard-WSL2`; exact future distro/kernel versions are dynamic.
+
+## Developer-tool target
+
+Useful baseline to verify/install on the current Windows installation:
+
+- Git;
+- GitHub CLI;
+- .NET SDK required by Eye;
+- PowerShell;
+- Node/npm only where tasks require it;
+- CMake;
+- Ninja;
+- FFmpeg;
+- VS Code;
+- `uv` / `uvx`;
+- ripgrep;
+- NVIDIA/CUDA tooling appropriate to the installed GPU;
+- WSL.
+
+Do not treat the previously installed package set as proof that these are currently present after any OS reprovisioning; Eye should expose live software manifests.
+
+## Eye runtime target
+
+The final Eye runtime is not identified by any historical prototype version.
+
+Canonical runtime identity:
+
+```text
+Windows SCM
+  -> one LocalSystem StealthEye service
+       -> stable eye.exe host
+       -> supervised versioned capability-engine child process
+       -> on-demand active-session workers
+```
+
+Canonical repository:
+
+```text
+StealthEyeLLC/eye
+```
+
+Canonical local checkout target:
 
 ```text
 X:\Repos\eye
