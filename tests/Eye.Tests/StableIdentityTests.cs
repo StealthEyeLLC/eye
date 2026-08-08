@@ -1,4 +1,5 @@
-﻿using System.Text;
+using Microsoft.Data.Sqlite;
+using System.Text;
 using StealthEye.Runtime;
 
 namespace Eye.Tests;
@@ -90,6 +91,63 @@ public sealed class StableIdentityTests : IDisposable
         Assert.Equal(0, second.StderrCursor);
     }
 
+    [Fact]
+    public void JobStore_MigratesLegacySchemaWithTerminalColumns()
+    {
+        var state = Path.Combine(_root, "legacy-state");
+        var spool = Path.Combine(_root, "legacy-spool", "jobs");
+        var initial = new JobStore(state, spool);
+        var connectionString = new SqliteConnectionStringBuilder
+        {
+            DataSource = initial.DatabasePath,
+            Mode = SqliteOpenMode.ReadWriteCreate,
+            Pooling = false
+        }.ToString();
+
+        using (var connection = new SqliteConnection(connectionString))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                DROP TABLE jobs;
+                CREATE TABLE jobs (
+                    job_id TEXT PRIMARY KEY,
+                    incarnation INTEGER NOT NULL,
+                    state TEXT NOT NULL,
+                    context TEXT NOT NULL,
+                    file_name TEXT NOT NULL,
+                    arguments_json TEXT NOT NULL,
+                    working_directory TEXT NULL,
+                    timeout_ms INTEGER NOT NULL,
+                    pid INTEGER NULL,
+                    effective_identity TEXT NULL,
+                    created_utc TEXT NOT NULL,
+                    started_utc TEXT NULL,
+                    completed_utc TEXT NULL,
+                    exit_code INTEGER NULL,
+                    timed_out INTEGER NOT NULL DEFAULT 0,
+                    failure_code TEXT NULL,
+                    failure_message TEXT NULL,
+                    stdout_path TEXT NOT NULL,
+                    stderr_path TEXT NOT NULL
+                );
+                """;
+            command.ExecuteNonQuery();
+        }
+
+        _ = new JobStore(state, spool);
+
+        using var verify = new SqliteConnection(connectionString);
+        verify.Open();
+        using var inspect = verify.CreateCommand();
+        inspect.CommandText = "PRAGMA table_info(jobs);";
+        using var reader = inspect.ExecuteReader();
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (reader.Read()) columns.Add(reader.GetString(1));
+        Assert.Contains("terminal", columns);
+        Assert.Contains("columns", columns);
+        Assert.Contains("rows", columns);
+    }
     public void Dispose()
     {
         if (Directory.Exists(_root)) Directory.Delete(_root, true);

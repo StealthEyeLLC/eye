@@ -223,6 +223,10 @@ public sealed class JobStore
             }
 
 
+            EnsureColumn(connection, "terminal", "terminal INTEGER NOT NULL DEFAULT 0");
+            EnsureColumn(connection, "columns", "columns INTEGER NULL");
+            EnsureColumn(connection, "rows", "rows INTEGER NULL");
+
             using var recover = connection.CreateCommand();
             recover.CommandText = """
                 UPDATE jobs
@@ -292,6 +296,23 @@ public sealed class JobStore
         return value is null ? null : DateTimeOffset.Parse(value);
     }
 
+    private static void EnsureColumn(SqliteConnection connection, string columnName, string columnDefinition)
+    {
+        using (var inspect = connection.CreateCommand())
+        {
+            inspect.CommandText = "PRAGMA table_info(jobs);";
+            using var reader = inspect.ExecuteReader();
+            while (reader.Read())
+            {
+                if (string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
+        }
+
+        using var alter = connection.CreateCommand();
+        alter.CommandText = $"ALTER TABLE jobs ADD COLUMN {columnDefinition};";
+        alter.ExecuteNonQuery();
+    }
     private static void RequireUpdated(int count, string jobId)
     {
         if (count != 1)
