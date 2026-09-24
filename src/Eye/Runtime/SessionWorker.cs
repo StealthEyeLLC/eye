@@ -244,6 +244,16 @@ public sealed class SessionWorker : IAsyncDisposable
             WorkerRpcMethods.EvaluateBrowserTarget,
             new WorkerBrowserEvaluateRequest(cdpTargetId, expression),
             cancellationToken);
+    public Task<WorkerWindowCaptureResult> CaptureWindowAsync(
+        long hwnd,
+        string destinationPath,
+        int timeoutMs = 5000,
+        bool recognizeText = false,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerWindowCaptureResult>(
+            WorkerRpcMethods.CaptureWindow,
+            new WorkerWindowCaptureRequest(hwnd, destinationPath, timeoutMs, recognizeText),
+            cancellationToken);
     public async Task CopyVtToAsync(Stream destination, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();

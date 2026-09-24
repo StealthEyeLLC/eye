@@ -177,6 +177,11 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
         WorkerBrowserEvaluateRequest request,
         CancellationToken cancellationToken) =>
         RequiredBrowser().EvaluateAsync(request.CdpTargetId, request.Expression, cancellationToken);
+    [JsonRpcMethod(WorkerRpcMethods.CaptureWindow)]
+    public Task<WorkerWindowCaptureResult> CaptureWindowAsync(
+        WorkerWindowCaptureRequest request,
+        CancellationToken cancellationToken) =>
+        DesktopWgcCapture.CaptureAsync(request, cancellationToken);
     [JsonRpcMethod(WorkerRpcMethods.Shutdown)]
     public WorkerShutdownResult Shutdown() => new(true);
 

@@ -14,6 +14,7 @@ public static class WorkerRpcMethods
     public const string ObserveWindows = "desktop.windows";
     public const string QueryUia = "desktop.uia_query";
     public const string ActUia = "desktop.uia_act";
+    public const string CaptureWindow = "desktop.capture";
     public const string ArmUiaChange = "desktop.uia_arm_change";
     public const string WaitUiaChange = "desktop.uia_wait_change";
     public const string EnsureBrowser = "browser.ensure";
@@ -190,5 +191,17 @@ public sealed record WorkerBrowserEvaluateResult(
     [property: JsonPropertyName("description")] string? Description,
     [property: JsonPropertyName("threw")] bool Threw,
     [property: JsonPropertyName("exception_text")] string? ExceptionText);
+public sealed record WorkerWindowCaptureRequest(
+    [property: JsonPropertyName("hwnd")] long Hwnd,
+    [property: JsonPropertyName("destination_path")] string DestinationPath,
+    [property: JsonPropertyName("timeout_ms")] int TimeoutMs = 5000,
+    [property: JsonPropertyName("recognize_text")] bool RecognizeText = false);
+
+public sealed record WorkerWindowCaptureResult(
+    [property: JsonPropertyName("width")] int Width,
+    [property: JsonPropertyName("height")] int Height,
+    [property: JsonPropertyName("dirty_region_count")] int DirtyRegionCount,
+    [property: JsonPropertyName("size_bytes")] long SizeBytes,
+    [property: JsonPropertyName("ocr_text")] string? OcrText = null);
 public sealed record WorkerShutdownResult(
     [property: JsonPropertyName("stopping")] bool Stopping);

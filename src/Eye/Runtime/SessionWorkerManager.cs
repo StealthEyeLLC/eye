@@ -63,6 +63,16 @@ public sealed class SessionWorkerManager
         return await worker.WaitUiaChangeAsync(cancellationToken);
     }
 
+    public async Task<WorkerWindowCaptureResult> CaptureWindowAsync(
+        long hwnd,
+        string destinationPath,
+        int timeoutMs = 5000,
+        bool recognizeText = false,
+        CancellationToken cancellationToken = default)
+    {
+        await using var worker = await StartAsync(cancellationToken);
+        return await worker.CaptureWindowAsync(hwnd, destinationPath, timeoutMs, recognizeText, cancellationToken);
+    }
     public Task<SessionWorker> StartAsync(CancellationToken cancellationToken = default) =>
         SessionWorker.StartAsync(
             ResolveWorkerExecutablePath(),
