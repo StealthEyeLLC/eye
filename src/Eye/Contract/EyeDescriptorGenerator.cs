@@ -64,7 +64,11 @@ public static class EyeDescriptorGenerator
 
         return variants.Length == 1
             ? variants[0]
-            : new JsonObject { ["oneOf"] = new JsonArray(variants) };
+            : new JsonObject
+            {
+                ["type"] = "object",
+                ["oneOf"] = new JsonArray(variants)
+            };
     }
 
     private static JsonNode BuildPostconditionSchema() => new JsonObject
@@ -120,7 +124,11 @@ public static class EyeDescriptorGenerator
             });
         }
 
-        return new JsonObject { ["oneOf"] = new JsonArray(variants.ToArray()) };
+        return new JsonObject
+        {
+            ["type"] = "object",
+            ["oneOf"] = new JsonArray(variants.ToArray())
+        };
     }
 
     private static JsonNode Clone(JsonElement element) =>

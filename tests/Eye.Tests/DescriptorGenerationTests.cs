@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using StealthEye.Contract;
+using StealthEye.Tools;
 
 namespace Eye.Tests;
 
@@ -92,6 +93,74 @@ public sealed class DescriptorGenerationTests
         Assert.Equal("ui://stealtheye/live", EyeContractCatalog.Load().Descriptors.Single(x => x.Name == "eye_live").ResourceUri);
     }
 
+    [Fact]
+    public void RuntimeProtocolTools_UseExactGeneratedSchemas()
+    {
+        var contract = EyeContractCatalog.Load();
+        var generated = EyeDescriptorGenerator.GenerateImplemented(contract)
+            .Where(x => x.Name != "eye_live")
+            .ToDictionary(x => x.Name, StringComparer.Ordinal);
+        var runtime = EyeGeneratedMcp.CreateModelTools(contract);
+
+        Assert.Equal(
+            generated.Keys.Order(StringComparer.Ordinal),
+            runtime.Select(x => x.ProtocolTool.Name).Order(StringComparer.Ordinal));
+
+        foreach (var tool in runtime)
+        {
+            var expected = generated[tool.ProtocolTool.Name];
+            Assert.True(
+                JsonElement.DeepEquals(expected.InputSchema, tool.ProtocolTool.InputSchema),
+                $"Input schema drift for {tool.ProtocolTool.Name}.");
+            Assert.True(
+                tool.ProtocolTool.OutputSchema is JsonElement output &&
+                JsonElement.DeepEquals(expected.OutputSchema, output),
+                $"Output schema drift for {tool.ProtocolTool.Name}.");
+        }
+    }
+    [Fact]
+    public void RuntimeToolsList_MatchesFrozenNormalizedSnapshot()
+    {
+        var contract = EyeContractCatalog.Load();
+        var tools = EyeGeneratedMcp.CreateModelTools(contract)
+            .Append(EyeLiveMcp.CreateTool(contract))
+            .ToArray();
+        var actual = EyeGeneratedMcp.NormalizeToolsList(tools);
+        var root = RepositoryRoot();
+        var snapshotPath = Path.Combine(
+            root,
+            "contracts",
+            "eye-mcp-v2.tools-list.normalized.json");
+
+        if (string.Equals(
+            Environment.GetEnvironmentVariable("EYE_UPDATE_CONTRACT_SNAPSHOT"),
+            "1",
+            StringComparison.Ordinal))
+        {
+            File.WriteAllText(snapshotPath, actual, new System.Text.UTF8Encoding(false));
+        }
+
+        Assert.True(File.Exists(snapshotPath), $"Missing tools/list snapshot: {snapshotPath}");
+        var expected = File.ReadAllText(snapshotPath)
+            .Replace("\r\n", "\n", StringComparison.Ordinal);
+        Assert.Equal(
+            expected,
+            actual.Replace("\r\n", "\n", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ServerInstructions_AreCanonicalAndFrontLoaded()
+    {
+        var instructions = EyeContractCatalog.Load().Manifest.ServerInstructions;
+
+        Assert.False(string.IsNullOrWhiteSpace(instructions));
+        Assert.True(instructions.Length <= 4000);
+        var front = instructions[..Math.Min(512, instructions.Length)];
+        Assert.Contains("ChatGPT", front, StringComparison.Ordinal);
+        Assert.Contains("typed operations", front, StringComparison.Ordinal);
+        Assert.Contains("durable jobs", front, StringComparison.Ordinal);
+        Assert.Contains("artifact", front, StringComparison.Ordinal);
+    }
     [Fact]
     public void PublicDtos_MatchCurrentContractPropertySets()
     {
@@ -236,6 +305,16 @@ public sealed class DescriptorGenerationTests
         Assert.DoesNotContain("user_data_dir", serialized, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null &&
+               !File.Exists(Path.Combine(directory.FullName, "Eye.slnx")))
+            directory = directory.Parent;
+
+        return directory?.FullName
+            ?? throw new DirectoryNotFoundException("Unable to locate Eye repository root.");
+    }
     private static EyeOperationDescriptor Operation(EyeContractCatalog contract, string id) =>
         contract.Descriptors.SelectMany(x => x.Operations).Single(x => x.Id == id);
 

@@ -142,7 +142,7 @@ internal static class DesktopWgcCapture
         try
         {
             var iid = DxgiDeviceIid;
-            hr = Marshal.QueryInterface(d3d, ref iid, out var dxgiDevice);
+            hr = Marshal.QueryInterface(d3d, in iid, out var dxgiDevice);
             Marshal.ThrowExceptionForHR(hr);
             try
             {

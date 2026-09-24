@@ -37,7 +37,9 @@ InteractiveTaskProcessLauncher.CleanupStaleOwnedResidue();
 var builder = WebApplication.CreateBuilder(args);
 
 var publicContract = EyeContractCatalog.Load();
+var modelTools = EyeGeneratedMcp.CreateModelTools(publicContract);
 var eyeLiveTool = EyeLiveMcp.CreateTool(publicContract);
+var servedTools = modelTools.Append(eyeLiveTool).ToArray();
 
 builder.Services.AddWindowsService(options => options.ServiceName = "StealthEye");
 var urls = Environment.GetEnvironmentVariable("EYE_URLS")
@@ -73,13 +75,13 @@ builder.Services.AddSingleton<BrowserControlService>();
 builder.Services.AddSingleton<UiaTriggerSource>();
 builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EyeDispatcher>();
+builder.Services.AddSingleton<EyeTool>();
 builder.Services.AddSingleton<EyeLiveSnapshotService>();
 builder.Services.AddSingleton<EyeLiveTool>();
 builder.Services
-    .AddMcpServer()
+    .AddMcpServer(options => options.ServerInstructions = publicContract.Manifest.ServerInstructions)
     .WithHttpTransport(options => options.Stateless = true)
-    .WithTools<EyeTool>()
-    .WithTools(new[] { eyeLiveTool })
+    .WithTools(servedTools)
     .WithResources<EyeLiveResource>();
 
 var app = builder.Build();

@@ -1,0 +1,4800 @@
+[
+  {
+    "_meta": null,
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "STEALTHEYE Change"
+    },
+    "description": "Apply precisely typed local file, machine, service, package, storage, snapshot, and configuration changes.",
+    "icons": null,
+    "inputSchema": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "version": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "version"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "engine.activate"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "type": "object"
+            },
+            "op": {
+              "const": "engine.restart"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "type": "object"
+            },
+            "op": {
+              "const": "engine.rollback"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "destination": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "overwrite": {
+                  "default": false,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "artifact_id",
+                "destination"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "artifact.export"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "artifact_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "artifact.delete"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "object"
+    },
+    "name": "eye_change",
+    "outputSchema": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "engine.activate"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "active_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "engine_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "last_error": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "previous_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "process_id": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "state": {
+                  "enum": [
+                    "not_configured",
+                    "healthy",
+                    "unavailable"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "engine.activate"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "engine.restart"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "active_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "engine_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "last_error": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "previous_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "process_id": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "state": {
+                  "enum": [
+                    "not_configured",
+                    "healthy",
+                    "unavailable"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "engine.restart"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "engine.rollback"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "active_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "engine_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "last_error": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "previous_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "process_id": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "state": {
+                  "enum": [
+                    "not_configured",
+                    "healthy",
+                    "unavailable"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "engine.rollback"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "artifact.export"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "type": "string"
+                },
+                "destination": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "maxLength": 64,
+                  "minLength": 64,
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "artifact_id",
+                "destination",
+                "size_bytes",
+                "sha256"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "artifact.export"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "artifact.delete"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "type": "string"
+                },
+                "deleted": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "artifact_id",
+                "deleted"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "artifact.delete"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "object"
+    },
+    "title": "STEALTHEYE Change"
+  },
+  {
+    "_meta": null,
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "STEALTHEYE Inspect"
+    },
+    "description": "Read, search, observe, query, wait, subscribe, and diagnose StealthEye machine state.",
+    "icons": null,
+    "inputSchema": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "type": "object"
+            },
+            "op": {
+              "const": "system.status"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "action_id": {
+                  "maxLength": 256,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "action.status"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "type": "object"
+            },
+            "op": {
+              "const": "capabilities"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "type": "object"
+            },
+            "op": {
+              "const": "engine.status"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "job.status"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "cursor": {
+                  "default": 0,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "max_bytes": {
+                  "default": 65536,
+                  "maximum": 1048576,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "stream": {
+                  "default": "stdout",
+                  "enum": [
+                    "stdout",
+                    "stderr"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "job.read"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "wait_ms": {
+                  "default": 30000,
+                  "maximum": 86400000,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "job_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "job.wait"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "job.result"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "job.attach"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "artifact_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "artifact.info"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "max_chars": {
+                  "default": 4000,
+                  "maximum": 20000,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "artifact_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "artifact.preview"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "max_bytes": {
+                  "default": 65536,
+                  "maximum": 262144,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "offset": {
+                  "default": 0,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "artifact_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "artifact.read_range"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "left_artifact_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "right_artifact_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "left_artifact_id",
+                "right_artifact_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "artifact.diff"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "include_invisible": {
+                  "default": false,
+                  "type": "boolean"
+                }
+              },
+              "type": "object"
+            },
+            "op": {
+              "const": "ui.observe"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "max_depth": {
+                  "default": 4,
+                  "maximum": 12,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "max_nodes": {
+                  "default": 200,
+                  "maximum": 2000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "window_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "window_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "ui.query"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {},
+              "type": "object"
+            },
+            "op": {
+              "const": "browser.observe"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "object"
+    },
+    "name": "eye_inspect",
+    "outputSchema": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "system.status"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "contract": {
+                  "const": "eye-mcp-v2"
+                },
+                "executable": {
+                  "const": "eye"
+                },
+                "identity": {
+                  "type": "string"
+                },
+                "machine": {
+                  "type": "string"
+                },
+                "process_id": {
+                  "type": "integer"
+                },
+                "product": {
+                  "const": "StealthEye"
+                },
+                "started_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "product",
+                "executable",
+                "version",
+                "contract",
+                "process_id",
+                "machine",
+                "identity",
+                "started_at"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "system.status"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "action.status"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "action_id": {
+                  "type": "string"
+                },
+                "capability": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "evidence_json": {
+                  "type": "string"
+                },
+                "input_sha256": {
+                  "maxLength": 64,
+                  "minLength": 64,
+                  "type": "string"
+                },
+                "postcondition_kind": {
+                  "type": "string"
+                },
+                "result_json": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "task_id": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "verified_at": {
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "action_id",
+                "task_id",
+                "capability",
+                "input_sha256",
+                "state",
+                "created_at",
+                "updated_at"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "action.status"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "capabilities"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "contract": {
+                  "const": "eye-mcp-v2"
+                },
+                "facades": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "eye_change": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "eye_external": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "eye_inspect": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "eye_interact": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "eye_live": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "eye_run": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "eye_inspect",
+                    "eye_run",
+                    "eye_change",
+                    "eye_interact",
+                    "eye_external",
+                    "eye_live"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "contract",
+                "facades"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "capabilities"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "engine.status"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "active_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "engine_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "last_error": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "previous_version": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "process_id": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "state": {
+                  "enum": [
+                    "not_configured",
+                    "healthy",
+                    "unavailable"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "engine.status"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "job.status"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "columns": {
+                  "maximum": 32767,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "completed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "context": {
+                  "enum": [
+                    "system",
+                    "user",
+                    "wsl"
+                  ],
+                  "type": "string"
+                },
+                "created_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "effective_identity": {
+                  "type": "string"
+                },
+                "exit_code": {
+                  "type": "integer"
+                },
+                "failure_code": {
+                  "type": "string"
+                },
+                "failure_message": {
+                  "type": "string"
+                },
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "pid": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "rows": {
+                  "maximum": 32767,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "started_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "state": {
+                  "enum": [
+                    "starting",
+                    "running",
+                    "completed",
+                    "timed_out",
+                    "cancelled",
+                    "failed",
+                    "interrupted"
+                  ],
+                  "type": "string"
+                },
+                "terminal": {
+                  "type": "boolean"
+                },
+                "timed_out": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "job_id",
+                "incarnation",
+                "state",
+                "context",
+                "terminal",
+                "created_at",
+                "timed_out"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "job.status"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "job.read"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "cursor": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "eof": {
+                  "type": "boolean"
+                },
+                "job_id": {
+                  "type": "string"
+                },
+                "next_cursor": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "state": {
+                  "enum": [
+                    "starting",
+                    "running",
+                    "completed",
+                    "timed_out",
+                    "cancelled",
+                    "failed",
+                    "interrupted"
+                  ],
+                  "type": "string"
+                },
+                "stream": {
+                  "enum": [
+                    "stdout",
+                    "stderr"
+                  ],
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id",
+                "stream",
+                "cursor",
+                "text",
+                "next_cursor",
+                "eof",
+                "state"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "job.read"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "job.wait"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "job": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "columns": {
+                      "maximum": 32767,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "completed_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "context": {
+                      "enum": [
+                        "system",
+                        "user",
+                        "wsl"
+                      ],
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "effective_identity": {
+                      "type": "string"
+                    },
+                    "exit_code": {
+                      "type": "integer"
+                    },
+                    "failure_code": {
+                      "type": "string"
+                    },
+                    "failure_message": {
+                      "type": "string"
+                    },
+                    "incarnation": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "job_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "pid": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "rows": {
+                      "maximum": 32767,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "started_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "state": {
+                      "enum": [
+                        "starting",
+                        "running",
+                        "completed",
+                        "timed_out",
+                        "cancelled",
+                        "failed",
+                        "interrupted"
+                      ],
+                      "type": "string"
+                    },
+                    "terminal": {
+                      "type": "boolean"
+                    },
+                    "timed_out": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "job_id",
+                    "incarnation",
+                    "state",
+                    "context",
+                    "terminal",
+                    "created_at",
+                    "timed_out"
+                  ],
+                  "type": "object"
+                },
+                "wait_timed_out": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "job",
+                "wait_timed_out"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "job.wait"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "job.result"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "columns": {
+                  "maximum": 32767,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "completed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "context": {
+                  "enum": [
+                    "system",
+                    "user",
+                    "wsl"
+                  ],
+                  "type": "string"
+                },
+                "created_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "effective_identity": {
+                  "type": "string"
+                },
+                "exit_code": {
+                  "type": "integer"
+                },
+                "failure_code": {
+                  "type": "string"
+                },
+                "failure_message": {
+                  "type": "string"
+                },
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "pid": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "rows": {
+                  "maximum": 32767,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "started_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "state": {
+                  "enum": [
+                    "starting",
+                    "running",
+                    "completed",
+                    "timed_out",
+                    "cancelled",
+                    "failed",
+                    "interrupted"
+                  ],
+                  "type": "string"
+                },
+                "terminal": {
+                  "type": "boolean"
+                },
+                "timed_out": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "job_id",
+                "incarnation",
+                "state",
+                "context",
+                "terminal",
+                "created_at",
+                "timed_out"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "job.result"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "job.attach"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "job": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "columns": {
+                      "maximum": 32767,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "completed_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "context": {
+                      "enum": [
+                        "system",
+                        "user",
+                        "wsl"
+                      ],
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "effective_identity": {
+                      "type": "string"
+                    },
+                    "exit_code": {
+                      "type": "integer"
+                    },
+                    "failure_code": {
+                      "type": "string"
+                    },
+                    "failure_message": {
+                      "type": "string"
+                    },
+                    "incarnation": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "job_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "pid": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "rows": {
+                      "maximum": 32767,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "started_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "state": {
+                      "enum": [
+                        "starting",
+                        "running",
+                        "completed",
+                        "timed_out",
+                        "cancelled",
+                        "failed",
+                        "interrupted"
+                      ],
+                      "type": "string"
+                    },
+                    "terminal": {
+                      "type": "boolean"
+                    },
+                    "timed_out": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "job_id",
+                    "incarnation",
+                    "state",
+                    "context",
+                    "terminal",
+                    "created_at",
+                    "timed_out"
+                  ],
+                  "type": "object"
+                },
+                "stderr_cursor": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "stdout_cursor": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "job",
+                "stdout_cursor",
+                "stderr_cursor"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "job.attach"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "artifact.info"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "created_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "kind": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "mime_type": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "provenance": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "sha256": {
+                  "maxLength": 64,
+                  "minLength": 64,
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "storage_tier": {
+                  "enum": [
+                    "hot",
+                    "cold"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "artifact_id",
+                "incarnation",
+                "kind",
+                "size_bytes",
+                "sha256",
+                "name",
+                "storage_tier",
+                "provenance",
+                "created_at"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "artifact.info"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "artifact.preview"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "text_available": {
+                  "type": "boolean"
+                },
+                "truncated": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "artifact_id",
+                "text_available",
+                "truncated"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "artifact.preview"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "artifact.read_range"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "type": "string"
+                },
+                "bytes_read": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "data_base64": {
+                  "type": "string"
+                },
+                "eof": {
+                  "type": "boolean"
+                },
+                "next_offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "artifact_id",
+                "offset",
+                "bytes_read",
+                "next_offset",
+                "eof",
+                "data_base64"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "artifact.read_range"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "artifact.diff"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "equal": {
+                  "type": "boolean"
+                },
+                "first_difference_offset": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "left_artifact_id": {
+                  "type": "string"
+                },
+                "left_sha256": {
+                  "maxLength": 64,
+                  "minLength": 64,
+                  "type": "string"
+                },
+                "left_size_bytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "right_artifact_id": {
+                  "type": "string"
+                },
+                "right_sha256": {
+                  "maxLength": 64,
+                  "minLength": 64,
+                  "type": "string"
+                },
+                "right_size_bytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "left_artifact_id",
+                "right_artifact_id",
+                "equal",
+                "left_size_bytes",
+                "right_size_bytes",
+                "left_sha256",
+                "right_sha256"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "artifact.diff"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "ui.observe"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "cursor": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "session_id": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "windows": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "bounds": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "bottom": {
+                            "type": "integer"
+                          },
+                          "left": {
+                            "type": "integer"
+                          },
+                          "right": {
+                            "type": "integer"
+                          },
+                          "top": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "left",
+                          "top",
+                          "right",
+                          "bottom"
+                        ],
+                        "type": "object"
+                      },
+                      "class_name": {
+                        "type": "string"
+                      },
+                      "foreground": {
+                        "type": "boolean"
+                      },
+                      "incarnation": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "minimized": {
+                        "type": "boolean"
+                      },
+                      "process_id": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "process_name": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "uia": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "automation_id": {
+                            "type": "string"
+                          },
+                          "class_name": {
+                            "type": "string"
+                          },
+                          "control_type": {
+                            "type": "string"
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "framework_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "offscreen": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "automation_id",
+                          "control_type",
+                          "framework_id",
+                          "class_name",
+                          "enabled",
+                          "offscreen"
+                        ],
+                        "type": "object"
+                      },
+                      "visible": {
+                        "type": "boolean"
+                      },
+                      "window_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "window_id",
+                      "incarnation",
+                      "process_id",
+                      "process_name",
+                      "title",
+                      "class_name",
+                      "visible",
+                      "minimized",
+                      "foreground",
+                      "bounds"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "cursor",
+                "session_id",
+                "observed_at",
+                "windows"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "ui.observe"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "ui.query"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "cursor": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "elements": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "automation_id": {
+                        "type": "string"
+                      },
+                      "bounds": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "bottom": {
+                            "type": "integer"
+                          },
+                          "left": {
+                            "type": "integer"
+                          },
+                          "right": {
+                            "type": "integer"
+                          },
+                          "top": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "left",
+                          "top",
+                          "right",
+                          "bottom"
+                        ],
+                        "type": "object"
+                      },
+                      "class_name": {
+                        "type": "string"
+                      },
+                      "control_type": {
+                        "type": "string"
+                      },
+                      "depth": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "element_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "focused": {
+                        "type": "boolean"
+                      },
+                      "framework_id": {
+                        "type": "string"
+                      },
+                      "incarnation": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "offscreen": {
+                        "type": "boolean"
+                      },
+                      "parent_element_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "element_id",
+                      "incarnation",
+                      "depth",
+                      "name",
+                      "automation_id",
+                      "control_type",
+                      "framework_id",
+                      "class_name",
+                      "enabled",
+                      "offscreen",
+                      "focused",
+                      "bounds"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "truncated": {
+                  "type": "boolean"
+                },
+                "window_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "window_incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "cursor",
+                "window_id",
+                "window_incarnation",
+                "observed_at",
+                "truncated",
+                "elements"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "ui.query"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "browser.observe"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "browser_version": {
+                  "type": "string"
+                },
+                "cursor": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "protocol_version": {
+                  "type": "string"
+                },
+                "targets": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "incarnation": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "target_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "target_id",
+                      "incarnation",
+                      "type",
+                      "title",
+                      "url"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "cursor",
+                "observed_at",
+                "browser_version",
+                "protocol_version",
+                "targets"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "browser.observe"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "object"
+    },
+    "title": "STEALTHEYE Inspect"
+  },
+  {
+    "_meta": null,
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "STEALTHEYE Interact"
+    },
+    "description": "Interact with Windows applications, UI Automation, input, clipboard, and Chrome/CDP user interfaces.",
+    "icons": null,
+    "inputSchema": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "enum": [
+                    "focus",
+                    "invoke",
+                    "set_value"
+                  ],
+                  "type": "string"
+                },
+                "element_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "element_id",
+                "action"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "ui.act"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "target_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "url": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "target_id",
+                "url"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "browser.navigate"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "expression": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "target_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "target_id",
+                "expression"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "browser.evaluate"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "object"
+    },
+    "name": "eye_interact",
+    "outputSchema": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "ui.act"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "enum": [
+                    "focus",
+                    "invoke",
+                    "set_value"
+                  ],
+                  "type": "string"
+                },
+                "completed": {
+                  "type": "boolean"
+                },
+                "completed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "element_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "element_id",
+                "incarnation",
+                "action",
+                "completed",
+                "completed_at"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "ui.act"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "browser.navigate"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "error_text": {
+                  "type": "string"
+                },
+                "frame_id": {
+                  "type": "string"
+                },
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "loader_id": {
+                  "type": "string"
+                },
+                "target_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "target_id",
+                "incarnation",
+                "url"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "browser.navigate"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "browser.evaluate"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "exception_text": {
+                  "type": "string"
+                },
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "target_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "threw": {
+                  "type": "boolean"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "value": {}
+              },
+              "required": [
+                "target_id",
+                "incarnation",
+                "type",
+                "threw"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "browser.evaluate"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "object"
+    },
+    "title": "STEALTHEYE Interact"
+  },
+  {
+    "_meta": {
+      "ui": {
+        "resourceUri": "ui://stealtheye/live"
+      }
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Eye Live"
+    },
+    "description": "Open the Eye Live mission, job, trigger, artifact, and relay component. This tool performs no machine operation itself.",
+    "icons": null,
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {},
+      "type": "object"
+    },
+    "name": "eye_live",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "artifacts": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "type": "string"
+              },
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "incarnation": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "size_bytes": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "storage_tier": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "artifact_id",
+              "incarnation",
+              "kind",
+              "name",
+              "size_bytes",
+              "storage_tier",
+              "created_at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "engine": {
+          "additionalProperties": false,
+          "properties": {
+            "active_version": {
+              "type": "string"
+            },
+            "engine_version": {
+              "type": "string"
+            },
+            "last_error": {
+              "type": "string"
+            },
+            "previous_version": {
+              "type": "string"
+            },
+            "process_id": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "state": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "type": "object"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "jobs": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "completed_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "context": {
+                "type": "string"
+              },
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "failure_message": {
+                "type": "string"
+              },
+              "incarnation": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "job_id": {
+                "type": "string"
+              },
+              "pid": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "state": {
+                "type": "string"
+              },
+              "terminal": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "job_id",
+              "incarnation",
+              "state",
+              "context",
+              "terminal",
+              "created_at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "machine": {
+          "additionalProperties": false,
+          "properties": {
+            "identity": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "identity"
+          ],
+          "type": "object"
+        },
+        "triggers": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "failure_message": {
+                "type": "string"
+              },
+              "file_path": {
+                "type": "string"
+              },
+              "incarnation": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "process_id": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "state": {
+                "type": "string"
+              },
+              "trigger_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "trigger_id",
+              "incarnation",
+              "kind",
+              "state",
+              "created_at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "generated_at",
+        "machine",
+        "engine",
+        "jobs",
+        "triggers",
+        "artifacts"
+      ],
+      "type": "object"
+    },
+    "title": "Eye Live"
+  },
+  {
+    "_meta": null,
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "STEALTHEYE Run"
+    },
+    "description": "Run SYSTEM, active-user, WSL, process, PowerShell, terminal, and ConPTY execution operations.",
+    "icons": null,
+    "inputSchema": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "arguments": {
+                  "default": [],
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "context": {
+                  "default": "system",
+                  "enum": [
+                    "system",
+                    "user",
+                    "wsl"
+                  ],
+                  "type": "string"
+                },
+                "file_name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "timeout_ms": {
+                  "default": 30000,
+                  "maximum": 86400000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "working_directory": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "file_name"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "run"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "arguments": {
+                  "default": [],
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "columns": {
+                  "default": 120,
+                  "maximum": 32767,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "context": {
+                  "default": "system",
+                  "enum": [
+                    "system",
+                    "user",
+                    "wsl"
+                  ],
+                  "type": "string"
+                },
+                "file_name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "rows": {
+                  "default": 30,
+                  "maximum": 32767,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "terminal": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "timeout_ms": {
+                  "default": 30000,
+                  "maximum": 86400000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "working_directory": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "file_name"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "job.start"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "text": {
+                  "maxLength": 262144,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id",
+                "text"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "job.write"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "columns": {
+                  "maximum": 32767,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "rows": {
+                  "maximum": 32767,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "job_id",
+                "columns",
+                "rows"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "job.resize"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "job.cancel"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "object"
+    },
+    "name": "eye_run",
+    "outputSchema": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "run"
+            },
+            "result": {
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "context": {
+                      "type": "string"
+                    },
+                    "duration_ms": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "effective_identity": {
+                      "type": "string"
+                    },
+                    "exit_code": {
+                      "type": "integer"
+                    },
+                    "pid": {
+                      "type": "integer"
+                    },
+                    "stderr": {
+                      "type": "string"
+                    },
+                    "stdout": {
+                      "type": "string"
+                    },
+                    "timed_out": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "pid",
+                    "exit_code",
+                    "timed_out",
+                    "stdout",
+                    "stderr",
+                    "context",
+                    "effective_identity",
+                    "duration_ms"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "incarnation": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "job_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "state": {
+                      "enum": [
+                        "starting",
+                        "running",
+                        "completed",
+                        "timed_out",
+                        "cancelled",
+                        "failed",
+                        "interrupted"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "job_id",
+                    "incarnation",
+                    "state"
+                  ],
+                  "type": "object"
+                }
+              ]
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "run"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "job.start"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "job_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "state": {
+                  "enum": [
+                    "starting",
+                    "running",
+                    "completed",
+                    "timed_out",
+                    "cancelled",
+                    "failed",
+                    "interrupted"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id",
+                "incarnation",
+                "state"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "job.start"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "job.write"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "bytes_written": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "job_id": {
+                  "type": "string"
+                },
+                "state": {
+                  "enum": [
+                    "starting",
+                    "running",
+                    "completed",
+                    "timed_out",
+                    "cancelled",
+                    "failed",
+                    "interrupted"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id",
+                "bytes_written",
+                "state"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "job.write"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "job.resize"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "columns": {
+                  "maximum": 32767,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "job_id": {
+                  "type": "string"
+                },
+                "rows": {
+                  "maximum": 32767,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "state": {
+                  "enum": [
+                    "starting",
+                    "running",
+                    "completed",
+                    "timed_out",
+                    "cancelled",
+                    "failed",
+                    "interrupted"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id",
+                "columns",
+                "rows",
+                "state"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "job.resize"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "job.cancel"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "job_id": {
+                  "type": "string"
+                },
+                "state": {
+                  "enum": [
+                    "starting",
+                    "running",
+                    "completed",
+                    "timed_out",
+                    "cancelled",
+                    "failed",
+                    "interrupted"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "job_id",
+                "state"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "job.cancel"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        }
+      ],
+      "type": "object"
+    },
+    "title": "STEALTHEYE Run"
+  }
+]

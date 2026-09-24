@@ -44,6 +44,7 @@ public sealed record EyeContractManifest(
     [property: JsonPropertyName("version")] string Version,
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("publication_state")] string PublicationState,
+    [property: JsonPropertyName("server_instructions")] string ServerInstructions,
     [property: JsonPropertyName("tools")] EyeToolDescriptor[] Tools,
     [property: JsonPropertyName("host_engine_protocol")] HostEngineProtocolManifest HostEngineProtocol,
     [property: JsonPropertyName("error_schema")] JsonElement ErrorSchema);
@@ -111,6 +112,8 @@ public sealed class EyeContractCatalog
     {
         if (manifest.Contract != "stealtheye.eye.mcp" || manifest.Version != "2.1.0")
             throw new InvalidOperationException("Unexpected public contract identity or version.");
+        if (string.IsNullOrWhiteSpace(manifest.ServerInstructions) || manifest.ServerInstructions.Length > 4000)
+            throw new InvalidOperationException("Public server instructions are missing or unreasonably large.");
         if (manifest.Status != "canonical-target" || manifest.PublicationState != "not-live-until-generated")
             throw new InvalidOperationException("The v2 contract must remain a non-live canonical target during Phase 1.");
         if (!manifest.Tools.Select(x => x.Name).SequenceEqual(FrozenToolNames, StringComparer.Ordinal))
