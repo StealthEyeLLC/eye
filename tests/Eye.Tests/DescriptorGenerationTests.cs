@@ -163,6 +163,62 @@ public sealed class DescriptorGenerationTests
         Assert.Contains("artifact", front, StringComparison.Ordinal);
     }
     [Fact]
+    public async Task WrongFacadeRouting_IsDerivedFromCanonicalContract()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "eye-facade-routing-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var contract = EyeContractCatalog.Load();
+            var jobs = new JobStore(
+                Path.Combine(root, "state"),
+                Path.Combine(root, "spool"));
+            var dispatcher = new EyeDispatcher(
+                new JobManager(jobs, new ProcessRunner()),
+                new ArtifactStore(jobs),
+                publicContract: contract);
+
+            foreach (var tool in contract.Descriptors.Where(x => x.Operations.Length > 0))
+            {
+                var correct = tool.EffectClass switch
+                {
+                    "inspect" => EyeEffectClass.Inspect,
+                    "run" => EyeEffectClass.Run,
+                    "change" => EyeEffectClass.Change,
+                    "interact" => EyeEffectClass.Interact,
+                    "external" => EyeEffectClass.External,
+                    _ => throw new InvalidOperationException(tool.EffectClass)
+                };
+                var wrong = correct == EyeEffectClass.Inspect
+                    ? EyeEffectClass.Run
+                    : EyeEffectClass.Inspect;
+
+                foreach (var operation in tool.Operations)
+                {
+                    var response = JsonSerializer.SerializeToElement(await dispatcher.ExecuteAsync(
+                        wrong,
+                        operation.Id,
+                        null));
+
+                    Assert.False(response.GetProperty("ok").GetBoolean());
+                    Assert.Equal(
+                        "wrong_tool",
+                        response.GetProperty("error").GetProperty("code").GetString());
+                    Assert.Equal(
+                        tool.Name,
+                        response.GetProperty("error").GetProperty("expected").GetProperty("tool").GetString());
+                }
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+    [Fact]
     public async Task CapabilitiesOperation_ProjectsCanonicalContractFacades()
     {
         var root = Path.Combine(

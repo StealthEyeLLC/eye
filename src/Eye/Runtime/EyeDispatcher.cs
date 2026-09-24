@@ -673,23 +673,43 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         object? expected = null) =>
         new(false, op, new EyeError(code, message, retryable, expected));
 
-    private static EyeEffectClass? GetEffectClass(string op) => op switch
+    private EyeEffectClass? GetEffectClass(string op)
     {
-        "system.status" or "capabilities" or "action.status" or "engine.status" or "job.status" or "job.read" or "job.wait" or "job.result" or "job.attach" or
-        "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" or "ui.observe" or "ui.query" or "browser.observe" => EyeEffectClass.Inspect,
-        "run" or "job.start" or "job.write" or "job.resize" or "job.cancel" => EyeEffectClass.Run,
-        "engine.activate" or "engine.restart" or "engine.rollback" or "artifact.export" or "artifact.delete" => EyeEffectClass.Change,
-        "ui.act" or "browser.navigate" or "browser.evaluate" => EyeEffectClass.Interact,
-        _ => null
+        var tool = RequirePublicContract().Descriptors.FirstOrDefault(
+            x => x.Operations.Any(operation =>
+                string.Equals(operation.Id, op, StringComparison.Ordinal)));
+        return tool is null ? null : ParseEffectClass(tool.EffectClass);
+    }
+
+    private string GetFacadeName(EyeEffectClass effectClass)
+    {
+        var contractEffectClass = ToContractEffectClass(effectClass);
+        return RequirePublicContract().Descriptors
+            .Single(x => string.Equals(
+                x.EffectClass,
+                contractEffectClass,
+                StringComparison.Ordinal))
+            .Name;
+    }
+
+    private static EyeEffectClass ParseEffectClass(string effectClass) => effectClass switch
+    {
+        "inspect" => EyeEffectClass.Inspect,
+        "run" => EyeEffectClass.Run,
+        "change" => EyeEffectClass.Change,
+        "interact" => EyeEffectClass.Interact,
+        "external" => EyeEffectClass.External,
+        _ => throw new InvalidOperationException(
+            $"Unsupported contract effect class '{effectClass}'.")
     };
 
-    private static string GetFacadeName(EyeEffectClass effectClass) => effectClass switch
+    private static string ToContractEffectClass(EyeEffectClass effectClass) => effectClass switch
     {
-        EyeEffectClass.Inspect => "eye_inspect",
-        EyeEffectClass.Run => "eye_run",
-        EyeEffectClass.Change => "eye_change",
-        EyeEffectClass.Interact => "eye_interact",
-        EyeEffectClass.External => "eye_external",
+        EyeEffectClass.Inspect => "inspect",
+        EyeEffectClass.Run => "run",
+        EyeEffectClass.Change => "change",
+        EyeEffectClass.Interact => "interact",
+        EyeEffectClass.External => "external",
         _ => throw new ArgumentOutOfRangeException(nameof(effectClass), effectClass, null)
     };
 }
