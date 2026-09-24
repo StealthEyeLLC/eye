@@ -1,3 +1,4 @@
+using StealthEye.Contract;
 namespace StealthEye.Runtime;
 
 public sealed class SessionWorkerManager
@@ -20,6 +21,13 @@ public sealed class SessionWorkerManager
     public string WorkerProtocolVersion { get; }
     public string ResolveWorkerExecutablePath() => Path.GetFullPath(_resolveWorkerExecutable());
 
+    public async Task<WorkerDesktopObservationResult> ObserveWindowsAsync(
+        bool includeInvisible = false,
+        CancellationToken cancellationToken = default)
+    {
+        await using var worker = await StartAsync(cancellationToken);
+        return await worker.ObserveWindowsAsync(includeInvisible, cancellationToken);
+    }
     public Task<SessionWorker> StartAsync(CancellationToken cancellationToken = default) =>
         SessionWorker.StartAsync(
             ResolveWorkerExecutablePath(),

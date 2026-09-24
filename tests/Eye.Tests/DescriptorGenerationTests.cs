@@ -16,15 +16,16 @@ public sealed class DescriptorGenerationTests
             [
                 "artifact.delete", "artifact.diff", "artifact.export", "artifact.info", "artifact.preview", "artifact.read_range",
                 "capabilities", "engine.activate", "engine.restart", "engine.rollback", "engine.status", "job.attach", "job.cancel", "job.read",
-                "job.resize", "job.result", "job.start", "job.status", "job.wait", "job.write", "run", "system.status"
+                "job.resize", "job.result", "job.start", "job.status", "job.wait", "job.write", "run", "system.status", "ui.observe"
             ],
             contract.PublishedOperationIds.Order(StringComparer.Ordinal).ToArray());
-        Assert.Empty(contract.AllowedEngineOperationIds);
+        Assert.Equal(["ui.observe"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Equal("eye_inspect", contract.GetToolForOperation("system.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("engine.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("job.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("job.attach").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("artifact.info").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("ui.observe").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("run").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("job.start").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("job.write").Name);
@@ -41,8 +42,8 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(["eye_inspect", "eye_run", "eye_change", "eye_live"], descriptors.Select(x => x.Name).ToArray());
 
         var inspect = descriptors.Single(x => x.Name == "eye_inspect");
-        Assert.Equal(12, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(24, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(13, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(26, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var run = descriptors.Single(x => x.Name == "eye_run");
         Assert.Equal(5, run.InputSchema.GetProperty("oneOf").GetArrayLength());
@@ -92,6 +93,7 @@ public sealed class DescriptorGenerationTests
         var artifactDiff = Operation(contract, "artifact.diff");
         var artifactExport = Operation(contract, "artifact.export");
         var artifactDelete = Operation(contract, "artifact.delete");
+        var uiObserve = Operation(contract, "ui.observe");
 
         AssertPropertySet<SystemStatusResult>(systemStatus.ResultSchema);
         AssertPropertySet<EmptyArgs>(engineStatus.ArgsSchema);
@@ -140,6 +142,12 @@ public sealed class DescriptorGenerationTests
         AssertPropertySet<ArtifactExportResult>(artifactExport.ResultSchema);
         AssertPropertySet<ArtifactIdArgs>(artifactDelete.ArgsSchema);
         AssertPropertySet<ArtifactDeleteResult>(artifactDelete.ResultSchema);
+        AssertPropertySet<UiObserveArgs>(uiObserve.ArgsSchema);
+        AssertPropertySet<UiObserveResult>(uiObserve.ResultSchema);
+        var uiProperties = uiObserve.ResultSchema.GetProperty("properties");
+        var uiWindow = uiProperties.GetProperty("windows").GetProperty("items");
+        AssertPropertySet<UiWindowResult>(uiWindow);
+        AssertPropertySet<UiWindowBoundsResult>(uiWindow.GetProperty("properties").GetProperty("bounds"));
         var live = contract.Descriptors.Single(x => x.Name == "eye_live");
         AssertPropertySet<EmptyArgs>(live.InputSchema!.Value);
         AssertPropertySet<EyeLiveSnapshotResult>(live.ResultSchema!.Value);

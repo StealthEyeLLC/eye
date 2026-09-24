@@ -23,6 +23,8 @@ builder.Services.AddSingleton<EngineSupervisor>();
 builder.Services.AddSingleton(sp => new SessionWorkerManager(
     sp.GetRequiredService<EngineSupervisor>(),
     WorkerRpcMethods.CurrentProtocolVersion));
+builder.Services.AddSingleton<DesktopWindowStore>();
+builder.Services.AddSingleton<DesktopObservationService>();
 builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EyeDispatcher>();
 builder.Services.AddSingleton<EyeLiveSnapshotService>();

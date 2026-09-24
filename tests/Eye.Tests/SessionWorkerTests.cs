@@ -59,6 +59,29 @@ public sealed class SessionWorkerTests
             Assert.Contains(marker + ":0:/mnt/x/repos/eye", compact, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task SessionWorker_ObservesActiveSessionWindowInventory()
+    {
+        var contract = EyeContractCatalog.Load();
+        await using var worker = await SessionWorker.StartAsync(
+            WorkerExecutable(),
+            contract.WorkerProtocolVersion,
+            TimeSpan.FromSeconds(10));
+
+        var observation = await worker.ObserveWindowsAsync();
+        Assert.Equal(worker.Handshake.SessionId, observation.SessionId);
+        Assert.NotEmpty(observation.Windows);
+        Assert.All(observation.Windows, window =>
+        {
+            Assert.NotEqual(0, window.Hwnd);
+            Assert.True(window.ProcessId > 0);
+            Assert.True(window.Visible);
+            Assert.False(string.IsNullOrWhiteSpace(window.ClassName));
+            Assert.True(window.Bounds.Right >= window.Bounds.Left);
+            Assert.True(window.Bounds.Bottom >= window.Bounds.Top);
+        });
+        Assert.Contains(observation.Windows, window => window.Foreground);
+    }
     private static string WorkerExecutable()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

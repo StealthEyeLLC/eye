@@ -13,7 +13,7 @@ public enum EyeEffectClass
     External
 }
 
-public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null)
+public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null)
 {
     private const int FastCompletionWindowMs = 1000;
     private const long InlineOutputLimitBytes = 262_144;
@@ -56,13 +56,35 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                     return Success(op, new CapabilitiesResult(
                         "eye-mcp-v2",
                         new CapabilityFacades(
-                            ["system.status", "capabilities", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff"],
+                            ["system.status", "capabilities", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff", "ui.observe"],
                             ["run", "job.start", "job.write", "job.resize", "job.cancel"],
                             ["engine.activate", "engine.restart", "engine.rollback", "artifact.export", "artifact.delete"],
                             [],
                             [],
                             [])));
 
+                case "ui.observe":
+                {
+                    var request = args is null || args.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined
+                        ? new UiObserveArgs()
+                        : args.Value.Deserialize<UiObserveArgs>() ?? new UiObserveArgs();
+                    var snapshot = await RequireDesktopObservationService().ObserveAsync(request.IncludeInvisible, cancellationToken);
+                    return Success(op, new UiObserveResult(
+                        snapshot.Cursor,
+                        snapshot.SessionId,
+                        snapshot.ObservedAt,
+                        snapshot.Windows.Select(window => new UiWindowResult(
+                            window.WindowId,
+                            window.Incarnation,
+                            window.ProcessId,
+                            window.ProcessName,
+                            window.Title,
+                            window.ClassName,
+                            window.Visible,
+                            window.Minimized,
+                            window.Foreground,
+                            new UiWindowBoundsResult(window.Left, window.Top, window.Right, window.Bottom))).ToArray()));
+                }
                 case "run":
                 {
                     var request = DeserializeRequired<RunRequest>(op, args);
@@ -336,6 +358,8 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         status.ProcessId,
         status.LastError);
 
+    private DesktopObservationService RequireDesktopObservationService() =>
+        desktopObservationService ?? throw new InvalidOperationException("Desktop observation service is not configured.");
     private EngineSupervisor RequireEngineSupervisor() =>
         engineSupervisor ?? throw new InvalidOperationException("Engine supervisor is not configured.");
     private static ArtifactInfoResult ToPublic(ArtifactRecord artifact) => new(
@@ -362,7 +386,7 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
     private static EyeEffectClass? GetEffectClass(string op) => op switch
     {
         "system.status" or "capabilities" or "engine.status" or "job.status" or "job.read" or "job.wait" or "job.result" or "job.attach" or
-        "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" => EyeEffectClass.Inspect,
+        "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" or "ui.observe" => EyeEffectClass.Inspect,
         "run" or "job.start" or "job.write" or "job.resize" or "job.cancel" => EyeEffectClass.Run,
         "engine.activate" or "engine.restart" or "engine.rollback" or "artifact.export" or "artifact.delete" => EyeEffectClass.Change,
         _ => null

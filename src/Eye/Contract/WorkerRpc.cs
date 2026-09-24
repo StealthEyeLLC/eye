@@ -10,6 +10,7 @@ public static class WorkerRpcMethods
     public const string WriteTerminal = "terminal.write";
     public const string ResizeTerminal = "terminal.resize";
     public const string WaitTerminal = "terminal.wait";
+    public const string ObserveWindows = "desktop.windows";
     public const string Shutdown = "worker.shutdown";
 }
 
@@ -51,5 +52,31 @@ public sealed record WorkerTerminalExitResult(
     [property: JsonPropertyName("timed_out")] bool TimedOut,
     [property: JsonPropertyName("duration_ms")] long DurationMs);
 
+public sealed record WorkerDesktopObserveRequest(
+    [property: JsonPropertyName("include_invisible")] bool IncludeInvisible = false);
+
+public sealed record WorkerWindowRect(
+    [property: JsonPropertyName("left")] int Left,
+    [property: JsonPropertyName("top")] int Top,
+    [property: JsonPropertyName("right")] int Right,
+    [property: JsonPropertyName("bottom")] int Bottom);
+
+public sealed record WorkerWindowInfo(
+    [property: JsonPropertyName("hwnd")] long Hwnd,
+    [property: JsonPropertyName("process_id")] int ProcessId,
+    [property: JsonPropertyName("process_start_at")] DateTimeOffset? ProcessStartAt,
+    [property: JsonPropertyName("process_name")] string ProcessName,
+    [property: JsonPropertyName("thread_id")] int ThreadId,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("class_name")] string ClassName,
+    [property: JsonPropertyName("visible")] bool Visible,
+    [property: JsonPropertyName("minimized")] bool Minimized,
+    [property: JsonPropertyName("foreground")] bool Foreground,
+    [property: JsonPropertyName("bounds")] WorkerWindowRect Bounds);
+
+public sealed record WorkerDesktopObservationResult(
+    [property: JsonPropertyName("session_id")] int SessionId,
+    [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
+    [property: JsonPropertyName("windows")] WorkerWindowInfo[] Windows);
 public sealed record WorkerShutdownResult(
     [property: JsonPropertyName("stopping")] bool Stopping);

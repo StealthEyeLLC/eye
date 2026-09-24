@@ -18,7 +18,7 @@ public sealed class ContractBoundaryTests
             contract.Descriptors.Select(x => x.Name).ToArray());
         Assert.Equal("1.0.0", contract.EngineProtocolVersion);
         Assert.Equal("1.0.0", contract.WorkerProtocolVersion);
-        Assert.Empty(contract.AllowedEngineOperationIds);
+        Assert.Equal(["ui.observe"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Equal(64, contract.PublicContractHash.Length);
         Assert.Matches("^[0-9a-f]{64}$", contract.PublicContractHash);
     }
@@ -55,7 +55,7 @@ public sealed class ContractBoundaryTests
     public void InvalidSupportedOperationIds_AreRejected()
     {
         var contract = EyeContractCatalog.Load();
-        var handshake = MatchingHandshake(contract) with { SupportedOperationIds = ["desktop.observe", "desktop.observe"] };
+        var handshake = MatchingHandshake(contract) with { SupportedOperationIds = ["ui.observe", "ui.observe"] };
 
         var result = EngineHandshakeValidator.Validate(contract, handshake);
 
@@ -67,7 +67,7 @@ public sealed class ContractBoundaryTests
     public void UnpublishedEngineOperationId_IsRejected()
     {
         var contract = EyeContractCatalog.Load();
-        var handshake = MatchingHandshake(contract) with { SupportedOperationIds = ["desktop.observe"] };
+        var handshake = MatchingHandshake(contract) with { SupportedOperationIds = ["ui.query"] };
 
         var result = EngineHandshakeValidator.Validate(contract, handshake);
 
@@ -89,6 +89,6 @@ public sealed class ContractBoundaryTests
         contract.EngineProtocolVersion,
         "phase-1-test-engine",
         contract.PublicContractHash,
-        [],
+        contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray(),
         contract.WorkerProtocolVersion);
 }

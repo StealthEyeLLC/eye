@@ -179,6 +179,13 @@ public sealed class SessionWorker : IAsyncDisposable
     public Task<WorkerTerminalExitResult> WaitTerminalAsync(CancellationToken cancellationToken = default) =>
         InvokeAsync<WorkerTerminalExitResult>(WorkerRpcMethods.WaitTerminal, cancellationToken);
 
+    public Task<WorkerDesktopObservationResult> ObserveWindowsAsync(
+        bool includeInvisible = false,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerDesktopObservationResult>(
+            WorkerRpcMethods.ObserveWindows,
+            new WorkerDesktopObserveRequest(includeInvisible),
+            cancellationToken);
     public async Task CopyVtToAsync(Stream destination, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();

@@ -5,6 +5,9 @@ using Nerdbank.Streams;
 using StreamJsonRpc;
 using StealthEye.Contract;
 using StealthEye.Runtime;
+using StealthEye.Worker;
+
+DesktopWindowInventory.EnablePerMonitorV2();
 
 var controlPipeName = RequiredArgument(args, "--control-pipe");
 var bulkPipeName = RequiredArgument(args, "--bulk-pipe");
@@ -121,6 +124,9 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
         return new WorkerTerminalExitResult(result.ExitCode, result.TimedOut, result.DurationMs);
     }
 
+    [JsonRpcMethod(WorkerRpcMethods.ObserveWindows)]
+    public WorkerDesktopObservationResult ObserveWindows(WorkerDesktopObserveRequest request) =>
+        DesktopWindowInventory.Observe(request.IncludeInvisible);
     [JsonRpcMethod(WorkerRpcMethods.Shutdown)]
     public WorkerShutdownResult Shutdown() => new(true);
 

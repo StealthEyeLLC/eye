@@ -362,6 +362,57 @@
             "required": ["left_artifact_id", "right_artifact_id", "equal", "left_size_bytes", "right_size_bytes", "left_sha256", "right_sha256"],
             "additionalProperties": false
           }
+        },
+        {
+          "id": "ui.observe",
+          "args_required": false,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "include_invisible": { "type": "boolean", "default": false }
+            },
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "cursor": { "type": "integer", "minimum": 1 },
+              "session_id": { "type": "integer", "minimum": 0 },
+              "observed_at": { "type": "string", "format": "date-time" },
+              "windows": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "window_id": { "type": "string", "minLength": 1 },
+                    "incarnation": { "type": "integer", "minimum": 1 },
+                    "process_id": { "type": "integer", "minimum": 0 },
+                    "process_name": { "type": "string" },
+                    "title": { "type": "string" },
+                    "class_name": { "type": "string" },
+                    "visible": { "type": "boolean" },
+                    "minimized": { "type": "boolean" },
+                    "foreground": { "type": "boolean" },
+                    "bounds": {
+                      "type": "object",
+                      "properties": {
+                        "left": { "type": "integer" },
+                        "top": { "type": "integer" },
+                        "right": { "type": "integer" },
+                        "bottom": { "type": "integer" }
+                      },
+                      "required": ["left", "top", "right", "bottom"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["window_id", "incarnation", "process_id", "process_name", "title", "class_name", "visible", "minimized", "foreground", "bounds"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["cursor", "session_id", "observed_at", "windows"],
+            "additionalProperties": false
+          }
         }
       ]
     },
@@ -742,7 +793,7 @@
     "version": "1.0.0",
     "transport": "stream-json-rpc-over-named-pipes",
     "worker_protocol_version": "1.0.0",
-    "engine_operation_ids": [],
+    "engine_operation_ids": ["ui.observe"],
     "contract_hash": {
       "algorithm": "sha256",
       "encoding": "lowercase-hex",
