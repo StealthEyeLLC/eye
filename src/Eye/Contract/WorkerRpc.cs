@@ -61,6 +61,14 @@ public sealed record WorkerWindowRect(
     [property: JsonPropertyName("right")] int Right,
     [property: JsonPropertyName("bottom")] int Bottom);
 
+public sealed record WorkerUiaWindowRoot(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("automation_id")] string AutomationId,
+    [property: JsonPropertyName("control_type")] string ControlType,
+    [property: JsonPropertyName("framework_id")] string FrameworkId,
+    [property: JsonPropertyName("class_name")] string ClassName,
+    [property: JsonPropertyName("enabled")] bool Enabled,
+    [property: JsonPropertyName("offscreen")] bool Offscreen);
 public sealed record WorkerWindowInfo(
     [property: JsonPropertyName("hwnd")] long Hwnd,
     [property: JsonPropertyName("process_id")] int ProcessId,
@@ -72,7 +80,8 @@ public sealed record WorkerWindowInfo(
     [property: JsonPropertyName("visible")] bool Visible,
     [property: JsonPropertyName("minimized")] bool Minimized,
     [property: JsonPropertyName("foreground")] bool Foreground,
-    [property: JsonPropertyName("bounds")] WorkerWindowRect Bounds);
+    [property: JsonPropertyName("bounds")] WorkerWindowRect Bounds,
+    [property: JsonPropertyName("uia")] WorkerUiaWindowRoot? Uia = null);
 
 public sealed record WorkerDesktopObservationResult(
     [property: JsonPropertyName("session_id")] int SessionId,

@@ -40,6 +40,9 @@ public sealed class DesktopDispatcherTests : IDisposable
             Assert.False(window.TryGetProperty("thread_id", out _));
             Assert.True(window.GetProperty("bounds").TryGetProperty("left", out _));
         });
+        Assert.Contains(windows.EnumerateArray(), window =>
+            window.TryGetProperty("uia", out var uia) &&
+            !string.IsNullOrWhiteSpace(uia.GetProperty("control_type").GetString()));
 
         var wrongFacade = JsonSerializer.SerializeToElement(await dispatcher.ExecuteAsync(
             EyeEffectClass.Interact,

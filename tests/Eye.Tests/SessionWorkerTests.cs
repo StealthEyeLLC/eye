@@ -81,6 +81,9 @@ public sealed class SessionWorkerTests
             Assert.True(window.Bounds.Bottom >= window.Bounds.Top);
         });
         Assert.Contains(observation.Windows, window => window.Foreground);
+        Assert.Contains(observation.Windows, window =>
+            window.Uia is { ControlType.Length: > 0 } &&
+            !string.IsNullOrWhiteSpace(window.Uia.ClassName));
     }
     private static string WorkerExecutable()
     {

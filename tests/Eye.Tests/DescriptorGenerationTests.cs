@@ -148,6 +148,7 @@ public sealed class DescriptorGenerationTests
         var uiWindow = uiProperties.GetProperty("windows").GetProperty("items");
         AssertPropertySet<UiWindowResult>(uiWindow);
         AssertPropertySet<UiWindowBoundsResult>(uiWindow.GetProperty("properties").GetProperty("bounds"));
+        AssertPropertySet<UiUiaRootResult>(uiWindow.GetProperty("properties").GetProperty("uia"));
         var live = contract.Descriptors.Single(x => x.Name == "eye_live");
         AssertPropertySet<EmptyArgs>(live.InputSchema!.Value);
         AssertPropertySet<EyeLiveSnapshotResult>(live.ResultSchema!.Value);

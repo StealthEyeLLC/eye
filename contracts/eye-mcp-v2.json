@@ -403,6 +403,20 @@
                       },
                       "required": ["left", "top", "right", "bottom"],
                       "additionalProperties": false
+                    },
+                    "uia": {
+                      "type": "object",
+                      "properties": {
+                        "name": { "type": "string" },
+                        "automation_id": { "type": "string" },
+                        "control_type": { "type": "string" },
+                        "framework_id": { "type": "string" },
+                        "class_name": { "type": "string" },
+                        "enabled": { "type": "boolean" },
+                        "offscreen": { "type": "boolean" }
+                      },
+                      "required": ["name", "automation_id", "control_type", "framework_id", "class_name", "enabled", "offscreen"],
+                      "additionalProperties": false
                     }
                   },
                   "required": ["window_id", "incarnation", "process_id", "process_name", "title", "class_name", "visible", "minimized", "foreground", "bounds"],

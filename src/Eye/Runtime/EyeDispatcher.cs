@@ -83,7 +83,15 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                             window.Visible,
                             window.Minimized,
                             window.Foreground,
-                            new UiWindowBoundsResult(window.Left, window.Top, window.Right, window.Bottom))).ToArray()));
+                            new UiWindowBoundsResult(window.Left, window.Top, window.Right, window.Bottom),
+                            window.Uia is null ? null : new UiUiaRootResult(
+                                window.Uia.Name,
+                                window.Uia.AutomationId,
+                                window.Uia.ControlType,
+                                window.Uia.FrameworkId,
+                                window.Uia.ClassName,
+                                window.Uia.Enabled,
+                                window.Uia.Offscreen))).ToArray()));
                 }
                 case "run":
                 {

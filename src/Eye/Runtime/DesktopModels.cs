@@ -2,6 +2,14 @@ using System.Text.Json.Serialization;
 
 namespace StealthEye.Runtime;
 
+public sealed record DesktopUiaRootState(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("automation_id")] string AutomationId,
+    [property: JsonPropertyName("control_type")] string ControlType,
+    [property: JsonPropertyName("framework_id")] string FrameworkId,
+    [property: JsonPropertyName("class_name")] string ClassName,
+    [property: JsonPropertyName("enabled")] bool Enabled,
+    [property: JsonPropertyName("offscreen")] bool Offscreen);
 public sealed record DesktopWindowState(
     [property: JsonPropertyName("window_id")] string WindowId,
     [property: JsonPropertyName("incarnation")] long Incarnation,
@@ -18,7 +26,8 @@ public sealed record DesktopWindowState(
     [property: JsonPropertyName("left")] int Left,
     [property: JsonPropertyName("top")] int Top,
     [property: JsonPropertyName("right")] int Right,
-    [property: JsonPropertyName("bottom")] int Bottom);
+    [property: JsonPropertyName("bottom")] int Bottom,
+    [property: JsonPropertyName("uia")] DesktopUiaRootState? Uia);
 
 public sealed record DesktopWindowSnapshot(
     [property: JsonPropertyName("cursor")] long Cursor,

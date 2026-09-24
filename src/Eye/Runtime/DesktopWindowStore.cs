@@ -236,7 +236,15 @@ public sealed class DesktopWindowStore
         window.Bounds.Left,
         window.Bounds.Top,
         window.Bounds.Right,
-        window.Bounds.Bottom);
+        window.Bounds.Bottom,
+        window.Uia is null ? null : new DesktopUiaRootState(
+            window.Uia.Name,
+            window.Uia.AutomationId,
+            window.Uia.ControlType,
+            window.Uia.FrameworkId,
+            window.Uia.ClassName,
+            window.Uia.Enabled,
+            window.Uia.Offscreen));
 
     private sealed record DesktopRow(
         string WindowId,

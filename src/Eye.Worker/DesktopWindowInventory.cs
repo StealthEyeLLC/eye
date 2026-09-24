@@ -55,7 +55,8 @@ internal static class DesktopWindowInventory
                 visible,
                 Native.IsIconic(hwnd),
                 hwnd == foreground,
-                new WorkerWindowRect(rect.Left, rect.Top, rect.Right, rect.Bottom)));
+                new WorkerWindowRect(rect.Left, rect.Top, rect.Right, rect.Bottom),
+                DesktopUiaRootReader.TryRead(hwnd)));
             return true;
         }, IntPtr.Zero);
 
