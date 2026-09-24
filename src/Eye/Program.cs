@@ -13,16 +13,14 @@ builder.WebHost.UseUrls(urls);
 
 builder.Services.AddSingleton<ProcessRunner>();
 builder.Services.AddSingleton<JobStore>();
-builder.Services.AddSingleton(sp => new SessionWorkerManager(
-    Environment.GetEnvironmentVariable("EYE_WORKER_EXE")
-        ?? builder.Configuration["Eye:WorkerExecutable"]
-        ?? Path.Combine(AppContext.BaseDirectory, "eye-worker.exe"),
-    WorkerRpcMethods.CurrentProtocolVersion));
 builder.Services.AddSingleton<ArtifactStore>();
 builder.Services.AddSingleton<TriggerStore>();
 builder.Services.AddSingleton<TriggerBroker>();
-builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EngineSupervisor>();
+builder.Services.AddSingleton(sp => new SessionWorkerManager(
+    sp.GetRequiredService<EngineSupervisor>(),
+    WorkerRpcMethods.CurrentProtocolVersion));
+builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EyeDispatcher>();
 builder.Services
     .AddMcpServer()

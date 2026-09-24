@@ -203,6 +203,18 @@ public sealed class EngineSupervisor : IAsyncDisposable
         return Path.Combine(EngineRoot, version, "eye-engine.exe");
     }
 
+    public string ResolveVersionWorkerExecutable(string version)
+    {
+        ValidateVersion(version);
+        return Path.Combine(EngineRoot, version, "eye-worker.exe");
+    }
+
+    public string ResolveActiveWorkerExecutable()
+    {
+        var version = _selection.ActiveVersion
+            ?? throw new InvalidOperationException("No active engine version is configured.");
+        return ResolveVersionWorkerExecutable(version);
+    }
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
