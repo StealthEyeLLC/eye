@@ -37,6 +37,16 @@ public sealed class SessionWorkerManager
         await using var worker = await StartAsync(cancellationToken);
         return await worker.QueryUiaAsync(hwnd, maxDepth, maxNodes, cancellationToken);
     }
+    public async Task<WorkerUiaActionResult> ActUiaAsync(
+        long hwnd,
+        string runtimeId,
+        string action,
+        string? value = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var worker = await StartAsync(cancellationToken);
+        return await worker.ActUiaAsync(hwnd, runtimeId, action, value, cancellationToken);
+    }
     public Task<SessionWorker> StartAsync(CancellationToken cancellationToken = default) =>
         SessionWorker.StartAsync(
             ResolveWorkerExecutablePath(),

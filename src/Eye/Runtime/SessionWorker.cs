@@ -195,6 +195,16 @@ public sealed class SessionWorker : IAsyncDisposable
             WorkerRpcMethods.QueryUia,
             new WorkerUiaQueryRequest(hwnd, maxDepth, maxNodes),
             cancellationToken);
+    public Task<WorkerUiaActionResult> ActUiaAsync(
+        long hwnd,
+        string runtimeId,
+        string action,
+        string? value = null,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerUiaActionResult>(
+            WorkerRpcMethods.ActUia,
+            new WorkerUiaActionRequest(hwnd, runtimeId, action, value),
+            cancellationToken);
     public async Task CopyVtToAsync(Stream destination, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();

@@ -13,7 +13,7 @@ public enum EyeEffectClass
     External
 }
 
-public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null)
+public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null, UiaActionService? uiaActionService = null)
 {
     private const int FastCompletionWindowMs = 1000;
     private const long InlineOutputLimitBytes = 262_144;
@@ -59,7 +59,7 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                             ["system.status", "capabilities", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff", "ui.observe", "ui.query"],
                             ["run", "job.start", "job.write", "job.resize", "job.cancel"],
                             ["engine.activate", "engine.restart", "engine.rollback", "artifact.export", "artifact.delete"],
-                            [],
+                            ["ui.act"],
                             [],
                             [])));
 
@@ -231,6 +231,21 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                     return Success(op, new JobAttachResult(ToPublic(attached.Job), attached.StdoutCursor, attached.StderrCursor));
                 }
 
+                case "ui.act":
+                {
+                    var request = DeserializeRequired<UiActArgs>(op, args);
+                    var result = await RequireUiaActionService().ActAsync(
+                        request.ElementId,
+                        request.Action,
+                        request.Value,
+                        cancellationToken);
+                    return Success(op, new UiActResult(
+                        result.ElementId,
+                        result.Incarnation,
+                        result.Action,
+                        result.Completed,
+                        result.CompletedAt));
+                }
                 case "artifact.info":
                 {
                     var request = DeserializeRequired<ArtifactIdArgs>(op, args);
@@ -395,6 +410,8 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         status.ProcessId,
         status.LastError);
 
+    private UiaActionService RequireUiaActionService() =>
+        uiaActionService ?? throw new InvalidOperationException("UIA action service is not configured.");
     private UiaQueryService RequireUiaQueryService() =>
         uiaQueryService ?? throw new InvalidOperationException("UIA query service is not configured.");
     private DesktopObservationService RequireDesktopObservationService() =>
@@ -428,6 +445,7 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" or "ui.observe" or "ui.query" => EyeEffectClass.Inspect,
         "run" or "job.start" or "job.write" or "job.resize" or "job.cancel" => EyeEffectClass.Run,
         "engine.activate" or "engine.restart" or "engine.rollback" or "artifact.export" or "artifact.delete" => EyeEffectClass.Change,
+        "ui.act" => EyeEffectClass.Interact,
         _ => null
     };
 

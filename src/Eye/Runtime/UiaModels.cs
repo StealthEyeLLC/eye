@@ -27,3 +27,16 @@ public sealed record UiaQuerySnapshot(
     [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
     [property: JsonPropertyName("truncated")] bool Truncated,
     [property: JsonPropertyName("elements")] UiaElementState[] Elements);
+public sealed record UiaElementTarget(
+    string ElementId,
+    long Incarnation,
+    string WindowId,
+    long WindowIncarnation,
+    string RuntimeId);
+
+public sealed record UiaActionSnapshot(
+    [property: JsonPropertyName("element_id")] string ElementId,
+    [property: JsonPropertyName("incarnation")] long Incarnation,
+    [property: JsonPropertyName("action")] string Action,
+    [property: JsonPropertyName("completed")] bool Completed,
+    [property: JsonPropertyName("completed_at")] DateTimeOffset CompletedAt);

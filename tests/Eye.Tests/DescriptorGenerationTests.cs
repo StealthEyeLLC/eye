@@ -16,10 +16,10 @@ public sealed class DescriptorGenerationTests
             [
                 "artifact.delete", "artifact.diff", "artifact.export", "artifact.info", "artifact.preview", "artifact.read_range",
                 "capabilities", "engine.activate", "engine.restart", "engine.rollback", "engine.status", "job.attach", "job.cancel", "job.read",
-                "job.resize", "job.result", "job.start", "job.status", "job.wait", "job.write", "run", "system.status", "ui.observe", "ui.query"
+                "job.resize", "job.result", "job.start", "job.status", "job.wait", "job.write", "run", "system.status", "ui.act", "ui.observe", "ui.query"
             ],
             contract.PublishedOperationIds.Order(StringComparer.Ordinal).ToArray());
-        Assert.Equal(["ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal(["ui.act", "ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Equal("eye_inspect", contract.GetToolForOperation("system.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("engine.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("job.status").Name);
@@ -27,6 +27,7 @@ public sealed class DescriptorGenerationTests
         Assert.Equal("eye_inspect", contract.GetToolForOperation("artifact.info").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("ui.observe").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("ui.query").Name);
+        Assert.Equal("eye_interact", contract.GetToolForOperation("ui.act").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("run").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("job.start").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("job.write").Name);
@@ -40,7 +41,7 @@ public sealed class DescriptorGenerationTests
     {
         var descriptors = EyeDescriptorGenerator.GenerateImplemented(EyeContractCatalog.Load());
 
-        Assert.Equal(["eye_inspect", "eye_run", "eye_change", "eye_live"], descriptors.Select(x => x.Name).ToArray());
+        Assert.Equal(["eye_inspect", "eye_run", "eye_change", "eye_interact", "eye_live"], descriptors.Select(x => x.Name).ToArray());
 
         var inspect = descriptors.Single(x => x.Name == "eye_inspect");
         Assert.Equal(14, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
@@ -61,6 +62,10 @@ public sealed class DescriptorGenerationTests
         var change = descriptors.Single(x => x.Name == "eye_change");
         Assert.Equal(5, change.InputSchema.GetProperty("oneOf").GetArrayLength());
         Assert.Equal(10, change.OutputSchema.GetProperty("oneOf").GetArrayLength());
+
+        var interact = descriptors.Single(x => x.Name == "eye_interact");
+        Assert.Equal("ui.act", interact.InputSchema.GetProperty("properties").GetProperty("op").GetProperty("const").GetString());
+        Assert.Equal(2, interact.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var live = descriptors.Single(x => x.Name == "eye_live");
         AssertPropertySet<EmptyArgs>(live.InputSchema);
@@ -96,6 +101,7 @@ public sealed class DescriptorGenerationTests
         var artifactDelete = Operation(contract, "artifact.delete");
         var uiObserve = Operation(contract, "ui.observe");
         var uiQuery = Operation(contract, "ui.query");
+        var uiAct = Operation(contract, "ui.act");
 
         AssertPropertySet<SystemStatusResult>(systemStatus.ResultSchema);
         AssertPropertySet<EmptyArgs>(engineStatus.ArgsSchema);
@@ -156,6 +162,8 @@ public sealed class DescriptorGenerationTests
         var uiElement = uiQuery.ResultSchema.GetProperty("properties").GetProperty("elements").GetProperty("items");
         AssertPropertySet<UiElementResult>(uiElement);
         AssertPropertySet<UiWindowBoundsResult>(uiElement.GetProperty("properties").GetProperty("bounds"));
+        AssertPropertySet<UiActArgs>(uiAct.ArgsSchema);
+        AssertPropertySet<UiActResult>(uiAct.ResultSchema);
         var live = contract.Descriptors.Single(x => x.Name == "eye_live");
         AssertPropertySet<EmptyArgs>(live.InputSchema!.Value);
         AssertPropertySet<EyeLiveSnapshotResult>(live.ResultSchema!.Value);

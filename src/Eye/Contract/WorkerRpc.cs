@@ -12,6 +12,7 @@ public static class WorkerRpcMethods
     public const string WaitTerminal = "terminal.wait";
     public const string ObserveWindows = "desktop.windows";
     public const string QueryUia = "desktop.uia_query";
+    public const string ActUia = "desktop.uia_act";
     public const string Shutdown = "worker.shutdown";
 }
 
@@ -111,5 +112,15 @@ public sealed record WorkerUiaQueryResult(
     [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
     [property: JsonPropertyName("truncated")] bool Truncated,
     [property: JsonPropertyName("elements")] WorkerUiaElementInfo[] Elements);
+public sealed record WorkerUiaActionRequest(
+    [property: JsonPropertyName("hwnd")] long Hwnd,
+    [property: JsonPropertyName("runtime_id")] string RuntimeId,
+    [property: JsonPropertyName("action")] string Action,
+    [property: JsonPropertyName("value")] string? Value = null,
+    [property: JsonPropertyName("max_nodes")] int MaxNodes = 5000);
+
+public sealed record WorkerUiaActionResult(
+    [property: JsonPropertyName("action")] string Action,
+    [property: JsonPropertyName("completed")] bool Completed);
 public sealed record WorkerShutdownResult(
     [property: JsonPropertyName("stopping")] bool Stopping);

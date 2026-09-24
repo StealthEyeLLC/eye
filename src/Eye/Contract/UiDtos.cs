@@ -64,3 +64,14 @@ public sealed record UiQueryResult(
     [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
     [property: JsonPropertyName("truncated")] bool Truncated,
     [property: JsonPropertyName("elements")] UiElementResult[] Elements);
+public sealed record UiActArgs(
+    [property: JsonPropertyName("element_id")] string ElementId,
+    [property: JsonPropertyName("action")] string Action,
+    [property: JsonPropertyName("value"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Value = null);
+
+public sealed record UiActResult(
+    [property: JsonPropertyName("element_id")] string ElementId,
+    [property: JsonPropertyName("incarnation")] long Incarnation,
+    [property: JsonPropertyName("action")] string Action,
+    [property: JsonPropertyName("completed")] bool Completed,
+    [property: JsonPropertyName("completed_at")] DateTimeOffset CompletedAt);

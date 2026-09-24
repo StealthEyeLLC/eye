@@ -19,7 +19,7 @@ public sealed class EngineInstanceTests
             Assert.Equal(contract.EngineProtocolVersion, instance.Handshake.EngineProtocolVersion);
             Assert.Equal(contract.PublicContractHash, instance.Handshake.PublicContractHash);
             Assert.Equal(contract.WorkerProtocolVersion, instance.Handshake.WorkerProtocolVersion);
-            Assert.Equal(["ui.observe", "ui.query"], instance.Handshake.SupportedOperationIds);
+            Assert.Equal(["ui.act", "ui.observe", "ui.query"], instance.Handshake.SupportedOperationIds);
             Assert.Equal(pid, instance.Ping.ProcessId);
 
             var ping = await instance.CallAsync<EnginePingResult>(EngineRpcMethods.Ping);

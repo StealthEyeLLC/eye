@@ -130,6 +130,9 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
     [JsonRpcMethod(WorkerRpcMethods.QueryUia)]
     public WorkerUiaQueryResult QueryUia(WorkerUiaQueryRequest request) =>
         DesktopUiaTreeReader.Query(request);
+    [JsonRpcMethod(WorkerRpcMethods.ActUia)]
+    public WorkerUiaActionResult ActUia(WorkerUiaActionRequest request) =>
+        DesktopUiaActor.Act(request);
     [JsonRpcMethod(WorkerRpcMethods.Shutdown)]
     public WorkerShutdownResult Shutdown() => new(true);
 

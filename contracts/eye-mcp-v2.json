@@ -753,7 +753,34 @@
       "effect_class": "interact",
       "description": "Interact with Windows applications, UI Automation, input, clipboard, and Chrome/CDP user interfaces.",
       "machine_effects": "interactive",
-      "operations": []
+      "operations": [
+        {
+          "id": "ui.act",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "element_id": { "type": "string", "minLength": 1 },
+              "action": { "type": "string", "enum": ["focus", "invoke", "set_value"] },
+              "value": { "type": "string" }
+            },
+            "required": ["element_id", "action"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "element_id": { "type": "string", "minLength": 1 },
+              "incarnation": { "type": "integer", "minimum": 1 },
+              "action": { "type": "string", "enum": ["focus", "invoke", "set_value"] },
+              "completed": { "type": "boolean" },
+              "completed_at": { "type": "string", "format": "date-time" }
+            },
+            "required": ["element_id", "incarnation", "action", "completed", "completed_at"],
+            "additionalProperties": false
+          }
+        }
+      ]
     },
     {
       "name": "eye_external",
@@ -866,7 +893,7 @@
     "version": "1.0.0",
     "transport": "stream-json-rpc-over-named-pipes",
     "worker_protocol_version": "1.0.0",
-    "engine_operation_ids": ["ui.observe", "ui.query"],
+    "engine_operation_ids": ["ui.act", "ui.observe", "ui.query"],
     "contract_hash": {
       "algorithm": "sha256",
       "encoding": "lowercase-hex",

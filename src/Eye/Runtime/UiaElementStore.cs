@@ -101,6 +101,27 @@ public sealed class UiaElementStore
         }
     }
 
+    public UiaElementTarget ResolveActive(string elementId)
+    {
+        if (string.IsNullOrWhiteSpace(elementId))
+            throw new ArgumentException("element_id is required.", nameof(elementId));
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT incarnation, window_id, window_incarnation, runtime_id FROM uia_elements WHERE element_id = $element_id AND active = 1;";
+            command.Parameters.AddWithValue("$element_id", elementId);
+            using var reader = command.ExecuteReader();
+            if (!reader.Read())
+                throw new ArgumentException($"Unknown or inactive element_id: {elementId}", nameof(elementId));
+            return new UiaElementTarget(
+                elementId,
+                reader.GetInt64(0),
+                reader.GetString(1),
+                reader.GetInt64(2),
+                reader.GetString(3));
+        }
+    }
     private void Initialize()
     {
         lock (_gate)
