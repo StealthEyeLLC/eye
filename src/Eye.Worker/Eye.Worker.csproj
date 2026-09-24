@@ -24,6 +24,7 @@
     <Compile Include="..\Eye\Runtime\NativeMethods.cs" Link="Runtime\NativeMethods.cs" />
     <Compile Include="..\Eye\Runtime\ProcessRunHooks.cs" Link="Runtime\ProcessRunHooks.cs" />
     <Compile Include="..\Eye\Runtime\ProcessRunner.cs" Link="Runtime\ProcessRunner.cs" />
+    <Compile Include="..\Eye\Runtime\ProcessStartupAttributeList.cs" Link="Runtime\ProcessStartupAttributeList.cs" />
     <Compile Include="..\Eye\Runtime\RunModels.cs" Link="Runtime\RunModels.cs" />
     <Compile Include="..\Eye\Runtime\ConPtySession.cs" Link="Runtime\ConPtySession.cs" />
   </ItemGroup>

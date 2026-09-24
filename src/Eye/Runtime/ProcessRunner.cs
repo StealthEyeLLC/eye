@@ -180,15 +180,12 @@ public sealed class ProcessRunner
                 using var stdinReadHandle = stdinRead;
                 using var stdinWriteHandle = stdinWrite;
 
-                var startup = new NativeMethods.STARTUPINFO
-                {
-                    cb = Marshal.SizeOf<NativeMethods.STARTUPINFO>(),
-                    lpDesktop = "winsta0\\default",
-                    dwFlags = NativeMethods.STARTF_USESTDHANDLES,
-                    hStdInput = stdinReadHandle.DangerousGetHandle(),
-                    hStdOutput = stdoutWriteHandle.DangerousGetHandle(),
-                    hStdError = stderrWriteHandle.DangerousGetHandle()
-                };
+                using var startupAttributes = ProcessStartupAttributeList.CreateStdio(
+                    stdinReadHandle,
+                    stdoutWriteHandle,
+                    stderrWriteHandle,
+                    @"winsta0\default");
+                var startup = startupAttributes.StartupInfo;
 
                 var executable = ResolveExecutable(request.FileName);
                 var commandLine = new StringBuilder(BuildCommandLine(executable ?? request.FileName, request.Arguments));
@@ -198,9 +195,10 @@ public sealed class ProcessRunner
 
                 var flags = NativeMethods.CREATE_UNICODE_ENVIRONMENT |
                             NativeMethods.CREATE_SUSPENDED |
-                            NativeMethods.CREATE_NO_WINDOW;
+                            NativeMethods.CREATE_NO_WINDOW |
+                            NativeMethods.EXTENDED_STARTUPINFO_PRESENT;
 
-                if (!NativeMethods.CreateProcessAsUserW(
+                if (!NativeMethods.CreateProcessAsUserExW(
                         token,
                         executable,
                         commandLine,
@@ -229,7 +227,7 @@ public sealed class ProcessRunner
 
 #endif
                     throw new InvalidOperationException(
-                        $"CreateProcessAsUser failed with Win32 error {error}.");
+                        $"CreateProcessAsUser(HANDLE_LIST) failed with Win32 error {error}.");
                 }
 
                 using var processHandle = new SafeFileHandle(pi.hProcess, ownsHandle: true);

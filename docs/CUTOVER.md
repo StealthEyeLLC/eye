@@ -56,7 +56,7 @@ Phase 1 activation gate is met. The canonical contract is generated but remains 
 - [ ] host provides active-user execution through `WTSQueryUserToken` / `CreateEnvironmentBlock` / `CreateProcessAsUser`.
 - [ ] host provides WSL execution through the active-user path.
 - [ ] CsWin32-generated bindings/SafeHandles replace suitable handwritten interop.
-- [ ] explicit inherited-handle lists are used.
+- [x] explicit inherited-handle lists are used.
 - [ ] Job Objects own launched process trees.
 - [ ] host owns native ConPTY handles/lifecycle.
 - [ ] cancellation consistently terminates owned process trees.

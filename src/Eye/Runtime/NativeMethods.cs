@@ -10,6 +10,7 @@ internal static class NativeMethods
     internal const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
     internal const uint CREATE_NO_WINDOW = 0x08000000;
     internal const uint EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
+    internal static readonly IntPtr PROC_THREAD_ATTRIBUTE_HANDLE_LIST = new(0x00020002);
     internal static readonly IntPtr PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = new(0x00020016);
     internal const uint STARTF_USESTDHANDLES = 0x00000100;
     internal const uint HANDLE_FLAG_INHERIT = 0x00000001;
