@@ -44,6 +44,20 @@ public sealed class TriggerBroker(TriggerStore store) : IAsyncDisposable
         return trigger;
     }
 
+    public TriggerRecord CreateFileExists(string filePath, int timeoutMs = 0)
+    {
+        ThrowIfDisposed();
+        if (string.IsNullOrWhiteSpace(filePath))
+            throw new ArgumentException("file_path is required.", nameof(filePath));
+        if (timeoutMs < 0 || timeoutMs > 86_400_000)
+            throw new ArgumentException("timeout_ms must be between 0 and 86400000.", nameof(timeoutMs));
+
+        var fullPath = Path.GetFullPath(filePath);
+        DateTimeOffset? deadline = timeoutMs > 0 ? DateTimeOffset.UtcNow.AddMilliseconds(timeoutMs) : null;
+        var trigger = store.CreateFileExists(fullPath, deadline);
+        EnsureActive(trigger);
+        return trigger;
+    }
     public TriggerRecord Status(string triggerId) => store.GetRequired(triggerId);
 
     public async Task<TriggerWaitResult> WaitAsync(
@@ -120,6 +134,9 @@ public sealed class TriggerBroker(TriggerStore store) : IAsyncDisposable
                     break;
                 case TriggerKinds.Time:
                     await WatchTimeAsync(trigger, active);
+                    break;
+                case TriggerKinds.FileExists:
+                    await WatchFileExistsAsync(trigger, active);
                     break;
                 default:
                     Complete(active, TriggerStates.Failed, "trigger_failed", new { kind = trigger.Kind }, $"Unsupported trigger kind: {trigger.Kind}");
@@ -229,6 +246,82 @@ public sealed class TriggerBroker(TriggerStore store) : IAsyncDisposable
         return completed;
     }
 
+    private async Task WatchFileExistsAsync(TriggerRecord trigger, ActiveTrigger active)
+    {
+        var filePath = trigger.FilePath
+            ?? throw new InvalidOperationException("File-exists trigger is missing file_path.");
+        filePath = Path.GetFullPath(filePath);
+        if (File.Exists(filePath))
+        {
+            Complete(active, TriggerStates.Satisfied, "file_exists", new { file_path = filePath, reason = "already_exists" });
+            return;
+        }
+
+        var watchRoot = FindExistingWatchRoot(filePath);
+        var signal = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var watcher = new FileSystemWatcher(watchRoot)
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size
+        };
+
+        void Check(string candidate)
+        {
+            if (string.Equals(Path.GetFullPath(candidate), filePath, StringComparison.OrdinalIgnoreCase) && File.Exists(filePath))
+                signal.TrySetResult("created");
+        }
+
+        FileSystemEventHandler changed = (_, e) => Check(e.FullPath);
+        RenamedEventHandler renamed = (_, e) => Check(e.FullPath);
+        ErrorEventHandler error = (_, e) => signal.TrySetException(e.GetException());
+        watcher.Created += changed;
+        watcher.Changed += changed;
+        watcher.Renamed += renamed;
+        watcher.Error += error;
+        watcher.EnableRaisingEvents = true;
+
+        if (File.Exists(filePath))
+            signal.TrySetResult("already_exists");
+
+        string reason;
+        if (trigger.DeadlineAt is null)
+        {
+            reason = await signal.Task.WaitAsync(active.Cancellation.Token);
+        }
+        else
+        {
+            var remaining = trigger.DeadlineAt.Value - DateTimeOffset.UtcNow;
+            if (remaining <= TimeSpan.Zero)
+            {
+                Complete(active, TriggerStates.TimedOut, "trigger_timed_out", new { file_path = filePath });
+                return;
+            }
+
+            var delay = Task.Delay(remaining, active.Cancellation.Token);
+            var winner = await Task.WhenAny(signal.Task, delay);
+            if (winner == delay)
+            {
+                await delay;
+                Complete(active, TriggerStates.TimedOut, "trigger_timed_out", new { file_path = filePath });
+                return;
+            }
+            reason = await signal.Task;
+        }
+
+        Complete(active, TriggerStates.Satisfied, "file_exists", new { file_path = filePath, reason });
+    }
+
+    private static string FindExistingWatchRoot(string filePath)
+    {
+        var directory = Path.GetDirectoryName(filePath)
+            ?? throw new ArgumentException("file_path must include a parent directory.", nameof(filePath));
+        while (!Directory.Exists(directory))
+        {
+            directory = Path.GetDirectoryName(directory)
+                ?? throw new DirectoryNotFoundException($"No existing ancestor directory for {filePath}.");
+        }
+        return directory;
+    }
     private static DateTimeOffset? TryGetProcessStart(int processId)
     {
         try

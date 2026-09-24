@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
+using System.Text.Json;
 using StealthEye.Runtime;
 
 namespace Eye.Tests;
@@ -86,6 +87,63 @@ public sealed class TriggerBrokerTests : IDisposable
         Assert.Equal(TriggerStates.Cancelled, broker.Status(created.TriggerId).State);
     }
 
+    [Fact]
+    public async Task FileExistsTrigger_UsesNativeWatcherAndAdvancesCursor()
+    {
+        Directory.CreateDirectory(_root);
+        var target = Path.Combine(_root, "watched", "ready.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        var store = CreateStore();
+        await using var broker = new TriggerBroker(store);
+        await broker.InitializeAsync();
+        var created = broker.CreateFileExists(target, 5_000);
+
+        await Task.Delay(100);
+        await File.WriteAllTextAsync(target, "ready");
+
+        var waited = await broker.WaitAsync(created.TriggerId, 5_000);
+        Assert.False(waited.WaitTimedOut);
+        Assert.Equal(TriggerStates.Satisfied, waited.Trigger.State);
+        Assert.Equal(Path.GetFullPath(target), waited.Trigger.FilePath, ignoreCase: true);
+        Assert.Equal(created.TriggerId, waited.Trigger.TriggerId);
+        Assert.Equal(1, waited.Trigger.Incarnation);
+
+        var read = broker.Read(created.TriggerId, 0, 10);
+        var item = Assert.Single(read.Events);
+        Assert.Equal("file_exists", item.EventType);
+        using (var payload = JsonDocument.Parse(item.PayloadJson))
+            Assert.Equal(Path.GetFullPath(target), payload.RootElement.GetProperty("file_path").GetString(), ignoreCase: true);
+        Assert.Equal(1, read.NextCursor);
+        Assert.True(read.Eof);
+    }
+
+    [Fact]
+    public async Task PendingFileExistsTrigger_ReattachesAfterBrokerRestart()
+    {
+        Directory.CreateDirectory(_root);
+        var target = Path.Combine(_root, "restart", "ready.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        var store = CreateStore();
+        string triggerId;
+
+        await using (var first = new TriggerBroker(store))
+        {
+            await first.InitializeAsync();
+            triggerId = first.CreateFileExists(target, 10_000).TriggerId;
+        }
+
+        await using var second = new TriggerBroker(store);
+        await second.InitializeAsync();
+        await Task.Delay(100);
+        await File.WriteAllTextAsync(target, "ready");
+
+        var waited = await second.WaitAsync(triggerId, 5_000);
+        Assert.False(waited.WaitTimedOut);
+        Assert.Equal(TriggerStates.Satisfied, waited.Trigger.State);
+        Assert.Equal(triggerId, waited.Trigger.TriggerId);
+        Assert.Equal(1, waited.Trigger.Incarnation);
+        Assert.Equal(Path.GetFullPath(target), waited.Trigger.FilePath, ignoreCase: true);
+    }
     private TriggerStore CreateStore()
     {
         var jobs = new JobStore(Path.Combine(_root, "state"), Path.Combine(_root, "spool", "jobs"));

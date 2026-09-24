@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace StealthEye.Runtime;
 
@@ -6,6 +6,7 @@ public static class TriggerKinds
 {
     public const string ProcessExit = "process_exit";
     public const string Time = "time";
+    public const string FileExists = "file_exists";
 }
 
 public static class TriggerStates
@@ -30,6 +31,7 @@ public sealed record TriggerRecord(
     [property: JsonPropertyName("process_id")] int? ProcessId,
     [property: JsonPropertyName("process_start_at")] DateTimeOffset? ProcessStartAt,
     [property: JsonPropertyName("due_at")] DateTimeOffset? DueAt,
+    [property: JsonPropertyName("file_path")] string? FilePath,
     [property: JsonPropertyName("failure_message")] string? FailureMessage);
 
 public sealed record TriggerEvent(

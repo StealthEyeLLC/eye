@@ -25,16 +25,24 @@ public sealed class TriggerStore
             throw new ArgumentException("process_id must be positive.", nameof(processId));
         return Insert(new TriggerRecord(
             NewId(), 1, TriggerKinds.ProcessExit, TriggerStates.Pending,
-            DateTimeOffset.UtcNow, null, deadlineAt, processId, processStartAt, null, null));
+            DateTimeOffset.UtcNow, null, deadlineAt, processId, processStartAt, null, null, null));
     }
 
     public TriggerRecord CreateTime(DateTimeOffset dueAt)
     {
         return Insert(new TriggerRecord(
             NewId(), 1, TriggerKinds.Time, TriggerStates.Pending,
-            DateTimeOffset.UtcNow, null, null, null, null, dueAt, null));
+            DateTimeOffset.UtcNow, null, null, null, null, dueAt, null, null));
     }
 
+    public TriggerRecord CreateFileExists(string filePath, DateTimeOffset? deadlineAt)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            throw new ArgumentException("file_path is required.", nameof(filePath));
+        return Insert(new TriggerRecord(
+            NewId(), 1, TriggerKinds.FileExists, TriggerStates.Pending,
+            DateTimeOffset.UtcNow, null, deadlineAt, null, null, null, Path.GetFullPath(filePath), null));
+    }
     public TriggerRecord GetRequired(string triggerId)
     {
         lock (_gate)
@@ -194,10 +202,10 @@ public sealed class TriggerStore
             command.CommandText = """
                 INSERT INTO triggers (
                     trigger_id, incarnation, kind, state, created_utc, completed_utc, deadline_utc,
-                    process_id, process_start_utc, due_utc, failure_message, next_sequence)
+                    process_id, process_start_utc, due_utc, file_path, failure_message, next_sequence)
                 VALUES (
                     $trigger_id, $incarnation, $kind, $state, $created_utc, NULL, $deadline_utc,
-                    $process_id, $process_start_utc, $due_utc, NULL, 1);
+                    $process_id, $process_start_utc, $due_utc, $file_path, NULL, 1);
                 """;
             command.Parameters.AddWithValue("$trigger_id", record.TriggerId);
             command.Parameters.AddWithValue("$incarnation", record.Incarnation);
@@ -208,6 +216,7 @@ public sealed class TriggerStore
             command.Parameters.AddWithValue("$process_id", (object?)record.ProcessId ?? DBNull.Value);
             command.Parameters.AddWithValue("$process_start_utc", (object?)record.ProcessStartAt?.ToString("O") ?? DBNull.Value);
             command.Parameters.AddWithValue("$due_utc", (object?)record.DueAt?.ToString("O") ?? DBNull.Value);
+            command.Parameters.AddWithValue("$file_path", (object?)record.FilePath ?? DBNull.Value);
             command.ExecuteNonQuery();
             return record;
         }
@@ -231,6 +240,7 @@ public sealed class TriggerStore
                     process_id INTEGER NULL,
                     process_start_utc TEXT NULL,
                     due_utc TEXT NULL,
+                    file_path TEXT NULL,
                     failure_message TEXT NULL,
                     next_sequence INTEGER NOT NULL DEFAULT 1
                 );
@@ -270,6 +280,7 @@ public sealed class TriggerStore
         GetNullableInt32(reader, "process_id"),
         GetNullableDateTime(reader, "process_start_utc"),
         GetNullableDateTime(reader, "due_utc"),
+        GetNullableString(reader, "file_path"),
         GetNullableString(reader, "failure_message"));
 
     private static string? GetNullableString(SqliteDataReader reader, string name)
