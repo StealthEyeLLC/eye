@@ -61,6 +61,25 @@ public sealed class SessionWorkerTests
     }
 
     [Fact]
+    public async Task SessionWorker_AllCanonicalBulkChannelsRoundTripBinaryPayloads()
+    {
+        var contract = EyeContractCatalog.Load();
+        await using var worker = await SessionWorker.StartAsync(
+            WorkerExecutable(),
+            contract.WorkerProtocolVersion,
+            TimeSpan.FromSeconds(10));
+
+        var payload = Enumerable.Range(0, 16 * 1024)
+            .Select(i => (byte)(i % 251))
+            .ToArray();
+
+        foreach (var channel in WorkerBulkChannels.All)
+        {
+            var echoed = await worker.ProbeBulkAsync(channel, payload);
+            Assert.Equal(payload, echoed);
+        }
+    }
+    [Fact]
     public async Task SessionWorker_ObservesActiveSessionWindowInventory()
     {
         var contract = EyeContractCatalog.Load();

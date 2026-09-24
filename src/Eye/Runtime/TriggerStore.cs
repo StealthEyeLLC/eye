@@ -54,6 +54,19 @@ public sealed class TriggerStore
             RegistrationJson = registrationJson
         });
     }
+    public TriggerRecord CreateBrowserNavigation(
+        string registrationJson,
+        DateTimeOffset? deadlineAt)
+    {
+        if (string.IsNullOrWhiteSpace(registrationJson))
+            throw new ArgumentException("registration_json is required.", nameof(registrationJson));
+        return Insert(new TriggerRecord(
+            NewId(), 1, TriggerKinds.BrowserNavigation, TriggerStates.Pending,
+            DateTimeOffset.UtcNow, null, deadlineAt, null, null, null, null, null)
+        {
+            RegistrationJson = registrationJson
+        });
+    }
     public TriggerRecord GetRequired(string triggerId)
     {
         lock (_gate)

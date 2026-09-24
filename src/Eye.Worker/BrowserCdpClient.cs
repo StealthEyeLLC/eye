@@ -54,6 +54,27 @@ internal sealed class BrowserCdpClient : IAsyncDisposable
         }
     }
 
+    internal async Task<JsonElement> WaitForEventAsync(
+        string method,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(method))
+            throw new ArgumentException("CDP event method is required.", nameof(method));
+
+        while (true)
+        {
+            var message = await ReceiveAsync(cancellationToken);
+            using var document = JsonDocument.Parse(message);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("method", out var methodElement) ||
+                !string.Equals(methodElement.GetString(), method, StringComparison.Ordinal))
+                continue;
+
+            return root.TryGetProperty("params", out var parameters)
+                ? parameters.Clone()
+                : default;
+        }
+    }
     private async Task<byte[]> ReceiveAsync(CancellationToken cancellationToken)
     {
         using var memory = new MemoryStream();

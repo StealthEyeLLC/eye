@@ -4,7 +4,10 @@ using System.Text.Json;
 
 namespace StealthEye.Runtime;
 
-public sealed class TriggerBroker(TriggerStore store, UiaTriggerSource? uiaTriggerSource = null) : IAsyncDisposable
+public sealed class TriggerBroker(
+    TriggerStore store,
+    UiaTriggerSource? uiaTriggerSource = null,
+    BrowserTriggerSource? browserTriggerSource = null) : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, ActiveTrigger> _active = new(StringComparer.Ordinal);
     private int _initialized;
@@ -74,12 +77,29 @@ public sealed class TriggerBroker(TriggerStore store, UiaTriggerSource? uiaTrigg
         EnsureActive(trigger);
         return trigger;
     }
+    public TriggerRecord CreateBrowserNavigation(
+        string targetId,
+        int timeoutMs = 0)
+    {
+        ThrowIfDisposed();
+        if (timeoutMs < 0 || timeoutMs > 86_400_000)
+            throw new ArgumentException("timeout_ms must be between 0 and 86400000.", nameof(timeoutMs));
+        var source = browserTriggerSource
+            ?? throw new InvalidOperationException("Browser trigger source is not configured.");
+        var registration = source.PrepareNavigationRegistration(targetId);
+        DateTimeOffset? deadline = timeoutMs > 0
+            ? DateTimeOffset.UtcNow.AddMilliseconds(timeoutMs)
+            : null;
+        var trigger = store.CreateBrowserNavigation(registration, deadline);
+        EnsureActive(trigger);
+        return trigger;
+    }
     public async Task WaitUntilArmedAsync(string triggerId, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
         var trigger = store.GetRequired(triggerId);
-        if (trigger.Kind != TriggerKinds.UiaChange)
-            throw new ArgumentException("trigger_id is not a UIA change trigger.", nameof(triggerId));
+        if (trigger.Kind is not (TriggerKinds.UiaChange or TriggerKinds.BrowserNavigation))
+            throw new ArgumentException("trigger_id is not an armable UI/browser trigger.", nameof(triggerId));
         if (TriggerStates.IsTerminal(trigger.State))
             return;
         var active = EnsureActive(trigger);
@@ -170,6 +190,9 @@ public sealed class TriggerBroker(TriggerStore store, UiaTriggerSource? uiaTrigg
                     break;
                 case TriggerKinds.UiaChange:
                     await WatchUiaChangeAsync(trigger, active);
+                    break;
+                case TriggerKinds.BrowserNavigation:
+                    await WatchBrowserNavigationAsync(trigger, active);
                     break;
                 default:
                     Complete(active, TriggerStates.Failed, "trigger_failed", new { kind = trigger.Kind }, $"Unsupported trigger kind: {trigger.Kind}");
@@ -381,6 +404,52 @@ public sealed class TriggerBroker(TriggerStore store, UiaTriggerSource? uiaTrigg
             element_incarnation = change.ElementIncarnation,
             property = change.Property,
             value = change.Value
+        });
+    }
+    private async Task WatchBrowserNavigationAsync(
+        TriggerRecord trigger,
+        ActiveTrigger active)
+    {
+        var source = browserTriggerSource
+            ?? throw new InvalidOperationException("Browser trigger source is not configured.");
+        var waitTask = source.WaitNavigationAsync(
+            trigger,
+            () => active.Ready.TrySetResult(true),
+            active.Cancellation.Token);
+
+        BrowserNavigationTriggerEvent navigation;
+        if (trigger.DeadlineAt is null)
+        {
+            navigation = await waitTask;
+        }
+        else
+        {
+            var remaining = trigger.DeadlineAt.Value - DateTimeOffset.UtcNow;
+            if (remaining <= TimeSpan.Zero)
+            {
+                Complete(active, TriggerStates.TimedOut, "trigger_timed_out", new { kind = trigger.Kind });
+                return;
+            }
+
+            var delay = Task.Delay(remaining, active.Cancellation.Token);
+            if (await Task.WhenAny(waitTask, delay) == delay)
+            {
+                await delay;
+                Complete(active, TriggerStates.TimedOut, "trigger_timed_out", new { kind = trigger.Kind });
+                return;
+            }
+
+            navigation = await waitTask;
+        }
+
+        Complete(active, TriggerStates.Satisfied, "browser_navigated", new
+        {
+            occurred_at = navigation.OccurredAt,
+            target_id = navigation.TargetId,
+            target_incarnation = navigation.TargetIncarnation,
+            url = navigation.Url,
+            frame_id = navigation.FrameId,
+            loader_id = navigation.LoaderId
         });
     }
     private static string FindExistingWatchRoot(string filePath)

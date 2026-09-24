@@ -4,7 +4,8 @@ namespace StealthEye.Runtime;
 
 public sealed class SessionWorkerManager : IAsyncDisposable
 {
-    private static readonly TimeSpan IdleLifetime = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan DefaultIdleLifetime = TimeSpan.FromSeconds(15);
+    private readonly TimeSpan _idleLifetime;
 
     private readonly Func<string> _resolveWorkerExecutable;
     private readonly SemaphoreSlim _cacheGate = new(1, 1);
@@ -16,19 +17,38 @@ public sealed class SessionWorkerManager : IAsyncDisposable
     private int _disposed;
 
     public SessionWorkerManager(string workerExecutablePath, string workerProtocolVersion)
+        : this(workerExecutablePath, workerProtocolVersion, DefaultIdleLifetime)
+    {
+    }
+
+    internal SessionWorkerManager(
+        string workerExecutablePath,
+        string workerProtocolVersion,
+        TimeSpan idleLifetime)
     {
         var fixedPath = Path.GetFullPath(workerExecutablePath);
         _resolveWorkerExecutable = () => fixedPath;
         WorkerProtocolVersion = workerProtocolVersion;
+        _idleLifetime = ValidateIdleLifetime(idleLifetime);
     }
 
     public SessionWorkerManager(EngineSupervisor engineSupervisor, string workerProtocolVersion)
+        : this(engineSupervisor, workerProtocolVersion, DefaultIdleLifetime)
+    {
+    }
+
+    internal SessionWorkerManager(
+        EngineSupervisor engineSupervisor,
+        string workerProtocolVersion,
+        TimeSpan idleLifetime)
     {
         _resolveWorkerExecutable = engineSupervisor.ResolveActiveWorkerExecutable;
         WorkerProtocolVersion = workerProtocolVersion;
+        _idleLifetime = ValidateIdleLifetime(idleLifetime);
     }
 
     public string WorkerProtocolVersion { get; }
+    internal int? CachedWorkerProcessId => _cachedWorker is { HasExited: false } worker ? worker.ProcessId : null;
     public string ResolveWorkerExecutablePath() => Path.GetFullPath(_resolveWorkerExecutable());
 
     public async Task<WorkerDesktopObservationResult> ObserveWindowsAsync(
@@ -177,7 +197,7 @@ public sealed class SessionWorkerManager : IAsyncDisposable
     {
         try
         {
-            await Task.Delay(IdleLifetime, cancellation.Token);
+            await Task.Delay(_idleLifetime, cancellation.Token);
             await _cacheGate.WaitAsync(cancellation.Token);
             try
             {
@@ -239,6 +259,12 @@ public sealed class SessionWorkerManager : IAsyncDisposable
         }
     }
 
+    private static TimeSpan ValidateIdleLifetime(TimeSpan idleLifetime)
+    {
+        if (idleLifetime < TimeSpan.Zero || idleLifetime > TimeSpan.FromMinutes(5))
+            throw new ArgumentOutOfRangeException(nameof(idleLifetime));
+        return idleLifetime;
+    }
     private void ThrowIfDisposed()
     {
         if (Volatile.Read(ref _disposed) != 0)

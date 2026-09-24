@@ -10,6 +10,9 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
     private readonly Process _chrome;
     private readonly HttpClient _http;
     private readonly string _baseUrl;
+    private readonly SemaphoreSlim _navigationGate = new(1, 1);
+    private BrowserCdpClient? _navigationClient;
+    private string? _navigationTargetId;
 
     private BrowserCdpSession(
         Process chrome,
@@ -233,6 +236,106 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
             result.TryGetProperty("errorText", out var errorText) ? errorText.GetString() : null);
     }
 
+    internal async Task<WorkerBrowserNavigationArmResult> ArmNavigationAsync(
+        string cdpTargetId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cdpTargetId))
+            throw new ArgumentException("cdp_target_id is required.", nameof(cdpTargetId));
+
+        await _navigationGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_navigationClient is not null)
+                throw new InvalidOperationException("A browser navigation watcher is already armed.");
+
+            var socket = await TargetSocketAsync(cdpTargetId, cancellationToken);
+            var client = await BrowserCdpClient.ConnectAsync(socket, cancellationToken);
+            try
+            {
+                await client.CallAsync("Page.enable", null, cancellationToken);
+            }
+            catch
+            {
+                await client.DisposeAsync();
+                throw;
+            }
+
+            _navigationClient = client;
+            _navigationTargetId = cdpTargetId;
+            return new WorkerBrowserNavigationArmResult(true);
+        }
+        finally
+        {
+            _navigationGate.Release();
+        }
+    }
+
+    internal async Task<WorkerBrowserNavigationResult> WaitNavigationAsync(
+        CancellationToken cancellationToken)
+    {
+        BrowserCdpClient client;
+        string targetId;
+
+        await _navigationGate.WaitAsync(cancellationToken);
+        try
+        {
+            client = _navigationClient
+                ?? throw new InvalidOperationException("No browser navigation watcher is armed.");
+            targetId = _navigationTargetId
+                ?? throw new InvalidOperationException("Browser navigation watcher target is missing.");
+        }
+        finally
+        {
+            _navigationGate.Release();
+        }
+
+        try
+        {
+            var parameters = await client.WaitForEventAsync("Page.frameNavigated", cancellationToken);
+            var frame = parameters.TryGetProperty("frame", out var frameElement)
+                ? frameElement
+                : default;
+            var url = frame.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                      frame.TryGetProperty("url", out var urlElement)
+                ? urlElement.GetString() ?? string.Empty
+                : string.Empty;
+            var frameId = frame.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                          frame.TryGetProperty("id", out var idElement)
+                ? idElement.GetString()
+                : null;
+            var loaderId = frame.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                           frame.TryGetProperty("loaderId", out var loaderElement)
+                ? loaderElement.GetString()
+                : null;
+
+            return new WorkerBrowserNavigationResult(
+                DateTimeOffset.UtcNow,
+                targetId,
+                url,
+                frameId,
+                loaderId);
+        }
+        finally
+        {
+            await _navigationGate.WaitAsync(CancellationToken.None);
+            try
+            {
+                if (ReferenceEquals(_navigationClient, client))
+                {
+                    _navigationClient = null;
+                    _navigationTargetId = null;
+                }
+            }
+            finally
+            {
+                _navigationGate.Release();
+            }
+
+            await client.DisposeAsync();
+        }
+    }
+
     internal async Task<WorkerBrowserEvaluateResult> EvaluateAsync(
         string cdpTargetId,
         string expression,
@@ -283,6 +386,22 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
     }
     public async ValueTask DisposeAsync()
     {
+        BrowserCdpClient? navigationClient;
+        await _navigationGate.WaitAsync(CancellationToken.None);
+        try
+        {
+            navigationClient = _navigationClient;
+            _navigationClient = null;
+            _navigationTargetId = null;
+        }
+        finally
+        {
+            _navigationGate.Release();
+        }
+        if (navigationClient is not null)
+            await navigationClient.DisposeAsync();
+        _navigationGate.Dispose();
+
         _http.Dispose();
         if (!_chrome.HasExited)
         {

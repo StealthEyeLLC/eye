@@ -24,9 +24,8 @@ await using var bulkPipe = new NamedPipeClientStream(".", bulkPipeName, PipeDire
 await Task.WhenAll(controlPipe.ConnectAsync(10_000), bulkPipe.ConnectAsync(10_000));
 
 await using var multiplexing = await MultiplexingStream.CreateAsync(bulkPipe);
-using var vtChannel = await multiplexing.OfferChannelAsync("terminal.vt");
-await using var vtStream = vtChannel.AsStream();
-await using var target = new SessionWorkerRpcTarget(vtStream);
+await using var bulkStreams = await WorkerBulkStreamSet.OfferAsync(multiplexing);
+await using var target = new SessionWorkerRpcTarget(bulkStreams.Streams);
 using var rpc = new JsonRpc(EyeRpcTransport.CreateMessageHandler(controlPipe), target);
 rpc.StartListening();
 try
@@ -59,10 +58,11 @@ static string RequiredArgument(string[] arguments, string name)
     throw new ArgumentException($"Missing required argument: {name}");
 }
 
-sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
+sealed class SessionWorkerRpcTarget(IReadOnlyDictionary<string, Stream> bulkStreams) : IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly SemaphoreSlim _vtWriteGate = new(1, 1);
+    private readonly SemaphoreSlim _bulkProbeGate = new(1, 1);
     private ConPtySession? _terminal;
     private BrowserCdpSession? _browser;
     private readonly DesktopUiaWatcher _uiaWatcher = new();
@@ -194,11 +194,50 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
         WorkerBrowserEvaluateRequest request,
         CancellationToken cancellationToken) =>
         RequiredBrowser().EvaluateAsync(request.CdpTargetId, request.Expression, cancellationToken);
+    [JsonRpcMethod(WorkerRpcMethods.ArmBrowserNavigation)]
+    public Task<WorkerBrowserNavigationArmResult> ArmBrowserNavigationAsync(
+        WorkerBrowserNavigationArmRequest request,
+        CancellationToken cancellationToken) =>
+        RequiredBrowser().ArmNavigationAsync(request.CdpTargetId, cancellationToken);
+
+    [JsonRpcMethod(WorkerRpcMethods.WaitBrowserNavigation)]
+    public Task<WorkerBrowserNavigationResult> WaitBrowserNavigationAsync(
+        CancellationToken cancellationToken) =>
+        RequiredBrowser().WaitNavigationAsync(cancellationToken);
     [JsonRpcMethod(WorkerRpcMethods.CaptureWindow)]
     public Task<WorkerWindowCaptureResult> CaptureWindowAsync(
         WorkerWindowCaptureRequest request,
         CancellationToken cancellationToken) =>
         DesktopWgcCapture.CaptureAsync(request, cancellationToken);
+    [JsonRpcMethod(WorkerRpcMethods.BulkProbe)]
+    public async Task<WorkerBulkProbeResult> BulkProbeAsync(
+        WorkerBulkProbeRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!WorkerBulkChannels.IsKnown(request.Channel))
+            throw new ArgumentException($"Unknown bulk channel: {request.Channel}", nameof(request));
+        if (request.Length is < 0 or > 1_048_576)
+            throw new ArgumentException("Bulk probe length must be between 0 and 1048576.", nameof(request));
+
+        var stream = bulkStreams[request.Channel];
+        var gate = string.Equals(request.Channel, WorkerBulkChannels.TerminalVt, StringComparison.Ordinal)
+            ? _vtWriteGate
+            : _bulkProbeGate;
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            var bytes = new byte[request.Length];
+            if (bytes.Length > 0)
+                await stream.ReadExactlyAsync(bytes, cancellationToken);
+            await stream.WriteAsync(bytes, cancellationToken);
+            await stream.FlushAsync(cancellationToken);
+            return new WorkerBulkProbeResult(request.Channel, bytes.Length);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
     [JsonRpcMethod(WorkerRpcMethods.Shutdown)]
     public WorkerShutdownResult Shutdown() => new(true);
 
@@ -212,6 +251,7 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
             await browser.DisposeAsync();
         _gate.Dispose();
         _vtWriteGate.Dispose();
+        _bulkProbeGate.Dispose();
         _uiaWatcher.Dispose();
     }
 
@@ -227,6 +267,7 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
         await _vtWriteGate.WaitAsync();
         try
         {
+            var vtStream = bulkStreams[WorkerBulkChannels.TerminalVt];
             await vtStream.WriteAsync(bytes);
             await vtStream.FlushAsync();
         }
@@ -254,5 +295,53 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
             Arguments = [.. arguments],
             TimeoutMs = request.TimeoutMs
         };
+    }
+}
+
+sealed class WorkerBulkStreamSet : IAsyncDisposable
+{
+    private readonly Dictionary<string, MultiplexingStream.Channel> _channels;
+    private readonly Dictionary<string, Stream> _streams;
+
+    private WorkerBulkStreamSet(
+        Dictionary<string, MultiplexingStream.Channel> channels,
+        Dictionary<string, Stream> streams)
+    {
+        _channels = channels;
+        _streams = streams;
+    }
+
+    internal IReadOnlyDictionary<string, Stream> Streams => _streams;
+
+    internal static async Task<WorkerBulkStreamSet> OfferAsync(MultiplexingStream multiplexing)
+    {
+        var channels = new Dictionary<string, MultiplexingStream.Channel>(StringComparer.Ordinal);
+        var streams = new Dictionary<string, Stream>(StringComparer.Ordinal);
+        try
+        {
+            foreach (var name in WorkerBulkChannels.All)
+            {
+                var channel = await multiplexing.OfferChannelAsync(name);
+                channels.Add(name, channel);
+                streams.Add(name, channel.AsStream());
+            }
+            return new WorkerBulkStreamSet(channels, streams);
+        }
+        catch
+        {
+            foreach (var stream in streams.Values)
+                await stream.DisposeAsync();
+            foreach (var channel in channels.Values)
+                channel.Dispose();
+            throw;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var stream in _streams.Values)
+            await stream.DisposeAsync();
+        foreach (var channel in _channels.Values)
+            channel.Dispose();
     }
 }

@@ -84,6 +84,44 @@ public sealed class BrowserSessionManager(SessionWorkerManager workers) : IAsync
             _gate.Release();
         }
     }
+    public async Task ArmNavigationAsync(
+        string cdpTargetId,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var worker = await EnsureWorkerAsync(cancellationToken);
+            if (_status is null)
+                _status = await worker.EnsureBrowserAsync(new WorkerBrowserEnsureRequest(), cancellationToken);
+            var armed = await worker.ArmBrowserNavigationAsync(cdpTargetId, cancellationToken);
+            if (!armed.Armed)
+                throw new InvalidOperationException("Browser navigation watcher did not arm.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<WorkerBrowserNavigationResult> WaitNavigationAsync(
+        CancellationToken cancellationToken = default)
+    {
+        SessionWorker worker;
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_worker is null || _worker.HasExited || _status is null)
+                throw new InvalidOperationException("No active browser session is available for the navigation watcher.");
+            worker = _worker;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        return await worker.WaitBrowserNavigationAsync(cancellationToken);
+    }
     public async Task<WorkerBrowserTargetsResult?> TryObserveActiveTargetsAsync(
         CancellationToken cancellationToken = default)
     {

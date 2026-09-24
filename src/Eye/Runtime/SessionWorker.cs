@@ -18,8 +18,7 @@ public sealed class SessionWorker : IAsyncDisposable
     private readonly NamedPipeServerStream _controlPipe;
     private readonly NamedPipeServerStream _bulkPipe;
     private readonly MultiplexingStream _multiplexing;
-    private readonly MultiplexingStream.Channel _vtChannel;
-    private readonly Stream _vtStream;
+    private readonly SessionWorkerBulkStreamSet _bulkStreams;
     private readonly JsonRpc _rpc;
     private readonly InteractiveTaskProcessLease? _interactiveTaskLease;
     private int _disposed;
@@ -30,8 +29,7 @@ public sealed class SessionWorker : IAsyncDisposable
         NamedPipeServerStream controlPipe,
         NamedPipeServerStream bulkPipe,
         MultiplexingStream multiplexing,
-        MultiplexingStream.Channel vtChannel,
-        Stream vtStream,
+        SessionWorkerBulkStreamSet bulkStreams,
         JsonRpc rpc,
         SessionWorkerHandshake handshake,
         string executablePath,
@@ -42,8 +40,7 @@ public sealed class SessionWorker : IAsyncDisposable
         _controlPipe = controlPipe;
         _bulkPipe = bulkPipe;
         _multiplexing = multiplexing;
-        _vtChannel = vtChannel;
-        _vtStream = vtStream;
+        _bulkStreams = bulkStreams;
         _rpc = rpc;
         _interactiveTaskLease = interactiveTaskLease;
         Handshake = handshake;
@@ -78,8 +75,7 @@ public sealed class SessionWorker : IAsyncDisposable
         Process? process = null;
         SafeFileHandle? jobHandle = null;
         MultiplexingStream? multiplexing = null;
-        MultiplexingStream.Channel? vtChannel = null;
-        Stream? vtStream = null;
+        SessionWorkerBulkStreamSet? bulkStreams = null;
         JsonRpc? rpc = null;
         InteractiveTaskProcessLease? interactiveTaskLease = null;
         try
@@ -103,8 +99,7 @@ public sealed class SessionWorker : IAsyncDisposable
             rpc = new JsonRpc(EyeRpcTransport.CreateMessageHandler(controlPipe));
             rpc.StartListening();
             multiplexing = await multiplexTask;
-            vtChannel = await multiplexing.AcceptChannelAsync("terminal.vt", timeout.Token);
-            vtStream = vtChannel.AsStream();
+            bulkStreams = await SessionWorkerBulkStreamSet.AcceptAsync(multiplexing, timeout.Token);
 
             var handshake = await rpc.InvokeWithCancellationAsync<SessionWorkerHandshake>(
                 WorkerRpcMethods.Handshake,
@@ -123,8 +118,7 @@ public sealed class SessionWorker : IAsyncDisposable
                 controlPipe,
                 bulkPipe,
                 multiplexing,
-                vtChannel,
-                vtStream,
+                bulkStreams,
                 rpc,
                 handshake,
                 executablePath,
@@ -134,8 +128,7 @@ public sealed class SessionWorker : IAsyncDisposable
             controlPipe = null!;
             bulkPipe = null!;
             multiplexing = null;
-            vtChannel = null;
-            vtStream = null;
+            bulkStreams = null;
             rpc = null;
             interactiveTaskLease = null;
             return worker;
@@ -151,8 +144,7 @@ public sealed class SessionWorker : IAsyncDisposable
             {
                 try { process.Kill(entireProcessTree: true); } catch { }
             }
-            if (vtStream is not null) await vtStream.DisposeAsync();
-            if (vtChannel is not null) vtChannel.Dispose();
+            if (bulkStreams is not null) await bulkStreams.DisposeAsync();
             if (multiplexing is not null) await multiplexing.DisposeAsync();
             jobHandle?.Dispose();
             process?.Dispose();
@@ -253,6 +245,19 @@ public sealed class SessionWorker : IAsyncDisposable
             WorkerRpcMethods.EvaluateBrowserTarget,
             new WorkerBrowserEvaluateRequest(cdpTargetId, expression),
             cancellationToken);
+    public Task<WorkerBrowserNavigationArmResult> ArmBrowserNavigationAsync(
+        string cdpTargetId,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerBrowserNavigationArmResult>(
+            WorkerRpcMethods.ArmBrowserNavigation,
+            new WorkerBrowserNavigationArmRequest(cdpTargetId),
+            cancellationToken);
+
+    public Task<WorkerBrowserNavigationResult> WaitBrowserNavigationAsync(
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerBrowserNavigationResult>(
+            WorkerRpcMethods.WaitBrowserNavigation,
+            cancellationToken);
     public Task<WorkerWindowCaptureResult> CaptureWindowAsync(
         long hwnd,
         string destinationPath,
@@ -263,10 +268,42 @@ public sealed class SessionWorker : IAsyncDisposable
             WorkerRpcMethods.CaptureWindow,
             new WorkerWindowCaptureRequest(hwnd, destinationPath, timeoutMs, recognizeText),
             cancellationToken);
+    internal async Task<byte[]> ProbeBulkAsync(
+        string channel,
+        ReadOnlyMemory<byte> payload,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        if (!WorkerBulkChannels.IsKnown(channel))
+            throw new ArgumentException($"Unknown bulk channel: {channel}", nameof(channel));
+        if (payload.Length > 1_048_576)
+            throw new ArgumentException("Bulk probe payload may contain at most 1048576 bytes.", nameof(payload));
+
+        var stream = _bulkStreams.Get(channel);
+        var rpcTask = InvokeAsync<WorkerBulkProbeResult>(
+            WorkerRpcMethods.BulkProbe,
+            new WorkerBulkProbeRequest(channel, payload.Length),
+            cancellationToken);
+
+        if (!payload.IsEmpty)
+            await stream.WriteAsync(payload, cancellationToken);
+        await stream.FlushAsync(cancellationToken);
+
+        var echoed = new byte[payload.Length];
+        if (echoed.Length > 0)
+            await stream.ReadExactlyAsync(echoed, cancellationToken);
+
+        var result = await rpcTask;
+        if (!string.Equals(result.Channel, channel, StringComparison.Ordinal) ||
+            result.Length != payload.Length)
+            throw new InvalidOperationException("Worker bulk probe response did not match the requested channel/length.");
+
+        return echoed;
+    }
     public async Task CopyVtToAsync(Stream destination, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
-        await _vtStream.CopyToAsync(destination, cancellationToken);
+        await _bulkStreams.Get(WorkerBulkChannels.TerminalVt).CopyToAsync(destination, cancellationToken);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
@@ -300,8 +337,7 @@ public sealed class SessionWorker : IAsyncDisposable
         finally
         {
             _rpc.Dispose();
-            await _vtStream.DisposeAsync();
-            _vtChannel.Dispose();
+            await _bulkStreams.DisposeAsync();
             await _multiplexing.DisposeAsync();
             await _controlPipe.DisposeAsync();
             await _bulkPipe.DisposeAsync();
@@ -436,5 +472,59 @@ public sealed class SessionWorker : IAsyncDisposable
                 NativeMethods.DestroyEnvironmentBlock(environment);
             }
         }
+    }
+}
+
+internal sealed class SessionWorkerBulkStreamSet : IAsyncDisposable
+{
+    private readonly Dictionary<string, MultiplexingStream.Channel> _channels;
+    private readonly Dictionary<string, Stream> _streams;
+
+    private SessionWorkerBulkStreamSet(
+        Dictionary<string, MultiplexingStream.Channel> channels,
+        Dictionary<string, Stream> streams)
+    {
+        _channels = channels;
+        _streams = streams;
+    }
+
+    internal Stream Get(string name) =>
+        _streams.TryGetValue(name, out var stream)
+            ? stream
+            : throw new ArgumentException($"Unknown bulk channel: {name}", nameof(name));
+
+    internal static async Task<SessionWorkerBulkStreamSet> AcceptAsync(
+        MultiplexingStream multiplexing,
+        CancellationToken cancellationToken)
+    {
+        var channels = new Dictionary<string, MultiplexingStream.Channel>(StringComparer.Ordinal);
+        var streams = new Dictionary<string, Stream>(StringComparer.Ordinal);
+        try
+        {
+            foreach (var name in WorkerBulkChannels.All)
+            {
+                var channel = await multiplexing.AcceptChannelAsync(name, cancellationToken);
+                channels.Add(name, channel);
+                streams.Add(name, channel.AsStream());
+            }
+
+            return new SessionWorkerBulkStreamSet(channels, streams);
+        }
+        catch
+        {
+            foreach (var stream in streams.Values)
+                await stream.DisposeAsync();
+            foreach (var channel in channels.Values)
+                channel.Dispose();
+            throw;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var stream in _streams.Values)
+            await stream.DisposeAsync();
+        foreach (var channel in _channels.Values)
+            channel.Dispose();
     }
 }

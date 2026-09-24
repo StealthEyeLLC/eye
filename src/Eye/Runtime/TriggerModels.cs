@@ -8,6 +8,7 @@ public static class TriggerKinds
     public const string Time = "time";
     public const string FileExists = "file_exists";
     public const string UiaChange = "uia_change";
+    public const string BrowserNavigation = "browser_navigation";
 }
 
 public static class TriggerStates

@@ -74,6 +74,7 @@ builder.Services.AddSingleton<BrowserTargetStore>();
 builder.Services.AddSingleton<BrowserObservationService>();
 builder.Services.AddSingleton<BrowserControlService>();
 builder.Services.AddSingleton<UiaTriggerSource>();
+builder.Services.AddSingleton<BrowserTriggerSource>();
 builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EyeDispatcher>();
 builder.Services.AddSingleton<EyeTool>();

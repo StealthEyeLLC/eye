@@ -6,7 +6,7 @@
 
 This checklist implements `docs/BUILD_BLUEPRINT.md`. It intentionally avoids preserving obsolete migration procedure as the active plan.
 
-## Phase 0 Ã¢â‚¬â€ machine foundation
+## Phase 0 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â machine foundation
 
 Before runtime ownership changes:
 
@@ -21,7 +21,7 @@ Before runtime ownership changes:
 - [ ] NVIDIA/CUDA stack is healthy where required.
 - [ ] Windows login/account/autologon configuration is left alone unless explicitly changed by the owner.
 
-## Phase 1 Ã¢â‚¬â€ contract v2 and host/engine protocol
+## Phase 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â contract v2 and host/engine protocol
 
 Canonical target tools:
 
@@ -48,7 +48,7 @@ eye_live
 
 Phase 1 activation gate is met. The canonical contract is generated but remains non-live until the runtime cutover gate is executed and verified.
 
-## Phase 2 Ã¢â‚¬â€ stable host core
+## Phase 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â stable host core
 
 - [x] one LocalSystem SCM service owns the stable host.
 - [x] stable host serves loopback MCP.
@@ -70,7 +70,7 @@ Phase 1 activation gate is met. The canonical contract is generated but remains 
 On 2026-09-24 the accepted host was installed as the single Auto-start StealthEye LocalSystem SCM service and independently verified to expose exactly one listener at 127.0.0.1:37931. Live MCP calls proved inline SYSTEM execution as NT AUTHORITY\SYSTEM, inline active-user execution as STEALTHEYELLC\StealthEye, automatic WSL promotion to a durable job, successful active-user WSL completion, and cursor-backed spool output (root::Linux). The accepted test suite also proves explicit inherited-handle isolation, host-owned native ConPTY lifecycle, and Job Object cancellation of both a job root process and its spawned descendant.
 
 Phase 2 is complete. Suitable Job Object interop now uses CsWin32-generated bindings/SafeHandles while the remaining specialized process/session declarations stay narrowly handwritten where they materially simplify the implementation.
-## Phase 3 Ã¢â‚¬â€ artifacts and identity model
+## Phase 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â artifacts and identity model
 
 - [x] host artifact registry exists.
 - [x] artifact metadata includes stable ID, kind, MIME type, size, hash/name as applicable, storage tier, and provenance.
@@ -88,7 +88,7 @@ On 2026-09-24 the accepted artifact registry was verified to persist stable arti
 The identity stores independently prove stable IDs plus incarnation and observation cursors for desktop windows, UIA elements, browser targets, jobs, and artifacts. Reused HWNDs with a different process generation, disappeared/reappeared browser targets, browser type replacement, and UIA elements under a new window incarnation all advance incarnation instead of silently aliasing the old object. Job stdout/stderr, terminal attachment, artifact range reads, and UI/browser observations expose bounded cursor/range progression.
 
 Phase 3 is complete. Fast completed run operations whose combined stdout/stderr exceeds the inline limit now promote their existing spool streams into durable artifacts and return bounded inline excerpts, truncation flags, artifact IDs, and the original job/exit/context metadata. Small fast output remains inline and slow work remains a durable job reference.
-## Phase 4 Ã¢â‚¬â€ supervised versioned engine
+## Phase 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â supervised versioned engine
 
 - [x] capability engine is a separate child process, never a DLL inside stable host.
 - [x] active and previous engine versions live side by side.
@@ -112,20 +112,29 @@ Host-ownership integration coverage creates a completed job, a live ConPTY termi
 The active-user scheduled fallback was also hardened during this phase: the scheduled wrapper now joins the host Job Object before a gate allows it to spawn the requested command. This removes the fast-process PID race where a short user command could exit before ownership was established.
 
 Phase 4 is complete.
-## Phase 5 Ã¢â‚¬â€ workers, streams, Trigger Broker, waits
+## Phase 5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â workers, streams, Trigger Broker, waits
 
-- [ ] StreamJsonRpc named-pipe control path works for host/engine/worker interactions.
-- [ ] multiplexed binary streams handle stdout/stderr/VT/image/audio/file traffic.
-- [ ] host launches short-lived active-session workers on demand.
-- [ ] host owns worker lifetime, IPC, identities, and cleanup.
-- [ ] worker behavior is version-matched to the active engine.
-- [ ] worker crash does not require restarting the stable host.
-- [ ] Trigger Broker durable queues are host-owned.
-- [ ] engine UIA/CDP watchers can feed host queues.
-- [ ] native waits exist for initial high-value conditions such as job/process exit, file events, service/port/session state.
-- [ ] wait sources expand with desktop/browser implementation rather than through polling loops.
+- [x] StreamJsonRpc named-pipe control path works for host/engine/worker interactions.
+- [x] multiplexed binary plane exposes and verifies stdout/stderr/VT/image/audio/file channels.
+- [x] host launches short-lived active-session workers on demand.
+- [x] host owns worker lifetime, IPC, identities, and cleanup.
+- [x] worker behavior is version-matched to the active engine.
+- [x] worker crash does not require restarting the stable host.
+- [x] Trigger Broker durable queues are host-owned.
+- [x] UIA/CDP worker watchers can feed host-owned trigger queues.
+- [x] initial event-driven waits cover process exit, file events, time, UIA changes, and browser navigation; service/port/session sources remain future expansion.
+- [x] wait sources expand with desktop/browser implementation rather than through polling loops.
 
-## Phase 6 Ã¢â‚¬â€ Eye Live and operator guidance
+### Phase 5 verification evidence
+
+On 2026-09-24 the host/engine/worker control plane was verified over StreamJsonRpc named pipes. The worker bulk pipe uses Nerdbank.Streams and worker protocol 1.1 exposes six canonical binary channels: stdout, stderr, terminal.vt, image, audio, and file. A real active-session worker round-tripped a 16 KiB non-text payload byte-for-byte over every channel while terminal VT continues to use the terminal.vt channel in production.
+
+Worker ownership is host-controlled. Active-session workers are launched on demand, version-resolved from the selected engine, placed under host-owned process control, replaced automatically after a crash, and destroyed after the idle lease window. Tests prove a killed cached worker is replaced without changing the stable host PID and that an idle worker does not remain resident.
+
+The Trigger Broker persists registrations and ordered event queues in host-owned SQLite state. Pending time/file triggers reattach after broker restart, process exit uses process-incarnation-aware native exit waiting, file creation uses FileSystemWatcher, UIA changes are fed from the active-session UIA watcher, and browser navigation is now fed from a real CDP Page.frameNavigated event into the same durable queue/cursor model. These sources are event-driven; broader service, port, session, Event Log, device, power/network, and performance sources are future extensions and must not be approximated with polling loops.
+
+Phase 5 is complete.
+## Phase 6 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Eye Live and operator guidance
 
 - [ ] `eye_live` returns an MCP Apps UI resource only when continuation/supervision is useful.
 - [ ] core Eye operation does not depend on UI being rendered.
@@ -135,7 +144,7 @@ Phase 4 is complete.
 - [ ] Eye Operator skill exists and teaches modality hierarchy, jobs, waits, artifacts, handles/cursors, and contract discipline.
 - [ ] MCP server initialization instructions provide compact routing rules with self-contained first 512 characters.
 
-## Phase 7 Ã¢â‚¬â€ desktop and browser capability engine
+## Phase 7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â desktop and browser capability engine
 
 ### Desktop
 
@@ -160,7 +169,7 @@ Phase 4 is complete.
 - [ ] optional Playwright .NET path is available only where it materially improves behavior.
 - [ ] no permanent Node daemon or bundled browser fleet exists.
 
-## Phase 8 Ã¢â‚¬â€ Blackboard, Relay, context capture, and adapters
+## Phase 8 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Blackboard, Relay, context capture, and adapters
 
 ### Blackboard / Relay
 
@@ -188,7 +197,7 @@ Add based on real tasks, not completeness theater:
 - [ ] deterministic adapters for Git/GitHub CLI, PowerShell/WSL, winget, FFmpeg, services/Task Scheduler, and other actually installed software.
 - [ ] resource-aware execution considers GPU memory/thermals/power/storage tier where useful.
 
-## Phase 9 Ã¢â‚¬â€ final runtime cutover
+## Phase 9 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â final runtime cutover
 
 Only cut over when the new runtime independently operates and repairs the machine.
 

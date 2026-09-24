@@ -5,7 +5,7 @@ namespace StealthEye.Contract;
 
 public static class WorkerRpcMethods
 {
-    public const string CurrentProtocolVersion = "1.0.0";
+    public const string CurrentProtocolVersion = "1.1.0";
     public const string Handshake = "worker.handshake";
     public const string StartTerminal = "terminal.start";
     public const string WriteTerminal = "terminal.write";
@@ -21,9 +21,42 @@ public static class WorkerRpcMethods
     public const string ObserveBrowserTargets = "browser.targets";
     public const string NavigateBrowserTarget = "browser.navigate";
     public const string EvaluateBrowserTarget = "browser.evaluate";
+    public const string ArmBrowserNavigation = "browser.arm_navigation";
+    public const string WaitBrowserNavigation = "browser.wait_navigation";
+    public const string BulkProbe = "bulk.probe";
     public const string Shutdown = "worker.shutdown";
 }
 
+public static class WorkerBulkChannels
+{
+    public const string Stdout = "stdout";
+    public const string Stderr = "stderr";
+    public const string TerminalVt = "terminal.vt";
+    public const string Image = "image";
+    public const string Audio = "audio";
+    public const string File = "file";
+
+    public static readonly string[] All =
+    [
+        Stdout,
+        Stderr,
+        TerminalVt,
+        Image,
+        Audio,
+        File
+    ];
+
+    public static bool IsKnown(string name) =>
+        All.Contains(name, StringComparer.Ordinal);
+}
+
+public sealed record WorkerBulkProbeRequest(
+    [property: JsonPropertyName("channel")] string Channel,
+    [property: JsonPropertyName("length")] int Length);
+
+public sealed record WorkerBulkProbeResult(
+    [property: JsonPropertyName("channel")] string Channel,
+    [property: JsonPropertyName("length")] int Length);
 public sealed record SessionWorkerHandshake(
     [property: JsonPropertyName("worker_protocol_version")] string WorkerProtocolVersion,
     [property: JsonPropertyName("worker_version")] string WorkerVersion,
@@ -180,6 +213,18 @@ public sealed record WorkerBrowserNavigateResult(
     [property: JsonPropertyName("loader_id")] string? LoaderId,
     [property: JsonPropertyName("error_text")] string? ErrorText);
 
+public sealed record WorkerBrowserNavigationArmRequest(
+    [property: JsonPropertyName("cdp_target_id")] string CdpTargetId);
+
+public sealed record WorkerBrowserNavigationArmResult(
+    [property: JsonPropertyName("armed")] bool Armed);
+
+public sealed record WorkerBrowserNavigationResult(
+    [property: JsonPropertyName("occurred_at")] DateTimeOffset OccurredAt,
+    [property: JsonPropertyName("cdp_target_id")] string CdpTargetId,
+    [property: JsonPropertyName("url")] string Url,
+    [property: JsonPropertyName("frame_id")] string? FrameId,
+    [property: JsonPropertyName("loader_id")] string? LoaderId);
 public sealed record WorkerBrowserEvaluateRequest(
     [property: JsonPropertyName("cdp_target_id")] string CdpTargetId,
     [property: JsonPropertyName("expression")] string Expression);
