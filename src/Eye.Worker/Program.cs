@@ -166,6 +166,17 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
     [JsonRpcMethod(WorkerRpcMethods.ObserveBrowserTargets)]
     public Task<WorkerBrowserTargetsResult> ObserveBrowserTargetsAsync(CancellationToken cancellationToken) =>
         RequiredBrowser().ObserveTargetsAsync(cancellationToken);
+    [JsonRpcMethod(WorkerRpcMethods.NavigateBrowserTarget)]
+    public Task<WorkerBrowserNavigateResult> NavigateBrowserTargetAsync(
+        WorkerBrowserNavigateRequest request,
+        CancellationToken cancellationToken) =>
+        RequiredBrowser().NavigateAsync(request.CdpTargetId, request.Url, cancellationToken);
+
+    [JsonRpcMethod(WorkerRpcMethods.EvaluateBrowserTarget)]
+    public Task<WorkerBrowserEvaluateResult> EvaluateBrowserTargetAsync(
+        WorkerBrowserEvaluateRequest request,
+        CancellationToken cancellationToken) =>
+        RequiredBrowser().EvaluateAsync(request.CdpTargetId, request.Expression, cancellationToken);
     [JsonRpcMethod(WorkerRpcMethods.Shutdown)]
     public WorkerShutdownResult Shutdown() => new(true);
 

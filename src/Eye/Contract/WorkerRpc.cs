@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace StealthEye.Contract;
@@ -17,6 +18,8 @@ public static class WorkerRpcMethods
     public const string WaitUiaChange = "desktop.uia_wait_change";
     public const string EnsureBrowser = "browser.ensure";
     public const string ObserveBrowserTargets = "browser.targets";
+    public const string NavigateBrowserTarget = "browser.navigate";
+    public const string EvaluateBrowserTarget = "browser.evaluate";
     public const string Shutdown = "worker.shutdown";
 }
 
@@ -143,7 +146,8 @@ public sealed record WorkerUiaChangeResult(
     [property: JsonPropertyName("value")] string? Value);public sealed record WorkerBrowserEnsureRequest(
     [property: JsonPropertyName("chrome_path")] string? ChromePath = null,
     [property: JsonPropertyName("user_data_dir")] string? UserDataDir = null,
-    [property: JsonPropertyName("initial_url")] string InitialUrl = "about:blank");
+    [property: JsonPropertyName("initial_url")] string InitialUrl = "about:blank",
+    [property: JsonPropertyName("headless")] bool Headless = true);
 
 public sealed record WorkerBrowserStatusResult(
     [property: JsonPropertyName("chrome_path")] string ChromePath,
@@ -164,5 +168,27 @@ public sealed record WorkerBrowserTargetsResult(
     [property: JsonPropertyName("browser_version")] string BrowserVersion,
     [property: JsonPropertyName("protocol_version")] string ProtocolVersion,
     [property: JsonPropertyName("targets")] WorkerBrowserTargetInfo[] Targets);
+public sealed record WorkerBrowserNavigateRequest(
+    [property: JsonPropertyName("cdp_target_id")] string CdpTargetId,
+    [property: JsonPropertyName("url")] string Url);
+
+public sealed record WorkerBrowserNavigateResult(
+    [property: JsonPropertyName("cdp_target_id")] string CdpTargetId,
+    [property: JsonPropertyName("url")] string Url,
+    [property: JsonPropertyName("frame_id")] string? FrameId,
+    [property: JsonPropertyName("loader_id")] string? LoaderId,
+    [property: JsonPropertyName("error_text")] string? ErrorText);
+
+public sealed record WorkerBrowserEvaluateRequest(
+    [property: JsonPropertyName("cdp_target_id")] string CdpTargetId,
+    [property: JsonPropertyName("expression")] string Expression);
+
+public sealed record WorkerBrowserEvaluateResult(
+    [property: JsonPropertyName("cdp_target_id")] string CdpTargetId,
+    [property: JsonPropertyName("type")] string Type,
+    [property: JsonPropertyName("value_json")] string? ValueJson,
+    [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName("threw")] bool Threw,
+    [property: JsonPropertyName("exception_text")] string? ExceptionText);
 public sealed record WorkerShutdownResult(
     [property: JsonPropertyName("stopping")] bool Stopping);

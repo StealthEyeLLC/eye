@@ -227,6 +227,23 @@ public sealed class SessionWorker : IAsyncDisposable
         CancellationToken cancellationToken = default) =>
         InvokeAsync<WorkerBrowserTargetsResult>(WorkerRpcMethods.ObserveBrowserTargets, cancellationToken);
 
+    public Task<WorkerBrowserNavigateResult> NavigateBrowserTargetAsync(
+        string cdpTargetId,
+        string url,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerBrowserNavigateResult>(
+            WorkerRpcMethods.NavigateBrowserTarget,
+            new WorkerBrowserNavigateRequest(cdpTargetId, url),
+            cancellationToken);
+
+    public Task<WorkerBrowserEvaluateResult> EvaluateBrowserTargetAsync(
+        string cdpTargetId,
+        string expression,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerBrowserEvaluateResult>(
+            WorkerRpcMethods.EvaluateBrowserTarget,
+            new WorkerBrowserEvaluateRequest(cdpTargetId, expression),
+            cancellationToken);
     public async Task CopyVtToAsync(Stream destination, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();

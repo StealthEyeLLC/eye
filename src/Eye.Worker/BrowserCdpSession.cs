@@ -62,6 +62,8 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
         start.ArgumentList.Add("--no-default-browser-check");
         start.ArgumentList.Add("--disable-background-mode");
         start.ArgumentList.Add("--disable-extensions");
+        if (request.Headless)
+            start.ArgumentList.Add("--headless=new");
         start.ArgumentList.Add(string.IsNullOrWhiteSpace(request.InitialUrl) ? "about:blank" : request.InitialUrl);
 
         var chrome = Process.Start(start)
@@ -148,6 +150,78 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
                 target.Url ?? string.Empty)).ToArray());
     }
 
+    internal async Task<WorkerBrowserNavigateResult> NavigateAsync(
+        string cdpTargetId,
+        string url,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cdpTargetId))
+            throw new ArgumentException("cdp_target_id is required.", nameof(cdpTargetId));
+        if (string.IsNullOrWhiteSpace(url))
+            throw new ArgumentException("url is required.", nameof(url));
+        if (!Uri.TryCreate(url, UriKind.Absolute, out _))
+            throw new ArgumentException("url must be absolute.", nameof(url));
+
+        var socket = await TargetSocketAsync(cdpTargetId, cancellationToken);
+        await using var client = await BrowserCdpClient.ConnectAsync(socket, cancellationToken);
+        await client.CallAsync("Page.enable", null, cancellationToken);
+        var result = await client.CallAsync("Page.navigate", new { url }, cancellationToken);
+        return new WorkerBrowserNavigateResult(
+            cdpTargetId,
+            url,
+            result.TryGetProperty("frameId", out var frameId) ? frameId.GetString() : null,
+            result.TryGetProperty("loaderId", out var loaderId) ? loaderId.GetString() : null,
+            result.TryGetProperty("errorText", out var errorText) ? errorText.GetString() : null);
+    }
+
+    internal async Task<WorkerBrowserEvaluateResult> EvaluateAsync(
+        string cdpTargetId,
+        string expression,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cdpTargetId))
+            throw new ArgumentException("cdp_target_id is required.", nameof(cdpTargetId));
+        if (string.IsNullOrWhiteSpace(expression))
+            throw new ArgumentException("expression is required.", nameof(expression));
+
+        var socket = await TargetSocketAsync(cdpTargetId, cancellationToken);
+        await using var client = await BrowserCdpClient.ConnectAsync(socket, cancellationToken);
+        var result = await client.CallAsync("Runtime.evaluate", new
+        {
+            expression,
+            returnByValue = true,
+            awaitPromise = true
+        }, cancellationToken);
+        var remote = result.GetProperty("result");
+        var threw = result.TryGetProperty("exceptionDetails", out var exceptionDetails);
+        string? exceptionText = null;
+        if (threw)
+        {
+            exceptionText = exceptionDetails.TryGetProperty("exception", out var exception) &&
+                            exception.TryGetProperty("description", out var description)
+                ? description.GetString()
+                : exceptionDetails.TryGetProperty("text", out var text) ? text.GetString() : "JavaScript evaluation failed.";
+        }
+        return new WorkerBrowserEvaluateResult(
+            cdpTargetId,
+            remote.TryGetProperty("type", out var type) ? type.GetString() ?? string.Empty : string.Empty,
+            remote.TryGetProperty("value", out var value) ? value.GetRawText() : null,
+            remote.TryGetProperty("description", out var remoteDescription) ? remoteDescription.GetString() : null,
+            threw,
+            exceptionText);
+    }
+
+    private async Task<Uri> TargetSocketAsync(string cdpTargetId, CancellationToken cancellationToken)
+    {
+        var targets = await _http.GetFromJsonAsync<CdpTarget[]>(_baseUrl + "/json/list", cancellationToken) ?? [];
+        var target = targets.SingleOrDefault(x => string.Equals(x.Id, cdpTargetId, StringComparison.Ordinal))
+            ?? throw new ArgumentException($"Unknown CDP target: {cdpTargetId}", nameof(cdpTargetId));
+        if (string.IsNullOrWhiteSpace(target.WebSocketDebuggerUrl) ||
+            !Uri.TryCreate(target.WebSocketDebuggerUrl, UriKind.Absolute, out var socket) ||
+            !socket.IsLoopback)
+            throw new InvalidOperationException("Target CDP WebSocket endpoint is unavailable or not loopback-bound.");
+        return socket;
+    }
     public async ValueTask DisposeAsync()
     {
         _http.Dispose();
@@ -195,5 +269,6 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
         [property: JsonPropertyName("id")] string? Id,
         [property: JsonPropertyName("type")] string? Type,
         [property: JsonPropertyName("title")] string? Title,
-        [property: JsonPropertyName("url")] string? Url);
+        [property: JsonPropertyName("url")] string? Url,
+        [property: JsonPropertyName("webSocketDebuggerUrl")] string? WebSocketDebuggerUrl);
 }

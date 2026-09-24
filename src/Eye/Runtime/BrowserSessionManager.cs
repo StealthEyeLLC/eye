@@ -13,6 +13,7 @@ public sealed class BrowserSessionManager(SessionWorkerManager workers) : IAsync
         string? chromePath = null,
         string? userDataDir = null,
         string initialUrl = "about:blank",
+        bool headless = true,
         CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken);
@@ -20,7 +21,7 @@ public sealed class BrowserSessionManager(SessionWorkerManager workers) : IAsync
         {
             var worker = await EnsureWorkerAsync(cancellationToken);
             _status = await worker.EnsureBrowserAsync(
-                new WorkerBrowserEnsureRequest(chromePath, userDataDir, initialUrl),
+                new WorkerBrowserEnsureRequest(chromePath, userDataDir, initialUrl, headless),
                 cancellationToken);
             return _status;
         }
@@ -46,6 +47,43 @@ public sealed class BrowserSessionManager(SessionWorkerManager workers) : IAsync
         }
     }
 
+    public async Task<WorkerBrowserNavigateResult> NavigateAsync(
+        string cdpTargetId,
+        string url,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var worker = await EnsureWorkerAsync(cancellationToken);
+            if (_status is null)
+                _status = await worker.EnsureBrowserAsync(new WorkerBrowserEnsureRequest(), cancellationToken);
+            return await worker.NavigateBrowserTargetAsync(cdpTargetId, url, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<WorkerBrowserEvaluateResult> EvaluateAsync(
+        string cdpTargetId,
+        string expression,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var worker = await EnsureWorkerAsync(cancellationToken);
+            if (_status is null)
+                _status = await worker.EnsureBrowserAsync(new WorkerBrowserEnsureRequest(), cancellationToken);
+            return await worker.EvaluateBrowserTargetAsync(cdpTargetId, expression, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
     public WorkerBrowserStatusResult? Status => _status;
 
     private async Task<SessionWorker> EnsureWorkerAsync(CancellationToken cancellationToken)
