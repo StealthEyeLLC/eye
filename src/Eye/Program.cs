@@ -17,6 +17,7 @@ builder.WebHost.UseUrls(urls);
 builder.Services.AddSingleton<ProcessRunner>();
 builder.Services.AddSingleton<JobStore>();
 builder.Services.AddSingleton<ArtifactStore>();
+builder.Services.AddSingleton<MissionBlackboardStore>();
 builder.Services.AddSingleton<TriggerStore>();
 builder.Services.AddSingleton<TriggerBroker>();
 builder.Services.AddSingleton<EngineSupervisor>();

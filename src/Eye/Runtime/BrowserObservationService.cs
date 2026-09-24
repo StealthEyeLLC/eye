@@ -7,4 +7,9 @@ public sealed class BrowserObservationService(BrowserSessionManager sessions, Br
         var observation = await sessions.ObserveTargetsAsync(cancellationToken);
         return targets.Apply(observation);
     }
+    public async Task<BrowserTargetSnapshot?> TryObserveActiveAsync(CancellationToken cancellationToken = default)
+    {
+        var observation = await sessions.TryObserveActiveTargetsAsync(cancellationToken);
+        return observation is null ? null : targets.Apply(observation);
+    }
 }

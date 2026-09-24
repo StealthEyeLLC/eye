@@ -84,6 +84,24 @@ public sealed class BrowserSessionManager(SessionWorkerManager workers) : IAsync
             _gate.Release();
         }
     }
+    public async Task<WorkerBrowserTargetsResult?> TryObserveActiveTargetsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_worker is null || _worker.HasExited || _status is null)
+                return null;
+            var desiredPath = workers.ResolveWorkerExecutablePath();
+            if (!string.Equals(_workerExecutablePath, desiredPath, StringComparison.OrdinalIgnoreCase))
+                return null;
+            return await _worker.ObserveBrowserTargetsAsync(cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
     public WorkerBrowserStatusResult? Status => _status;
 
     private async Task<SessionWorker> EnsureWorkerAsync(CancellationToken cancellationToken)
