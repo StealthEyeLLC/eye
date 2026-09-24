@@ -5,6 +5,9 @@ using StealthEye.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var publicContract = EyeContractCatalog.Load();
+var eyeLiveTool = EyeLiveMcp.CreateTool(publicContract);
+
 builder.Services.AddWindowsService(options => options.ServiceName = "StealthEye");
 var urls = Environment.GetEnvironmentVariable("EYE_URLS")
     ?? builder.Configuration["Eye:Urls"]
@@ -22,10 +25,14 @@ builder.Services.AddSingleton(sp => new SessionWorkerManager(
     WorkerRpcMethods.CurrentProtocolVersion));
 builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EyeDispatcher>();
+builder.Services.AddSingleton<EyeLiveSnapshotService>();
+builder.Services.AddSingleton<EyeLiveTool>();
 builder.Services
     .AddMcpServer()
     .WithHttpTransport(options => options.Stateless = true)
-    .WithTools<EyeTool>();
+    .WithTools<EyeTool>()
+    .WithTools(new[] { eyeLiveTool })
+    .WithResources<EyeLiveResource>();
 
 var app = builder.Build();
 _ = app.Services.GetRequiredService<JobStore>();

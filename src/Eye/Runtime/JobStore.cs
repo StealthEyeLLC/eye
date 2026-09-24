@@ -184,6 +184,22 @@ public sealed class JobStore
         }
     }
 
+    public JobRecord[] ListRecent(int limit = 20)
+    {
+        if (limit is < 1 or > 100)
+            throw new ArgumentException("limit must be between 1 and 100.", nameof(limit));
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM jobs ORDER BY created_utc DESC LIMIT $limit;";
+            command.Parameters.AddWithValue("$limit", limit);
+            using var reader = command.ExecuteReader();
+            var records = new List<JobRecord>();
+            while (reader.Read()) records.Add(Read(reader));
+            return [.. records];
+        }
+    }
     private void Initialize()
     {
         lock (_gate)

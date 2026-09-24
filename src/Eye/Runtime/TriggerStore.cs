@@ -193,6 +193,22 @@ public sealed class TriggerStore
         }
     }
 
+    public TriggerRecord[] ListRecent(int limit = 20)
+    {
+        if (limit is < 1 or > 100)
+            throw new ArgumentException("limit must be between 1 and 100.", nameof(limit));
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM triggers ORDER BY created_utc DESC LIMIT $limit;";
+            command.Parameters.AddWithValue("$limit", limit);
+            using var reader = command.ExecuteReader();
+            var records = new List<TriggerRecord>();
+            while (reader.Read()) records.Add(ReadTrigger(reader));
+            return [.. records];
+        }
+    }
     private TriggerRecord Insert(TriggerRecord record)
     {
         lock (_gate)

@@ -263,6 +263,36 @@ done:
         }
         return total;
     }
+    public ArtifactRecord[] ListRecent(int limit = 20)
+    {
+        if (limit is < 1 or > 100)
+            throw new ArgumentException("limit must be between 1 and 100.", nameof(limit));
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM artifacts ORDER BY created_utc DESC LIMIT $limit;";
+            command.Parameters.AddWithValue("$limit", limit);
+            using var reader = command.ExecuteReader();
+            var records = new List<ArtifactRecord>();
+            while (reader.Read())
+            {
+                records.Add(new ArtifactRecord(
+                    reader.GetString(reader.GetOrdinal("artifact_id")),
+                    reader.GetInt64(reader.GetOrdinal("incarnation")),
+                    reader.GetString(reader.GetOrdinal("kind")),
+                    GetNullableString(reader, "mime_type"),
+                    reader.GetInt64(reader.GetOrdinal("size_bytes")),
+                    reader.GetString(reader.GetOrdinal("sha256")),
+                    reader.GetString(reader.GetOrdinal("name")),
+                    reader.GetString(reader.GetOrdinal("storage_tier")),
+                    reader.GetString(reader.GetOrdinal("provenance")),
+                    DateTimeOffset.Parse(reader.GetString(reader.GetOrdinal("created_utc"))),
+                    reader.GetString(reader.GetOrdinal("content_path"))));
+            }
+            return [.. records];
+        }
+    }
     private void Initialize()
     {
         lock (_gate)

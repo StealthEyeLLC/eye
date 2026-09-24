@@ -17,7 +17,10 @@ public sealed record EyeToolDescriptor(
     [property: JsonPropertyName("description")] string Description,
     [property: JsonPropertyName("machine_effects")] string MachineEffects,
     [property: JsonPropertyName("operations")] EyeOperationDescriptor[] Operations,
-    [property: JsonPropertyName("ui_only")] bool UiOnly = false);
+    [property: JsonPropertyName("ui_only")] bool UiOnly = false,
+    [property: JsonPropertyName("resource_uri")] string? ResourceUri = null,
+    [property: JsonPropertyName("input_schema")] JsonElement? InputSchema = null,
+    [property: JsonPropertyName("result_schema")] JsonElement? ResultSchema = null);
 
 public sealed record ContractHashSemantics(
     [property: JsonPropertyName("algorithm")] string Algorithm,
@@ -121,6 +124,15 @@ public sealed class EyeContractCatalog
             throw new InvalidOperationException("Duplicate public operation ID in v2 contract.");
         if (operations.Any(x => x.ArgsSchema.ValueKind != JsonValueKind.Object || x.ResultSchema.ValueKind != JsonValueKind.Object))
             throw new InvalidOperationException("Every public operation requires object args/result schemas.");
+        var live = manifest.Tools.Single(x => x.Name == "eye_live");
+        if (!live.UiOnly || live.Operations.Length != 0 ||
+            live.InputSchema?.ValueKind != JsonValueKind.Object ||
+            live.ResultSchema?.ValueKind != JsonValueKind.Object ||
+            live.ResourceUri is null || !live.ResourceUri.StartsWith("ui://", StringComparison.Ordinal))
+            throw new InvalidOperationException("eye_live requires direct object schemas and a ui:// resource URI.");
+        if (manifest.Tools.Where(x => x.Name != "eye_live").Any(x =>
+                x.UiOnly || x.ResourceUri is not null || x.InputSchema is not null || x.ResultSchema is not null))
+            throw new InvalidOperationException("Only eye_live may define direct UI tool schemas.");
         if (manifest.ErrorSchema.ValueKind != JsonValueKind.Object)
             throw new InvalidOperationException("The public error schema must be an object schema.");
 

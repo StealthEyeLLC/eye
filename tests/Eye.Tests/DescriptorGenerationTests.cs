@@ -38,7 +38,7 @@ public sealed class DescriptorGenerationTests
     {
         var descriptors = EyeDescriptorGenerator.GenerateImplemented(EyeContractCatalog.Load());
 
-        Assert.Equal(["eye_inspect", "eye_run", "eye_change"], descriptors.Select(x => x.Name).ToArray());
+        Assert.Equal(["eye_inspect", "eye_run", "eye_change", "eye_live"], descriptors.Select(x => x.Name).ToArray());
 
         var inspect = descriptors.Single(x => x.Name == "eye_inspect");
         Assert.Equal(12, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
@@ -59,6 +59,11 @@ public sealed class DescriptorGenerationTests
         var change = descriptors.Single(x => x.Name == "eye_change");
         Assert.Equal(5, change.InputSchema.GetProperty("oneOf").GetArrayLength());
         Assert.Equal(10, change.OutputSchema.GetProperty("oneOf").GetArrayLength());
+
+        var live = descriptors.Single(x => x.Name == "eye_live");
+        AssertPropertySet<EmptyArgs>(live.InputSchema);
+        AssertPropertySet<EyeLiveSnapshotResult>(live.OutputSchema);
+        Assert.Equal("ui://stealtheye/live", EyeContractCatalog.Load().Descriptors.Single(x => x.Name == "eye_live").ResourceUri);
     }
 
     [Fact]
@@ -135,6 +140,15 @@ public sealed class DescriptorGenerationTests
         AssertPropertySet<ArtifactExportResult>(artifactExport.ResultSchema);
         AssertPropertySet<ArtifactIdArgs>(artifactDelete.ArgsSchema);
         AssertPropertySet<ArtifactDeleteResult>(artifactDelete.ResultSchema);
+        var live = contract.Descriptors.Single(x => x.Name == "eye_live");
+        AssertPropertySet<EmptyArgs>(live.InputSchema!.Value);
+        AssertPropertySet<EyeLiveSnapshotResult>(live.ResultSchema!.Value);
+        var liveProperties = live.ResultSchema.Value.GetProperty("properties");
+        AssertPropertySet<EyeLiveMachineResult>(liveProperties.GetProperty("machine"));
+        AssertPropertySet<EyeLiveEngineResult>(liveProperties.GetProperty("engine"));
+        AssertPropertySet<EyeLiveJobResult>(liveProperties.GetProperty("jobs").GetProperty("items"));
+        AssertPropertySet<EyeLiveTriggerResult>(liveProperties.GetProperty("triggers").GetProperty("items"));
+        AssertPropertySet<EyeLiveArtifactResult>(liveProperties.GetProperty("artifacts").GetProperty("items"));
 
         Assert.Equal(
             ["system", "user", "wsl"],

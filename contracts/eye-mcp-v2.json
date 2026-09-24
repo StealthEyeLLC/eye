@@ -644,6 +644,97 @@
       "description": "Open the Eye Live mission, job, trigger, artifact, and relay component. This tool performs no machine operation itself.",
       "machine_effects": "none",
       "ui_only": true,
+      "resource_uri": "ui://stealtheye/live",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "result_schema": {
+        "type": "object",
+        "properties": {
+          "generated_at": { "type": "string", "format": "date-time" },
+          "machine": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "identity": { "type": "string" }
+            },
+            "required": ["name", "identity"],
+            "additionalProperties": false
+          },
+          "engine": {
+            "type": "object",
+            "properties": {
+              "state": { "type": "string" },
+              "active_version": { "type": "string" },
+              "previous_version": { "type": "string" },
+              "engine_version": { "type": "string" },
+              "process_id": { "type": "integer", "minimum": 0 },
+              "last_error": { "type": "string" }
+            },
+            "required": ["state"],
+            "additionalProperties": false
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "job_id": { "type": "string" },
+                "incarnation": { "type": "integer", "minimum": 1 },
+                "state": { "type": "string" },
+                "context": { "type": "string" },
+                "terminal": { "type": "boolean" },
+                "pid": { "type": "integer", "minimum": 0 },
+                "created_at": { "type": "string", "format": "date-time" },
+                "completed_at": { "type": "string", "format": "date-time" },
+                "failure_message": { "type": "string" }
+              },
+              "required": ["job_id", "incarnation", "state", "context", "terminal", "created_at"],
+              "additionalProperties": false
+            }
+          },
+          "triggers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "trigger_id": { "type": "string" },
+                "incarnation": { "type": "integer", "minimum": 1 },
+                "kind": { "type": "string" },
+                "state": { "type": "string" },
+                "created_at": { "type": "string", "format": "date-time" },
+                "deadline_at": { "type": "string", "format": "date-time" },
+                "process_id": { "type": "integer", "minimum": 0 },
+                "file_path": { "type": "string" },
+                "failure_message": { "type": "string" }
+              },
+              "required": ["trigger_id", "incarnation", "kind", "state", "created_at"],
+              "additionalProperties": false
+            }
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "artifact_id": { "type": "string" },
+                "incarnation": { "type": "integer", "minimum": 1 },
+                "kind": { "type": "string" },
+                "name": { "type": "string" },
+                "size_bytes": { "type": "integer", "minimum": 0 },
+                "storage_tier": { "type": "string" },
+                "created_at": { "type": "string", "format": "date-time" }
+              },
+              "required": ["artifact_id", "incarnation", "kind", "name", "size_bytes", "storage_tier", "created_at"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["generated_at", "machine", "engine", "jobs", "triggers", "artifacts"],
+        "additionalProperties": false
+      },
       "operations": []
     }
   ],
