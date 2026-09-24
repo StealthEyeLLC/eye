@@ -20,6 +20,7 @@ public sealed class EngineSupervisor : IAsyncDisposable
     private static readonly TimeSpan CrashLoopWindow = TimeSpan.FromSeconds(30);
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly EyeContractCatalog _contract;
+    private readonly Func<string, CancellationToken, Task<EngineInstance>>? _startVersionOverride;
     private EngineSelectionState _selection;
     private EngineInstance? _active;
     private string? _lastError;
@@ -32,6 +33,15 @@ public sealed class EngineSupervisor : IAsyncDisposable
         string? stateRoot = null,
         string? engineRoot = null,
         EyeContractCatalog? contract = null)
+        : this(stateRoot, engineRoot, contract, null)
+    {
+    }
+
+    internal EngineSupervisor(
+        string? stateRoot,
+        string? engineRoot,
+        EyeContractCatalog? contract,
+        Func<string, CancellationToken, Task<EngineInstance>>? startVersionOverride)
     {
         StateRoot = stateRoot
             ?? Environment.GetEnvironmentVariable("EYE_STATE_ROOT")
@@ -41,6 +51,7 @@ public sealed class EngineSupervisor : IAsyncDisposable
             ?? Path.Combine(StateRoot, "engines");
         SelectorPath = Path.Combine(StateRoot, "engine-state.json");
         _contract = contract ?? EyeContractCatalog.Load();
+        _startVersionOverride = startVersionOverride;
 
         Directory.CreateDirectory(StateRoot);
         Directory.CreateDirectory(EngineRoot);
@@ -331,7 +342,9 @@ public sealed class EngineSupervisor : IAsyncDisposable
     }
 
     private Task<EngineInstance> StartVersionAsync(string version, CancellationToken cancellationToken) =>
-        EngineInstance.StartAsync(ResolveVersionExecutable(version), _contract, TimeSpan.FromSeconds(10), cancellationToken);
+        _startVersionOverride is null
+            ? EngineInstance.StartAsync(ResolveVersionExecutable(version), _contract, TimeSpan.FromSeconds(10), cancellationToken)
+            : _startVersionOverride(version, cancellationToken);
 
     private EngineSelectionState LoadSelection()
     {

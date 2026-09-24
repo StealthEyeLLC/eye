@@ -61,7 +61,8 @@ internal sealed class InteractiveTaskProcessLease : IDisposable
 internal sealed record InteractiveTaskProcessLaunch(
     Process Process,
     SafeFileHandle JobHandle,
-    InteractiveTaskProcessLease Lease);
+    InteractiveTaskProcessLease Lease,
+    int CommandProcessId);
 
 internal static class InteractiveTaskProcessLauncher
 {
@@ -137,7 +138,9 @@ internal static class InteractiveTaskProcessLauncher
         var id = Guid.NewGuid().ToString("N");
         var taskName = "StealthEye-Session-" + id;
         var scriptPath = Path.Combine(root, id + ".ps1");
-        var pidPath = Path.Combine(root, id + ".pid");
+        var wrapperPidPath = Path.Combine(root, id + ".pid");
+        var commandPidPath = Path.Combine(root, id + ".command.pid");
+        var gatePath = Path.Combine(root, id + ".go");
         var exitPath = Path.Combine(root, id + ".exit");
         var markerPath = Path.Combine(root, id + ".task");
         File.WriteAllText(markerPath, taskName, new System.Text.UTF8Encoding(false));
@@ -148,14 +151,21 @@ internal static class InteractiveTaskProcessLauncher
             BuildLaunchScript(
                 executablePath,
                 arguments,
-                pidPath,
+                wrapperPidPath,
+                commandPidPath,
+                gatePath,
                 exitPath,
                 workingDirectory,
                 stdoutPath,
                 stderrPath),
             new System.Text.UTF8Encoding(false));
 
-        var lease = new InteractiveTaskProcessLease(taskName, scriptPath, pidPath, exitPath, markerPath);
+        var lease = new InteractiveTaskProcessLease(
+            taskName,
+            scriptPath,
+            wrapperPidPath,
+            exitPath,
+            markerPath);
         try
         {
             var taskAction =
@@ -181,30 +191,47 @@ internal static class InteractiveTaskProcessLauncher
             RunSchtasks(["/Run", "/TN", taskName], throwOnFailure: true);
 
             var deadline = DateTime.UtcNow + timeout;
-            int pid = 0;
+            var wrapperPid = 0;
             while (DateTime.UtcNow < deadline)
             {
-                if (TryReadPublishedPid(pidPath, out pid))
+                if (TryReadPublishedPid(wrapperPidPath, out wrapperPid))
                     break;
-
-                Thread.Sleep(50);
+                Thread.Sleep(20);
             }
 
-            if (pid <= 0)
+            if (wrapperPid <= 0)
             {
                 var detail = RunSchtasks(
                     ["/Query", "/TN", taskName, "/V", "/FO", "LIST"],
                     throwOnFailure: false);
                 throw new InvalidOperationException(
-                    $"Interactive task did not publish a worker PID within {timeout.TotalSeconds:0.#}s. {detail}");
+                    $"Interactive task did not publish its wrapper PID within {timeout.TotalSeconds:0.#}s. {detail}");
             }
 
-            var process = Process.GetProcessById(pid);
+            var process = Process.GetProcessById(wrapperPid);
             var job = ProcessRunner.CreateKillOnCloseJob();
             try
             {
                 Win32JobApi.AssignProcess(job, process.Handle);
-                return new InteractiveTaskProcessLaunch(process, job, lease);
+                File.WriteAllText(gatePath, "go", new System.Text.UTF8Encoding(false));
+
+                var commandPid = 0;
+                while (DateTime.UtcNow < deadline)
+                {
+                    if (TryReadPublishedPid(commandPidPath, out commandPid))
+                        break;
+                    if (process.HasExited)
+                        break;
+                    Thread.Sleep(20);
+                }
+
+                if (commandPid <= 0)
+                    throw new InvalidOperationException(
+                        "Interactive task did not publish the command PID after ownership was established.");
+
+                TryDeletePath(gatePath);
+                TryDeletePath(commandPidPath);
+                return new InteractiveTaskProcessLaunch(process, job, lease, commandPid);
             }
             catch
             {
@@ -215,11 +242,12 @@ internal static class InteractiveTaskProcessLauncher
         }
         catch
         {
+            TryDeletePath(gatePath);
+            TryDeletePath(commandPidPath);
             lease.Dispose();
             throw;
         }
     }
-
     internal static InteractiveTaskProcessLaunch LaunchDirect(
         string executablePath,
         string[] arguments,
@@ -301,7 +329,7 @@ internal static class InteractiveTaskProcessLauncher
             try
             {
                 Win32JobApi.AssignProcess(job, process.Handle);
-                return new InteractiveTaskProcessLaunch(process, job, lease);
+                return new InteractiveTaskProcessLaunch(process, job, lease, pid);
             }
             catch
             {
@@ -315,6 +343,10 @@ internal static class InteractiveTaskProcessLauncher
             lease.Dispose();
             throw;
         }
+    }
+    private static void TryDeletePath(string path)
+    {
+        try { File.Delete(path); } catch { }
     }
     private static bool TryReadPublishedPid(string pidPath, out int pid)
     {
@@ -403,7 +435,9 @@ internal static class InteractiveTaskProcessLauncher
     private static string BuildLaunchScript(
         string executablePath,
         string[] arguments,
-        string pidPath,
+        string wrapperPidPath,
+        string commandPidPath,
+        string gatePath,
         string exitPath,
         string? workingDirectory,
         string? stdoutPath,
@@ -418,11 +452,19 @@ internal static class InteractiveTaskProcessLauncher
             "$ErrorActionPreference='Stop'",
             "$exe=" + Ps(executablePath),
             "$args=@(" + args + ")",
-            "$pidFile=" + Ps(pidPath),
+            "$wrapperPidFile=" + Ps(wrapperPidPath),
+            "$commandPidFile=" + Ps(commandPidPath),
+            "$gateFile=" + Ps(gatePath),
             "$exitFile=" + Ps(exitPath),
             "$workingDirectory=" + PsNullable(workingDirectory),
             "$stdoutFile=" + PsNullable(stdoutPath),
             "$stderrFile=" + PsNullable(stderrPath),
+            "[IO.File]::WriteAllText($wrapperPidFile,[string]$PID)",
+            "$gateDeadline=[DateTime]::UtcNow.AddSeconds(30)",
+            "while(-not [IO.File]::Exists($gateFile)){",
+            "  if([DateTime]::UtcNow -ge $gateDeadline){throw 'Timed out waiting for STEALTHEYE ownership gate.'}",
+            "  Start-Sleep -Milliseconds 20",
+            "}",
             "$psi=[Diagnostics.ProcessStartInfo]::new()",
             "$psi.FileName=$exe",
             "$psi.UseShellExecute=$false",
@@ -434,7 +476,7 @@ internal static class InteractiveTaskProcessLauncher
             "$p=[Diagnostics.Process]::new()",
             "$p.StartInfo=$psi",
             "if(-not $p.Start()){throw 'Process.Start returned false.'}",
-            "[IO.File]::WriteAllText($pidFile,[string]$p.Id)",
+            "[IO.File]::WriteAllText($commandPidFile,[string]$p.Id)",
             "$stdoutStream=$null",
             "$stderrStream=$null",
             "$stdoutCopy=$null",

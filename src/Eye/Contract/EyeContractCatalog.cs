@@ -91,12 +91,17 @@ public sealed class EyeContractCatalog
             ?? throw new InvalidOperationException($"Missing embedded contract resource: {ResourceName}");
         using var memory = new MemoryStream();
         stream.CopyTo(memory);
-        var bytes = memory.ToArray();
-        var manifest = JsonSerializer.Deserialize<EyeContractManifest>(bytes)
+        return LoadBytes(memory.ToArray());
+    }
+
+    internal static EyeContractCatalog LoadBytes(byte[] sourceBytes)
+    {
+        ArgumentNullException.ThrowIfNull(sourceBytes);
+        var manifest = JsonSerializer.Deserialize<EyeContractManifest>(sourceBytes)
             ?? throw new InvalidOperationException("Unable to deserialize the canonical v2 contract.");
 
         Validate(manifest);
-        return new EyeContractCatalog(manifest, ComputePublicContractHash(bytes));
+        return new EyeContractCatalog(manifest, ComputePublicContractHash(sourceBytes));
     }
 
     public static string ComputePublicContractHash(byte[] sourceBytes)

@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Text;
+using StealthEye.Contract;
 using StealthEye.Runtime;
 
 namespace Eye.Tests;
@@ -58,6 +60,52 @@ public sealed class EngineSupervisorTests : IDisposable
         Assert.Equal("B", initialized.PreviousVersion);
     }
 
+    [Fact]
+    public async Task IncompatibleHandshakeCandidate_DoesNotReplaceHealthyEngine()
+    {
+        var state = Path.Combine(_root, "state-incompatible");
+        var engines = Path.Combine(_root, "engines-incompatible");
+        Stage(engines, "A");
+        Stage(engines, "B");
+
+        var current = EyeContractCatalog.Load();
+        var contractBytes = await File.ReadAllBytesAsync(ContractPath());
+        var contractText = Encoding.UTF8.GetString(contractBytes);
+        var incompatibleText = contractText.Replace(
+            "STEALTHEYE is a privileged Windows capability substrate controlled by ChatGPT.",
+            "STEALTHEYE incompatible-handshake integration test.",
+            StringComparison.Ordinal);
+        Assert.NotEqual(contractText, incompatibleText);
+        var incompatible = EyeContractCatalog.LoadBytes(Encoding.UTF8.GetBytes(incompatibleText));
+        Assert.NotEqual(current.PublicContractHash, incompatible.PublicContractHash);
+
+        Task<EngineInstance> Start(string version, CancellationToken cancellationToken) =>
+            EngineInstance.StartAsync(
+                Path.Combine(engines, version, "eye-engine.exe"),
+                string.Equals(version, "B", StringComparison.Ordinal) ? incompatible : current,
+                TimeSpan.FromSeconds(10),
+                cancellationToken);
+
+        await using var supervisor = new EngineSupervisor(
+            state,
+            engines,
+            current,
+            Start);
+
+        var a = await supervisor.ActivateAsync("A");
+        var aPid = a.ProcessId!.Value;
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => supervisor.ActivateAsync("B"));
+        Assert.Contains("handshake rejected", ex.Message, StringComparison.OrdinalIgnoreCase);
+
+        var status = supervisor.Status();
+        Assert.Equal("healthy", status.State);
+        Assert.Equal("A", status.ActiveVersion);
+        Assert.Null(status.PreviousVersion);
+        Assert.Equal(aPid, status.ProcessId);
+        Assert.False(ProcessGone(aPid));
+    }
     [Fact]
     public async Task Initialize_WithMissingSelectedEngine_LeavesHostUnavailableNotCrashed()
     {
@@ -169,6 +217,15 @@ public sealed class EngineSupervisorTests : IDisposable
             File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
     }
 
+    private static string ContractPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null &&
+               !File.Exists(Path.Combine(directory.FullName, "Eye.slnx")))
+            directory = directory.Parent;
+        Assert.NotNull(directory);
+        return Path.Combine(directory!.FullName, "contracts", "eye-mcp-v2.json");
+    }
     private static string EngineOutputDirectory()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

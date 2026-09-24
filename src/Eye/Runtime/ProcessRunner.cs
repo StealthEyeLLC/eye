@@ -346,7 +346,7 @@ public sealed class ProcessRunner
                 stdoutPath,
                 stderrPath);
 
-            hooks?.Started?.Invoke(launch.Process.Id, identity);
+            hooks?.Started?.Invoke(launch.CommandProcessId, identity);
             var stdoutTask = ReadGrowingFileAsync(
                 stdoutPath,
                 launch.Process,
@@ -389,7 +389,7 @@ public sealed class ProcessRunner
             started.Stop();
 
             return new ProcessRunResult(
-                launch.Process.Id,
+                launch.CommandProcessId,
                 launch.Process.ExitCode,
                 timedOut,
                 stdout,

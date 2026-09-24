@@ -90,17 +90,28 @@ The identity stores independently prove stable IDs plus incarnation and observat
 Phase 3 is complete. Fast completed run operations whose combined stdout/stderr exceeds the inline limit now promote their existing spool streams into durable artifacts and return bounded inline excerpts, truncation flags, artifact IDs, and the original job/exit/context metadata. Small fast output remains inline and slow work remains a durable job reference.
 ## Phase 4 Ã¢â‚¬â€ supervised versioned engine
 
-- [ ] capability engine is a separate child process, never a DLL inside stable host.
-- [ ] active and previous engine versions live side by side.
-- [ ] host supervises engine health/crash behavior.
-- [ ] staged engine starts and handshakes before activation.
-- [ ] activation routing switches atomically.
-- [ ] previous engine remains available for rollback.
-- [ ] handshake failure cannot replace the working engine.
-- [ ] crash-loop behavior triggers rollback.
-- [ ] host-owned jobs/terminals/artifacts/triggers/mission state survive engine replacement/crash.
-- [ ] degraded mode without an engine retains status, raw SYSTEM/user/WSL repair execution, jobs/terminals, artifact reads, mission/trigger state, and rollback controls.
+- [x] capability engine is a separate child process, never a DLL inside stable host.
+- [x] active and previous engine versions live side by side.
+- [x] host supervises engine health/crash behavior.
+- [x] staged engine starts and handshakes before activation.
+- [x] activation routing switches atomically.
+- [x] previous engine remains available for rollback.
+- [x] handshake failure cannot replace the working engine.
+- [x] crash-loop behavior triggers rollback.
+- [x] host-owned jobs/terminals/artifacts/triggers/mission state survive engine replacement/crash.
+- [x] degraded mode without an engine retains status, raw SYSTEM/user/WSL repair execution, jobs/terminals, artifact reads, mission/trigger state, and rollback controls.
 
+### Phase 4 verification evidence
+
+On 2026-09-24 the supervised engine layer was exercised with real child processes and side-by-side staged versions. A and B handshake and ping before activation; selector state persists through an atomic temporary-file replacement; restart and rollback preserve the previous staged version; two rapid B crashes restart once and then roll back to A.
+
+An incompatible v2.3 contract hash was injected only through the internal engine-start test seam while using the real engine executable. Version B was rejected by the real handshake validator before installation, while the healthy A process, active selector, and PID remained unchanged.
+
+Host-ownership integration coverage creates a completed job, a live ConPTY terminal, an artifact, mission blackboard, and pending trigger before A-to-B replacement. After B restart and crash-loop rollback, the live terminal still accepts input, and all durable host-owned records remain readable with the same stable identities. Degraded-mode coverage starts with a missing active engine and proves engine status, raw SYSTEM/user/WSL repair execution, artifact reads, mission/trigger state, and rollback to the staged previous engine remain functional.
+
+The active-user scheduled fallback was also hardened during this phase: the scheduled wrapper now joins the host Job Object before a gate allows it to spawn the requested command. This removes the fast-process PID race where a short user command could exit before ownership was established.
+
+Phase 4 is complete.
 ## Phase 5 Ã¢â‚¬â€ workers, streams, Trigger Broker, waits
 
 - [ ] StreamJsonRpc named-pipe control path works for host/engine/worker interactions.
