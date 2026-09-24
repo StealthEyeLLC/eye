@@ -110,7 +110,7 @@ public sealed class EyeContractCatalog
 
     private static void Validate(EyeContractManifest manifest)
     {
-        if (manifest.Contract != "stealtheye.eye.mcp" || manifest.Version != "2.2.0")
+        if (manifest.Contract != "stealtheye.eye.mcp" || manifest.Version != "2.3.0")
             throw new InvalidOperationException("Unexpected public contract identity or version.");
         if (string.IsNullOrWhiteSpace(manifest.ServerInstructions) || manifest.ServerInstructions.Length > 4000)
             throw new InvalidOperationException("Public server instructions are missing or unreasonably large.");

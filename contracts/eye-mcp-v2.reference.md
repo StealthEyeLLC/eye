@@ -3,10 +3,10 @@
 > Generated from contracts/eye-mcp-v2.json. Do not edit by hand.
 
 - Contract: stealtheye.eye.mcp
-- Version: 2.2.0
+- Version: 2.3.0
 - Status: canonical-target
 - Publication state: generated-not-live-until-cutover
-- Canonical JSON SHA-256: e72907784b63a6f6fca004ea5e91eb2df09777a597586e4d50abb0678bafb4f9
+- Canonical JSON SHA-256: 829bc5a3641a3b0458382b4faca19dbb9e3ad2ce98fb6b80d5106abb54c3815c
 - Host/engine protocol: 1.0.0
 - Worker protocol: 1.0.0
 

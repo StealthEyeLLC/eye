@@ -8,11 +8,13 @@ public sealed class JobDispatcherTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "eye-dispatcher-tests-" + Guid.NewGuid().ToString("N"));
     private readonly EyeDispatcher _dispatcher;
+    private readonly ArtifactStore _artifacts;
 
     public JobDispatcherTests()
     {
         var store = new JobStore(Path.Combine(_root, "state"), Path.Combine(_root, "spool"));
-        _dispatcher = new EyeDispatcher(new JobManager(store, new ProcessRunner()), new ArtifactStore(store));
+        _artifacts = new ArtifactStore(store);
+        _dispatcher = new EyeDispatcher(new JobManager(store, new ProcessRunner()), _artifacts);
     }
 
     [Fact]
@@ -90,6 +92,45 @@ public sealed class JobDispatcherTests : IDisposable
             "job.cancel",
             JsonSerializer.SerializeToElement(new JobIdArgs(jobId))));
         Assert.Equal(JobStates.Cancelled, cancelled.GetProperty("result").GetProperty("state").GetString());
+    }
+    [Fact]
+    public async Task Dispatcher_RunPromotesLargeFastOutputToArtifactWithExcerpt()
+    {
+        Directory.CreateDirectory(_root);
+        var result = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Run,
+            "run",
+            JsonSerializer.SerializeToElement(new RunRequest
+            {
+                Context = "system",
+                FileName = "powershell.exe",
+                Arguments = ["-NoProfile", "-Command", "[Console]::Out.Write([string]::new([char]88, 350000))"],
+                TimeoutMs = 10000
+            })));
+
+        Assert.True(result.GetProperty("ok").GetBoolean(), result.ToString());
+        var payload = result.GetProperty("result");
+        Assert.Equal(JobStates.Completed, payload.GetProperty("state").GetString());
+        Assert.True(payload.GetProperty("stdout_truncated").GetBoolean());
+        Assert.False(payload.GetProperty("stderr_truncated").GetBoolean());
+        Assert.True(payload.GetProperty("stdout_excerpt").GetString()!.Length > 0);
+        Assert.True(payload.GetProperty("stdout_excerpt").GetString()!.Length <= 4096);
+        Assert.False(payload.TryGetProperty("stdout", out _));
+
+        var artifactId = payload.GetProperty("stdout_artifact_id").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(artifactId));
+        Assert.False(payload.TryGetProperty("stderr_artifact_id", out _));
+
+        var artifact = _artifacts.Info(artifactId!);
+        Assert.Equal("log", artifact.Kind);
+        Assert.Equal("text/plain", artifact.MimeType);
+        Assert.True(artifact.SizeBytes > 262_144);
+        Assert.Equal($"job:{payload.GetProperty("job_id").GetString()}:stdout", artifact.Provenance);
+
+        var preview = await _artifacts.PreviewAsync(artifactId!, 32);
+        Assert.True(preview.TextAvailable);
+        Assert.Equal(new string('X', 32), preview.Text);
+        Assert.True(preview.Truncated);
     }
     [Fact]
     public async Task Dispatcher_EnforcesFacadeAndRunSchemaBounds()

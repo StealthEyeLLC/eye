@@ -4650,6 +4650,81 @@
                     "state"
                   ],
                   "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "context": {
+                      "type": "string"
+                    },
+                    "duration_ms": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "effective_identity": {
+                      "type": "string"
+                    },
+                    "exit_code": {
+                      "type": "integer"
+                    },
+                    "incarnation": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "job_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "pid": {
+                      "type": "integer"
+                    },
+                    "state": {
+                      "enum": [
+                        "completed",
+                        "timed_out"
+                      ],
+                      "type": "string"
+                    },
+                    "stderr_artifact_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "stderr_excerpt": {
+                      "type": "string"
+                    },
+                    "stderr_truncated": {
+                      "type": "boolean"
+                    },
+                    "stdout_artifact_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "stdout_excerpt": {
+                      "type": "string"
+                    },
+                    "stdout_truncated": {
+                      "type": "boolean"
+                    },
+                    "timed_out": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "job_id",
+                    "incarnation",
+                    "state",
+                    "pid",
+                    "exit_code",
+                    "timed_out",
+                    "context",
+                    "effective_identity",
+                    "duration_ms",
+                    "stdout_excerpt",
+                    "stderr_excerpt",
+                    "stdout_truncated",
+                    "stderr_truncated"
+                  ],
+                  "type": "object"
                 }
               ]
             }

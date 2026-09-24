@@ -324,9 +324,10 @@ public sealed class DescriptorGenerationTests
         AssertPropertySet<CapabilitiesResult>(capabilities.ResultSchema);
         AssertPropertySet<CapabilityFacades>(capabilities.ResultSchema.GetProperty("properties").GetProperty("facades"));
         AssertPropertySet<RunArgs>(run.ArgsSchema);
-        Assert.Equal(2, run.ResultSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(3, run.ResultSchema.GetProperty("oneOf").GetArrayLength());
         AssertPropertySet<RunOperationResult>(run.ResultSchema.GetProperty("oneOf")[0]);
         AssertPropertySet<JobReferenceResult>(run.ResultSchema.GetProperty("oneOf")[1]);
+        AssertPropertySet<RunArtifactResult>(run.ResultSchema.GetProperty("oneOf")[2]);
         AssertPropertySet<JobStartArgs>(jobStart.ArgsSchema);
         AssertPropertySet<JobReferenceResult>(jobStart.ResultSchema);
         AssertPropertySet<JobWriteArgs>(jobWrite.ArgsSchema);

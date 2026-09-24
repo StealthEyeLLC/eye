@@ -168,6 +168,22 @@ public sealed record RunOperationResult(
     [property: JsonPropertyName("effective_identity")] string EffectiveIdentity,
     [property: JsonPropertyName("duration_ms")] long DurationMs);
 
+public sealed record RunArtifactResult(
+    [property: JsonPropertyName("job_id")] string JobId,
+    [property: JsonPropertyName("incarnation")] long Incarnation,
+    [property: JsonPropertyName("state")] string State,
+    [property: JsonPropertyName("pid")] int Pid,
+    [property: JsonPropertyName("exit_code")] int ExitCode,
+    [property: JsonPropertyName("timed_out")] bool TimedOut,
+    [property: JsonPropertyName("context")] string Context,
+    [property: JsonPropertyName("effective_identity")] string EffectiveIdentity,
+    [property: JsonPropertyName("duration_ms")] long DurationMs,
+    [property: JsonPropertyName("stdout_artifact_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? StdoutArtifactId,
+    [property: JsonPropertyName("stderr_artifact_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? StderrArtifactId,
+    [property: JsonPropertyName("stdout_excerpt")] string StdoutExcerpt,
+    [property: JsonPropertyName("stderr_excerpt")] string StderrExcerpt,
+    [property: JsonPropertyName("stdout_truncated")] bool StdoutTruncated,
+    [property: JsonPropertyName("stderr_truncated")] bool StderrTruncated);
 public sealed record JobReferenceResult(
     [property: JsonPropertyName("job_id")] string JobId,
     [property: JsonPropertyName("incarnation")] long Incarnation,

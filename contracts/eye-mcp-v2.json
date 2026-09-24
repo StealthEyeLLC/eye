@@ -1,6 +1,6 @@
 {
   "contract": "stealtheye.eye.mcp",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "status": "canonical-target",
   "publication_state": "generated-not-live-until-cutover",
   "server_instructions": "STEALTHEYE is a privileged Windows capability substrate controlled by ChatGPT. Prefer precise typed operations, then direct CLI/file operations, then browser CDP, then Windows UI Automation, and use raw eye_run only when no narrower operation fits. Long work should become durable jobs; wait on events instead of polling; move large data by artifact reference. Reuse stable IDs, incarnations, and cursors. For consequential effects, use stable task_id/action_id plus a deterministic postcondition so retries are idempotent and evidence-backed. ChatGPT remains the planner; STEALTHEYE does not autonomously plan or declare unverified completion.",
@@ -603,7 +603,29 @@
               },
               "required": ["job_id", "incarnation", "state"],
               "additionalProperties": false
-            }
+            },
+              {
+                "type": "object",
+                "properties": {
+                  "job_id": { "type": "string", "minLength": 1 },
+                  "incarnation": { "type": "integer", "minimum": 1 },
+                  "state": { "type": "string", "enum": ["completed", "timed_out"] },
+                  "pid": { "type": "integer" },
+                  "exit_code": { "type": "integer" },
+                  "timed_out": { "type": "boolean" },
+                  "context": { "type": "string" },
+                  "effective_identity": { "type": "string" },
+                  "duration_ms": { "type": "integer", "minimum": 0 },
+                  "stdout_artifact_id": { "type": "string", "minLength": 1 },
+                  "stderr_artifact_id": { "type": "string", "minLength": 1 },
+                  "stdout_excerpt": { "type": "string" },
+                  "stderr_excerpt": { "type": "string" },
+                  "stdout_truncated": { "type": "boolean" },
+                  "stderr_truncated": { "type": "boolean" }
+                },
+                "required": ["job_id", "incarnation", "state", "pid", "exit_code", "timed_out", "context", "effective_identity", "duration_ms", "stdout_excerpt", "stderr_excerpt", "stdout_truncated", "stderr_truncated"],
+                "additionalProperties": false
+              }
             ]
           }
         }

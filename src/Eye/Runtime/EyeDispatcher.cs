@@ -17,6 +17,7 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
 {
     private const int FastCompletionWindowMs = 1000;
     private const long InlineOutputLimitBytes = 262_144;
+    private const int ArtifactExcerptBytes = 4_096;
 
     public async Task<object> ExecuteAsync(
         EyeEffectClass effectClass,
@@ -223,6 +224,12 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                                 inline.EffectiveIdentity,
                                 inline.DurationMs));
                         }
+
+                        var artifactBacked = await TryPromoteLargeRunResultAsync(
+                            waited.Job,
+                            cancellationToken);
+                        if (artifactBacked is not null)
+                            return Success(op, artifactBacked);
                     }
 
                     var current = waited.Job;
@@ -473,6 +480,89 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         }
     }
 
+
+    private async Task<RunArtifactResult?> TryPromoteLargeRunResultAsync(
+        JobRecord job,
+        CancellationToken cancellationToken)
+    {
+        if (job.Terminal ||
+            job.State is not (JobStates.Completed or JobStates.TimedOut) ||
+            job.Pid is null ||
+            job.ExitCode is null ||
+            job.EffectiveIdentity is null ||
+            job.CompletedAt is null)
+            return null;
+
+        var stdoutLength = new FileInfo(job.StdoutPath).Length;
+        var stderrLength = new FileInfo(job.StderrPath).Length;
+        if (stdoutLength + stderrLength <= InlineOutputLimitBytes)
+            return null;
+
+        ArtifactRecord? stdoutArtifact = null;
+        ArtifactRecord? stderrArtifact = null;
+        if (stdoutLength > 0)
+        {
+            stdoutArtifact = await artifactStore.ImportFileAsync(
+                job.StdoutPath,
+                "log",
+                "text/plain",
+                $"{job.JobId}.stdout.txt",
+                $"job:{job.JobId}:stdout",
+                "hot",
+                cancellationToken);
+        }
+
+        if (stderrLength > 0)
+        {
+            stderrArtifact = await artifactStore.ImportFileAsync(
+                job.StderrPath,
+                "log",
+                "text/plain",
+                $"{job.JobId}.stderr.txt",
+                $"job:{job.JobId}:stderr",
+                "hot",
+                cancellationToken);
+        }
+
+        var stdoutRead = stdoutLength == 0
+            ? null
+            : await jobManager.ReadAsync(
+                job.JobId,
+                "stdout",
+                0,
+                ArtifactExcerptBytes,
+                cancellationToken);
+        var stderrRead = stderrLength == 0
+            ? null
+            : await jobManager.ReadAsync(
+                job.JobId,
+                "stderr",
+                0,
+                ArtifactExcerptBytes,
+                cancellationToken);
+
+        var startedAt = job.StartedAt ?? job.CreatedAt;
+        var durationMs = Math.Max(
+            0,
+            (long)(job.CompletedAt.Value - startedAt).TotalMilliseconds);
+
+        return new RunArtifactResult(
+            job.JobId,
+            job.Incarnation,
+            job.State,
+            job.Pid.Value,
+            job.ExitCode.Value,
+            job.TimedOut,
+            job.Context,
+            job.EffectiveIdentity,
+            durationMs,
+            stdoutArtifact?.ArtifactId,
+            stderrArtifact?.ArtifactId,
+            stdoutRead?.Text ?? string.Empty,
+            stderrRead?.Text ?? string.Empty,
+            stdoutRead is not null && !stdoutRead.Eof,
+            stderrRead is not null && !stderrRead.Eof);
+    }
 
     private static void ValidateActionEnvelope(ActionExecutionEnvelope envelope)
     {
