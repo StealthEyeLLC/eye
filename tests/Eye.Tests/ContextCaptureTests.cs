@@ -4,6 +4,7 @@ using StealthEye.Runtime;
 
 namespace Eye.Tests;
 
+[Collection("Interactive desktop")]
 public sealed class ContextCaptureTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "eye-context-" + Guid.NewGuid().ToString("N"));

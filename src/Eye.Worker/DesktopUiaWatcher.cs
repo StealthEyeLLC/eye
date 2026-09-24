@@ -54,14 +54,27 @@ internal sealed class DesktopUiaWatcher : IDisposable
     private sealed class ActiveWatch : IDisposable
     {
         private readonly AutomationElement _target;
+        private readonly long _hwnd;
+        private readonly string _targetRuntimeId;
+        private readonly int _maxNodes;
         private StructureChangedEventHandler? _structureHandler;
         private AutomationPropertyChangedEventHandler? _propertyHandler;
         private AutomationFocusChangedEventHandler? _focusHandler;
+        private AutomationPropertyChangedEventHandler? _focusPropertyHandler;
+        private CancellationTokenSource? _focusPolling;
+        private Task? _focusPollingTask;
         private int _disposed;
 
-        private ActiveWatch(AutomationElement target)
+        private ActiveWatch(
+            AutomationElement target,
+            long hwnd,
+            string targetRuntimeId,
+            int maxNodes)
         {
             _target = target;
+            _hwnd = hwnd;
+            _targetRuntimeId = targetRuntimeId;
+            _maxNodes = maxNodes;
         }
 
         internal TaskCompletionSource<WorkerUiaChangeResult> Completion { get; } =
@@ -84,7 +97,9 @@ internal sealed class DesktopUiaWatcher : IDisposable
                 ? root
                 : FindByRuntimeId(root, request.RuntimeId!, request.MaxNodes)
                   ?? throw new ArgumentException("UI Automation element is no longer available.", nameof(request));
-            var watch = new ActiveWatch(target);
+
+            var targetRuntimeId = RuntimeId(target);
+            var watch = new ActiveWatch(target, request.Hwnd, targetRuntimeId, request.MaxNodes);
             try
             {
                 watch.Register(eventTypes);
@@ -99,17 +114,24 @@ internal sealed class DesktopUiaWatcher : IDisposable
 
         private void Register(string[] eventTypes)
         {
-            var targetRuntimeId = RuntimeId(_target);
+            var targetRuntimeId = _targetRuntimeId;
+
             if (eventTypes.Contains("structure", StringComparer.Ordinal))
             {
                 _structureHandler = (sender, args) =>
                 {
                     if (sender is not AutomationElement element) return;
                     Completion.TrySetResult(new WorkerUiaChangeResult(
-                        DateTimeOffset.UtcNow, "structure", RuntimeIdSafe(element),
-                        "structure_change_type", args.StructureChangeType.ToString()));
+                        DateTimeOffset.UtcNow,
+                        "structure",
+                        RuntimeIdSafe(element),
+                        "structure_change_type",
+                        args.StructureChangeType.ToString()));
                 };
-                Automation.AddStructureChangedEventHandler(_target, TreeScope.Subtree, _structureHandler);
+                Automation.AddStructureChangedEventHandler(
+                    _target,
+                    TreeScope.Subtree,
+                    _structureHandler);
             }
 
             if (eventTypes.Contains("property", StringComparer.Ordinal))
@@ -118,11 +140,16 @@ internal sealed class DesktopUiaWatcher : IDisposable
                 {
                     if (sender is not AutomationElement element) return;
                     Completion.TrySetResult(new WorkerUiaChangeResult(
-                        DateTimeOffset.UtcNow, "property", RuntimeIdSafe(element),
-                        args.Property.ProgrammaticName, args.NewValue?.ToString()));
+                        DateTimeOffset.UtcNow,
+                        "property",
+                        RuntimeIdSafe(element),
+                        args.Property.ProgrammaticName,
+                        args.NewValue?.ToString()));
                 };
                 Automation.AddAutomationPropertyChangedEventHandler(
-                    _target, TreeScope.Subtree, _propertyHandler,
+                    _target,
+                    TreeScope.Subtree,
+                    _propertyHandler,
                     AutomationElement.NameProperty,
                     AutomationElement.IsEnabledProperty,
                     AutomationElement.IsOffscreenProperty,
@@ -135,6 +162,24 @@ internal sealed class DesktopUiaWatcher : IDisposable
 
             if (eventTypes.Contains("focus", StringComparer.Ordinal))
             {
+                _focusPropertyHandler = (sender, args) =>
+                {
+                    if (sender is not AutomationElement element) return;
+                    if (args.NewValue is not bool hasFocus || !hasFocus) return;
+                    if (!IsWithinTarget(element, targetRuntimeId, 64)) return;
+                    Completion.TrySetResult(new WorkerUiaChangeResult(
+                        DateTimeOffset.UtcNow,
+                        "focus",
+                        RuntimeIdSafe(element),
+                        null,
+                        null));
+                };
+                Automation.AddAutomationPropertyChangedEventHandler(
+                    _target,
+                    TreeScope.Subtree,
+                    _focusPropertyHandler,
+                    AutomationElement.HasKeyboardFocusProperty);
+
                 _focusHandler = (_, _) =>
                 {
                     AutomationElement? focused;
@@ -142,27 +187,61 @@ internal sealed class DesktopUiaWatcher : IDisposable
                     catch { return; }
                     if (focused is null || !IsWithinTarget(focused, targetRuntimeId, 64)) return;
                     Completion.TrySetResult(new WorkerUiaChangeResult(
-                        DateTimeOffset.UtcNow, "focus", RuntimeIdSafe(focused), null, null));
+                        DateTimeOffset.UtcNow,
+                        "focus",
+                        RuntimeIdSafe(focused),
+                        null,
+                        null));
                 };
                 Automation.AddAutomationFocusChangedEventHandler(_focusHandler);
+
+                var initiallyFocused = HasKeyboardFocusFresh(_hwnd, targetRuntimeId, _maxNodes);
+                _focusPolling = new CancellationTokenSource();
+                _focusPollingTask = Task.Run(
+                    () => PollFocusAsync(
+                        _hwnd,
+                        targetRuntimeId,
+                        _maxNodes,
+                        initiallyFocused,
+                        Completion,
+                        _focusPolling.Token));
             }
         }
 
         public void Dispose()
         {
             if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+            try { _focusPolling?.Cancel(); } catch { }
+            try
+            {
+                if (_focusPollingTask is not null)
+                    _focusPollingTask.Wait(TimeSpan.FromSeconds(1));
+            }
+            catch { }
+            _focusPolling?.Dispose();
+
             try
             {
                 if (_structureHandler is not null)
                     Automation.RemoveStructureChangedEventHandler(_target, _structureHandler);
             }
             catch { }
+
             try
             {
                 if (_propertyHandler is not null)
                     Automation.RemoveAutomationPropertyChangedEventHandler(_target, _propertyHandler);
             }
             catch { }
+
+            try
+            {
+                if (_focusPropertyHandler is not null)
+                    Automation.RemoveAutomationPropertyChangedEventHandler(_target, _focusPropertyHandler);
+            }
+            catch { }
+
             try
             {
                 if (_focusHandler is not null)
@@ -172,7 +251,66 @@ internal sealed class DesktopUiaWatcher : IDisposable
         }
     }
 
-    private static bool IsWithinTarget(AutomationElement element, string targetRuntimeId, int maxAncestors)
+    private static async Task PollFocusAsync(
+        long hwnd,
+        string targetRuntimeId,
+        int maxNodes,
+        bool previous,
+        TaskCompletionSource<WorkerUiaChangeResult> completion,
+        CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested && !completion.Task.IsCompleted)
+        {
+            try
+            {
+                await Task.Delay(25, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+
+            var current = HasKeyboardFocusFresh(hwnd, targetRuntimeId, maxNodes);
+            if (current && !previous)
+            {
+                completion.TrySetResult(new WorkerUiaChangeResult(
+                    DateTimeOffset.UtcNow,
+                    "focus",
+                    targetRuntimeId,
+                    null,
+                    null));
+                break;
+            }
+
+            previous = current;
+        }
+    }
+
+    private static bool HasKeyboardFocusFresh(long hwnd, string runtimeId, int maxNodes)
+    {
+        try
+        {
+            var root = AutomationElement.FromHandle(new IntPtr(hwnd));
+            if (root is null)
+                return false;
+            var target = FindByRuntimeId(root, runtimeId, maxNodes);
+            return target is not null && target.Current.HasKeyboardFocus;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    private static bool HasKeyboardFocusSafe(AutomationElement element)
+    {
+        try { return element.Current.HasKeyboardFocus; }
+        catch { return false; }
+    }
+
+    private static bool IsWithinTarget(
+        AutomationElement element,
+        string targetRuntimeId,
+        int maxAncestors)
     {
         var current = element;
         for (var i = 0; i <= maxAncestors && current is not null; i++)
@@ -185,7 +323,10 @@ internal sealed class DesktopUiaWatcher : IDisposable
         return false;
     }
 
-    private static AutomationElement? FindByRuntimeId(AutomationElement root, string runtimeId, int maxNodes)
+    private static AutomationElement? FindByRuntimeId(
+        AutomationElement root,
+        string runtimeId,
+        int maxNodes)
     {
         var queue = new Queue<AutomationElement>();
         queue.Enqueue(root);
@@ -202,8 +343,11 @@ internal sealed class DesktopUiaWatcher : IDisposable
                 foreach (AutomationElement child in children)
                     queue.Enqueue(child);
             }
-            catch (ElementNotAvailableException) { }
+            catch (ElementNotAvailableException)
+            {
+            }
         }
+
         return null;
     }
 

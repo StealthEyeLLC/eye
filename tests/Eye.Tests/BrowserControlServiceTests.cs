@@ -4,6 +4,7 @@ using StealthEye.Runtime;
 
 namespace Eye.Tests;
 
+[Collection("Interactive desktop")]
 public sealed class BrowserControlServiceTests : IDisposable
 {
     private readonly string _stateRoot = Path.Combine(Path.GetTempPath(), "eye-browser-control-state-" + Guid.NewGuid().ToString("N"));

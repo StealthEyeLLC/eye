@@ -3,6 +3,7 @@ using StealthEye.Runtime;
 
 namespace Eye.Tests;
 
+[Collection("Interactive desktop")]
 public sealed class BrowserObservationServiceTests : IDisposable
 {
     private readonly string _stateRoot = Path.Combine(Path.GetTempPath(), "eye-browser-observe-state-" + Guid.NewGuid().ToString("N"));

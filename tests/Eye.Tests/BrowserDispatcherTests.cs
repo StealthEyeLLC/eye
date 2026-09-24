@@ -4,6 +4,7 @@ using StealthEye.Runtime;
 
 namespace Eye.Tests;
 
+[Collection("Interactive desktop")]
 public sealed class BrowserDispatcherTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "eye-browser-dispatch-" + Guid.NewGuid().ToString("N"));

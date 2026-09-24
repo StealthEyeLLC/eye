@@ -152,6 +152,9 @@ public sealed class TriggerBroker(TriggerStore store, UiaTriggerSource? uiaTrigg
 
     private async Task WatchAsync(TriggerRecord trigger, ActiveTrigger active)
     {
+        // Do not synchronously consume the trigger timeout budget during registration.
+        await Task.Yield();
+
         try
         {
             switch (trigger.Kind)

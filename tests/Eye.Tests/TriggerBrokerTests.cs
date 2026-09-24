@@ -34,15 +34,16 @@ public sealed class TriggerBrokerTests : IDisposable
     [Fact]
     public async Task ProcessExitTrigger_UsesProcessIncarnationAndNativeExitWait()
     {
+        var store = CreateStore();
+        await using var broker = new TriggerBroker(store);
+        await broker.InitializeAsync();
+
         using var process = Process.Start(new ProcessStartInfo("powershell.exe")
         {
             UseShellExecute = false,
             CreateNoWindow = true,
-            ArgumentList = { "-NoProfile", "-Command", "Start-Sleep -Milliseconds 250" }
+            ArgumentList = { "-NoProfile", "-Command", "Start-Sleep -Milliseconds 500" }
         })!;
-        var store = CreateStore();
-        await using var broker = new TriggerBroker(store);
-        await broker.InitializeAsync();
         var created = broker.CreateProcessExit(process.Id, 5_000);
 
         var waited = await broker.WaitAsync(created.TriggerId, 5_000);

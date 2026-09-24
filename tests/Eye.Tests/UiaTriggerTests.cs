@@ -4,6 +4,7 @@ using StealthEye.Runtime;
 
 namespace Eye.Tests;
 
+[Collection("Interactive desktop")]
 public sealed class UiaTriggerTests : IDisposable
 {
     private string? _work;

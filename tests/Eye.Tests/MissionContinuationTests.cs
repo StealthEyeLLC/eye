@@ -4,6 +4,7 @@ using StealthEye.Runtime;
 
 namespace Eye.Tests;
 
+[Collection("Interactive desktop")]
 public sealed class MissionContinuationTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "eye-continuation-" + Guid.NewGuid().ToString("N"));

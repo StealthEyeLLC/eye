@@ -11,6 +11,13 @@ DesktopWindowInventory.EnablePerMonitorV2();
 
 var controlPipeName = RequiredArgument(args, "--control-pipe");
 var bulkPipeName = RequiredArgument(args, "--bulk-pipe");
+var pidFile = OptionalArgument(args, "--pid-file");
+if (!string.IsNullOrWhiteSpace(pidFile))
+{
+    var fullPidFile = Path.GetFullPath(pidFile);
+    Directory.CreateDirectory(Path.GetDirectoryName(fullPidFile)!);
+    File.WriteAllText(fullPidFile, Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+}
 
 await using var controlPipe = new NamedPipeClientStream(".", controlPipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
 await using var bulkPipe = new NamedPipeClientStream(".", bulkPipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
@@ -31,6 +38,16 @@ catch (ConnectionLostException)
     // Host owns worker lifetime; pipe closure is the graceful stop signal.
 }
 
+static string? OptionalArgument(string[] arguments, string name)
+{
+    for (var i = 0; i < arguments.Length - 1; i++)
+    {
+        if (string.Equals(arguments[i], name, StringComparison.Ordinal))
+            return arguments[i + 1];
+    }
+
+    return null;
+}
 static string RequiredArgument(string[] arguments, string name)
 {
     for (var i = 0; i < arguments.Length - 1; i++)

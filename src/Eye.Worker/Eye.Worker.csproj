@@ -9,6 +9,7 @@
     <AssemblyName>eye-worker</AssemblyName>
     <RootNamespace>StealthEye.Worker</RootNamespace>
     <Version>0.1.0</Version>
+    <DefineConstants>$(DefineConstants);EYE_SESSION_WORKER</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />

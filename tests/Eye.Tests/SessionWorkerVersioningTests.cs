@@ -3,6 +3,7 @@ using StealthEye.Runtime;
 
 namespace Eye.Tests;
 
+[Collection("Interactive desktop")]
 public sealed class SessionWorkerVersioningTests : IDisposable
 {
     private readonly string _root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "StealthEye", "tests", "eye-worker-versioning-" + Guid.NewGuid().ToString("N"));

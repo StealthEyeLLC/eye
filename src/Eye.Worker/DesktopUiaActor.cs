@@ -27,6 +27,8 @@ internal static class DesktopUiaActor
         {
             case "focus":
                 element.SetFocus();
+                if (!WaitForKeyboardFocus(element, TimeSpan.FromSeconds(1)))
+                    throw new InvalidOperationException("Element did not acquire keyboard focus.");
                 break;
             case "invoke":
                 if (!element.TryGetCurrentPattern(InvokePattern.Pattern, out var invokeObject))
@@ -46,6 +48,24 @@ internal static class DesktopUiaActor
         return new WorkerUiaActionResult(request.Action, true);
     }
 
+    private static bool WaitForKeyboardFocus(AutomationElement element, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        do
+        {
+            if (HasKeyboardFocusSafe(element))
+                return true;
+            Thread.Sleep(10);
+        } while (DateTime.UtcNow < deadline);
+
+        return HasKeyboardFocusSafe(element);
+    }
+
+    private static bool HasKeyboardFocusSafe(AutomationElement element)
+    {
+        try { return element.Current.HasKeyboardFocus; }
+        catch { return false; }
+    }
     private static AutomationElement? FindByRuntimeId(AutomationElement root, string runtimeId, int maxNodes)
     {
         var queue = new Queue<AutomationElement>();

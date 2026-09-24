@@ -21,6 +21,7 @@ public sealed class SessionWorker : IAsyncDisposable
     private readonly MultiplexingStream.Channel _vtChannel;
     private readonly Stream _vtStream;
     private readonly JsonRpc _rpc;
+    private readonly InteractiveTaskProcessLease? _interactiveTaskLease;
     private int _disposed;
 
     private SessionWorker(
@@ -33,7 +34,8 @@ public sealed class SessionWorker : IAsyncDisposable
         Stream vtStream,
         JsonRpc rpc,
         SessionWorkerHandshake handshake,
-        string executablePath)
+        string executablePath,
+        InteractiveTaskProcessLease? interactiveTaskLease)
     {
         _process = process;
         _jobHandle = jobHandle;
@@ -43,6 +45,7 @@ public sealed class SessionWorker : IAsyncDisposable
         _vtChannel = vtChannel;
         _vtStream = vtStream;
         _rpc = rpc;
+        _interactiveTaskLease = interactiveTaskLease;
         Handshake = handshake;
         ExecutablePath = executablePath;
     }
@@ -65,8 +68,9 @@ public sealed class SessionWorker : IAsyncDisposable
         if (!File.Exists(executablePath))
             throw new FileNotFoundException("Session worker executable not found.", executablePath);
 
-        var controlName = $"stealtheye-worker-control-{Environment.ProcessId}-{Guid.NewGuid():N}";
-        var bulkName = $"stealtheye-worker-bulk-{Environment.ProcessId}-{Guid.NewGuid():N}";
+        var nonce = Guid.NewGuid().ToString("N")[..12];
+        var controlName = $"eye-c-{Environment.ProcessId}-{nonce}";
+        var bulkName = $"eye-b-{Environment.ProcessId}-{nonce}";
         var activeUserSid = GetActiveUserSid();
         var controlPipe = CreateWorkerPipe(controlName, activeUserSid);
         var bulkPipe = CreateWorkerPipe(bulkName, activeUserSid);
@@ -77,11 +81,13 @@ public sealed class SessionWorker : IAsyncDisposable
         MultiplexingStream.Channel? vtChannel = null;
         Stream? vtStream = null;
         JsonRpc? rpc = null;
+        InteractiveTaskProcessLease? interactiveTaskLease = null;
         try
         {
             var launched = LaunchActiveUserWorker(executablePath, controlName, bulkName);
             process = launched.Process;
             jobHandle = launched.JobHandle;
+            interactiveTaskLease = launched.Lease;
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(startupTimeout ?? TimeSpan.FromSeconds(10));
@@ -121,7 +127,8 @@ public sealed class SessionWorker : IAsyncDisposable
                 vtStream,
                 rpc,
                 handshake,
-                executablePath);
+                executablePath,
+                interactiveTaskLease);
             process = null;
             jobHandle = null;
             controlPipe = null!;
@@ -130,6 +137,7 @@ public sealed class SessionWorker : IAsyncDisposable
             vtChannel = null;
             vtStream = null;
             rpc = null;
+            interactiveTaskLease = null;
             return worker;
         }
         catch
@@ -148,6 +156,7 @@ public sealed class SessionWorker : IAsyncDisposable
             if (multiplexing is not null) await multiplexing.DisposeAsync();
             jobHandle?.Dispose();
             process?.Dispose();
+            interactiveTaskLease?.Dispose();
             await controlPipe.DisposeAsync();
             await bulkPipe.DisposeAsync();
             throw;
@@ -298,6 +307,7 @@ public sealed class SessionWorker : IAsyncDisposable
             await _bulkPipe.DisposeAsync();
             _jobHandle.Dispose();
             _process.Dispose();
+            _interactiveTaskLease?.Dispose();
         }
     }
 
@@ -352,7 +362,7 @@ public sealed class SessionWorker : IAsyncDisposable
             HandleInheritability.None,
             (PipeAccessRights)0);
     }
-    private static (Process Process, SafeFileHandle JobHandle) LaunchActiveUserWorker(
+    private static (Process Process, SafeFileHandle JobHandle, InteractiveTaskProcessLease? Lease) LaunchActiveUserWorker(
         string executablePath,
         string controlPipeName,
         string bulkPipeName)
@@ -391,7 +401,18 @@ public sealed class SessionWorker : IAsyncDisposable
                         ref startup,
                         out var pi))
                 {
-                    ProcessRunner.ThrowWin32("CreateProcessAsUser(worker)");
+                    var error = Marshal.GetLastWin32Error();
+                    if (error is 5 or 1314)
+                    {
+                        var fallback = InteractiveTaskProcessLauncher.LaunchDirect(
+                            executablePath,
+                            arguments,
+                            TimeSpan.FromSeconds(10));
+                        return (fallback.Process, fallback.JobHandle, fallback.Lease);
+                    }
+
+                    throw new InvalidOperationException(
+                        $"CreateProcessAsUser(worker) failed with Win32 error {error}.");
                 }
 
                 using var processHandle = new SafeFileHandle(pi.hProcess, ownsHandle: true);
@@ -403,7 +424,7 @@ public sealed class SessionWorker : IAsyncDisposable
                         ProcessRunner.ThrowWin32("AssignProcessToJobObject(worker)");
                     if (NativeMethods.ResumeThread(threadHandle) == uint.MaxValue)
                         ProcessRunner.ThrowWin32("ResumeThread(worker)");
-                    return (Process.GetProcessById((int)pi.dwProcessId), jobHandle);
+                    return (Process.GetProcessById((int)pi.dwProcessId), jobHandle, null);
                 }
                 catch
                 {

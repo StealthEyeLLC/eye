@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using ModelContextProtocol.Server;
 using StealthEye.Contract;
 using StealthEye.Runtime;
@@ -31,6 +31,8 @@ if (args.Length > 0 && args[0] is "inventory" or "doctor" or "torture-test")
     Environment.ExitCode = report.Overall == DiagnosticStates.Fail ? 1 : 0;
     return;
 }
+
+InteractiveTaskProcessLauncher.CleanupStaleOwnedResidue();
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -213,7 +213,23 @@ public sealed class ProcessRunner
                         ref startup,
                         out var pi))
                 {
-                    ThrowWin32("CreateProcessAsUser");
+                    var error = Marshal.GetLastWin32Error();
+#if !EYE_SESSION_WORKER
+                    if (error is 5 or 1314)
+                    {
+                        return await RunActiveUserViaTaskAsync(
+                            request,
+                            cancellationToken,
+                            hooks,
+                            resultContext,
+                            identity.Name,
+                            workingDirectory!,
+                            started);
+                    }
+
+#endif
+                    throw new InvalidOperationException(
+                        $"CreateProcessAsUser failed with Win32 error {error}.");
                 }
 
                 using var processHandle = new SafeFileHandle(pi.hProcess, ownsHandle: true);
@@ -277,6 +293,174 @@ public sealed class ProcessRunner
         }
     }
 
+#if !EYE_SESSION_WORKER
+    private static async Task<ProcessRunResult> RunActiveUserViaTaskAsync(
+        RunRequest request,
+        CancellationToken cancellationToken,
+        ProcessRunHooks? hooks,
+        string resultContext,
+        string identity,
+        string workingDirectory,
+        Stopwatch started)
+    {
+        var executable = ResolveExecutable(request.FileName);
+        if (string.IsNullOrWhiteSpace(executable) || !File.Exists(executable))
+            throw new FileNotFoundException(
+                $"Unable to resolve active-user executable '{request.FileName}'.",
+                request.FileName);
+
+        var outputRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "StealthEye",
+            "process-output");
+        Directory.CreateDirectory(outputRoot);
+        var id = Guid.NewGuid().ToString("N");
+        var stdoutPath = Path.Combine(outputRoot, id + ".stdout");
+        var stderrPath = Path.Combine(outputRoot, id + ".stderr");
+
+        InteractiveTaskProcessLaunch? launch = null;
+        try
+        {
+            launch = InteractiveTaskProcessLauncher.Launch(
+                executable,
+                request.Arguments,
+                TimeSpan.FromSeconds(10),
+                workingDirectory,
+                stdoutPath,
+                stderrPath);
+
+            hooks?.Started?.Invoke(launch.Process.Id, identity);
+            var stdoutTask = ReadGrowingFileAsync(
+                stdoutPath,
+                launch.Process,
+                ProcessOutputChannel.Stdout,
+                hooks);
+            var stderrTask = ReadGrowingFileAsync(
+                stderrPath,
+                launch.Process,
+                ProcessOutputChannel.Stderr,
+                hooks);
+
+            var timedOut = false;
+            using var timeout = request.TimeoutMs > 0
+                ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
+                : null;
+            if (timeout is not null)
+                timeout.CancelAfter(request.TimeoutMs);
+            var waitToken = timeout?.Token ?? cancellationToken;
+
+            try
+            {
+                await launch.Process.WaitForExitAsync(waitToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                TerminateJob(launch.JobHandle);
+                await launch.Process.WaitForExitAsync(CancellationToken.None);
+                await DrainOutputAsync(stdoutTask, stderrTask);
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                timedOut = true;
+                TerminateJob(launch.JobHandle);
+                await launch.Process.WaitForExitAsync(CancellationToken.None);
+            }
+
+            var stdout = await stdoutTask;
+            var stderr = await stderrTask;
+            started.Stop();
+
+            return new ProcessRunResult(
+                launch.Process.Id,
+                launch.Process.ExitCode,
+                timedOut,
+                stdout,
+                stderr,
+                resultContext,
+                identity,
+                started.ElapsedMilliseconds);
+        }
+        finally
+        {
+            if (launch is not null)
+            {
+                launch.JobHandle.Dispose();
+                launch.Process.Dispose();
+                launch.Lease.Dispose();
+            }
+
+            TryDeleteFile(stdoutPath);
+            TryDeleteFile(stderrPath);
+        }
+    }
+
+    private static async Task<string> ReadGrowingFileAsync(
+        string path,
+        Process process,
+        ProcessOutputChannel channel,
+        ProcessRunHooks? hooks)
+    {
+        while (!File.Exists(path))
+        {
+            if (process.HasExited)
+                break;
+            await Task.Delay(20);
+        }
+
+        if (!File.Exists(path))
+            return string.Empty;
+
+        await using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete,
+            4096,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        using var reader = new StreamReader(
+            stream,
+            Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: true,
+            bufferSize: 4096,
+            leaveOpen: true);
+
+        var captured = hooks?.CaptureOutput == false ? null : new StringBuilder();
+        var buffer = new char[4096];
+        var emptyAfterExit = 0;
+
+        while (true)
+        {
+            var read = await reader.ReadAsync(buffer.AsMemory());
+            if (read > 0)
+            {
+                emptyAfterExit = 0;
+                var text = new string(buffer, 0, read);
+                captured?.Append(text);
+                if (hooks?.Output is not null)
+                    await hooks.Output(channel, text);
+                continue;
+            }
+
+            if (process.HasExited)
+            {
+                emptyAfterExit++;
+                if (emptyAfterExit >= 3)
+                    break;
+            }
+
+            await Task.Delay(20);
+        }
+
+        return captured?.ToString() ?? string.Empty;
+    }
+
+    private static void TryDeleteFile(string path)
+    {
+        try { File.Delete(path); } catch { }
+    }
+
+#endif
     private enum WaitOutcome
     {
         Exited,
