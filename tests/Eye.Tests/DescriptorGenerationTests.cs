@@ -16,7 +16,7 @@ public sealed class DescriptorGenerationTests
 
         Assert.Equal(
             [
-                "action.status", "artifact.delete", "artifact.diff", "artifact.export", "artifact.info", "artifact.preview", "artifact.read_range",
+                "action.status", "artifact.delete", "artifact.diff", "artifact.export", "artifact.import", "artifact.info", "artifact.preview", "artifact.read_range",
                 "browser.evaluate", "browser.navigate", "browser.observe", "capabilities", "engine.activate", "engine.restart", "engine.rollback", "engine.status", "job.attach", "job.cancel", "job.read",
                 "job.resize", "job.result", "job.start", "job.status", "job.wait", "job.write", "run", "system.status", "ui.act", "ui.observe", "ui.query"
             ],
@@ -40,6 +40,7 @@ public sealed class DescriptorGenerationTests
         Assert.Equal("eye_run", contract.GetToolForOperation("job.resize").Name);
         Assert.Equal("eye_change", contract.GetToolForOperation("engine.activate").Name);
         Assert.Equal("eye_change", contract.GetToolForOperation("artifact.export").Name);
+        Assert.Equal("eye_change", contract.GetToolForOperation("artifact.import").Name);
     }
 
     [Fact]
@@ -82,8 +83,8 @@ public sealed class DescriptorGenerationTests
         }
 
         var change = descriptors.Single(x => x.Name == "eye_change");
-        Assert.Equal(5, change.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(10, change.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(6, change.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(12, change.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var interact = descriptors.Single(x => x.Name == "eye_interact");
         Assert.Equal(3, interact.InputSchema.GetProperty("oneOf").GetArrayLength());
@@ -299,6 +300,7 @@ public sealed class DescriptorGenerationTests
         var artifactPreview = Operation(contract, "artifact.preview");
         var artifactRead = Operation(contract, "artifact.read_range");
         var artifactDiff = Operation(contract, "artifact.diff");
+        var artifactImport = Operation(contract, "artifact.import");
         var artifactExport = Operation(contract, "artifact.export");
         var artifactDelete = Operation(contract, "artifact.delete");
         var uiObserve = Operation(contract, "ui.observe");
@@ -353,6 +355,8 @@ public sealed class DescriptorGenerationTests
         AssertPropertySet<ArtifactReadRangeResult>(artifactRead.ResultSchema);
         AssertPropertySet<ArtifactDiffArgs>(artifactDiff.ArgsSchema);
         AssertPropertySet<ArtifactDiffPublicResult>(artifactDiff.ResultSchema);
+        AssertPropertySet<ArtifactImportArgs>(artifactImport.ArgsSchema);
+        AssertPropertySet<ArtifactInfoResult>(artifactImport.ResultSchema);
         AssertPropertySet<ArtifactExportArgs>(artifactExport.ArgsSchema);
         AssertPropertySet<ArtifactExportResult>(artifactExport.ResultSchema);
         AssertPropertySet<ArtifactIdArgs>(artifactDelete.ArgsSchema);

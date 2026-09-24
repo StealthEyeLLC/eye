@@ -79,6 +79,13 @@ public sealed record ArtifactDiffArgs(
     [property: JsonPropertyName("left_artifact_id")] string LeftArtifactId,
     [property: JsonPropertyName("right_artifact_id")] string RightArtifactId);
 
+public sealed record ArtifactImportArgs(
+    [property: JsonPropertyName("source_path")] string SourcePath,
+    [property: JsonPropertyName("kind")] string Kind,
+    [property: JsonPropertyName("mime_type"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? MimeType = null,
+    [property: JsonPropertyName("name"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Name = null,
+    [property: JsonPropertyName("provenance")] string Provenance = "mcp-import",
+    [property: JsonPropertyName("storage_tier")] string StorageTier = "hot");
 public sealed record ArtifactExportArgs(
     [property: JsonPropertyName("artifact_id")] string ArtifactId,
     [property: JsonPropertyName("destination")] string Destination,

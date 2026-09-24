@@ -418,6 +418,19 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
 
                 case "engine.rollback":
                     return Success(op, ToPublic(await RequireEngineSupervisor().RollbackAsync(cancellationToken)));
+                case "artifact.import":
+                {
+                    var request = DeserializeRequired<ArtifactImportArgs>(op, args);
+                    var artifact = await artifactStore.ImportFileAsync(
+                        request.SourcePath,
+                        request.Kind,
+                        request.MimeType,
+                        request.Name,
+                        request.Provenance,
+                        request.StorageTier,
+                        cancellationToken);
+                    return Success(op, ToPublic(artifact));
+                }
                 case "artifact.export":
                 {
                     var request = DeserializeRequired<ArtifactExportArgs>(op, args);

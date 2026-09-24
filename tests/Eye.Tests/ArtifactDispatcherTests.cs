@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using StealthEye.Contract;
 using StealthEye.Runtime;
@@ -58,6 +58,41 @@ public sealed class ArtifactDispatcherTests : IDisposable
         Assert.Equal(6, diff.GetProperty("result").GetProperty("first_difference_offset").GetInt64());
     }
 
+    [Fact]
+    public async Task Dispatcher_ArtifactImport_RegistersMachineVisibleFile()
+    {
+        Directory.CreateDirectory(_root);
+        var source = Path.Combine(_root, "incoming.txt");
+        await File.WriteAllTextAsync(source, "import-me", new UTF8Encoding(false));
+
+        var imported = Element(await _dispatcher.ExecuteAsync(
+            EyeEffectClass.Change,
+            "artifact.import",
+            JsonSerializer.SerializeToElement(new ArtifactImportArgs(
+                source,
+                "text",
+                "text/plain",
+                "incoming.txt",
+                "dispatcher-import",
+                "hot"))));
+
+        Assert.True(imported.GetProperty("ok").GetBoolean(), imported.ToString());
+        var result = imported.GetProperty("result");
+        var artifactId = result.GetProperty("artifact_id").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(artifactId));
+        Assert.Equal("text", result.GetProperty("kind").GetString());
+        Assert.Equal("text/plain", result.GetProperty("mime_type").GetString());
+        Assert.Equal("incoming.txt", result.GetProperty("name").GetString());
+        Assert.Equal("dispatcher-import", result.GetProperty("provenance").GetString());
+        Assert.Equal("hot", result.GetProperty("storage_tier").GetString());
+        Assert.Equal(9, result.GetProperty("size_bytes").GetInt64());
+        Assert.Equal(64, result.GetProperty("sha256").GetString()!.Length);
+        Assert.False(result.TryGetProperty("content_path", out _));
+
+        var info = _artifacts.Info(artifactId!);
+        Assert.Equal(result.GetProperty("sha256").GetString(), info.Sha256);
+        Assert.Equal("import-me", await File.ReadAllTextAsync(info.ContentPath));
+    }
     [Fact]
     public async Task Dispatcher_ArtifactExportAndDelete_BelongToEyeChange()
     {

@@ -6,7 +6,7 @@
 
 This checklist implements `docs/BUILD_BLUEPRINT.md`. It intentionally avoids preserving obsolete migration procedure as the active plan.
 
-## Phase 0 — machine foundation
+## Phase 0 â€” machine foundation
 
 Before runtime ownership changes:
 
@@ -21,7 +21,7 @@ Before runtime ownership changes:
 - [ ] NVIDIA/CUDA stack is healthy where required.
 - [ ] Windows login/account/autologon configuration is left alone unless explicitly changed by the owner.
 
-## Phase 1 — contract v2 and host/engine protocol
+## Phase 1 â€” contract v2 and host/engine protocol
 
 Canonical target tools:
 
@@ -48,14 +48,14 @@ eye_live
 
 Phase 1 activation gate is met. The canonical contract is generated but remains non-live until the runtime cutover gate is executed and verified.
 
-## Phase 2 — stable host core
+## Phase 2 â€” stable host core
 
 - [x] one LocalSystem SCM service owns the stable host.
 - [x] stable host serves loopback MCP.
 - [x] host provides raw SYSTEM execution.
 - [x] host provides active-user execution through `WTSQueryUserToken` / `CreateEnvironmentBlock` / `CreateProcessAsUser`.
 - [x] host provides WSL execution through the active-user path.
-- [ ] CsWin32-generated bindings/SafeHandles replace suitable handwritten interop.
+- [x] CsWin32-generated bindings/SafeHandles replace suitable handwritten interop.
 - [x] explicit inherited-handle lists are used.
 - [x] Job Objects own launched process trees.
 - [x] host owns native ConPTY handles/lifecycle.
@@ -69,19 +69,26 @@ Phase 1 activation gate is met. The canonical contract is generated but remains 
 
 On 2026-09-24 the accepted host was installed as the single Auto-start StealthEye LocalSystem SCM service and independently verified to expose exactly one listener at 127.0.0.1:37931. Live MCP calls proved inline SYSTEM execution as NT AUTHORITY\SYSTEM, inline active-user execution as STEALTHEYELLC\StealthEye, automatic WSL promotion to a durable job, successful active-user WSL completion, and cursor-backed spool output (root::Linux). The accepted test suite also proves explicit inherited-handle isolation, host-owned native ConPTY lifecycle, and Job Object cancellation of both a job root process and its spawned descendant.
 
-The remaining Phase 2 implementation item is the bounded migration of suitable handwritten Win32 declarations to CsWin32-generated bindings/SafeHandles.
-## Phase 3 — artifacts and identity model
+Phase 2 is complete. Suitable Job Object interop now uses CsWin32-generated bindings/SafeHandles while the remaining specialized process/session declarations stay narrowly handwritten where they materially simplify the implementation.
+## Phase 3 â€” artifacts and identity model
 
-- [ ] host artifact registry exists.
-- [ ] artifact metadata includes stable ID, kind, MIME type, size, hash/name as applicable, storage tier, and provenance.
-- [ ] artifact preview/range-read/export/delete/diff paths exist where applicable.
+- [x] host artifact registry exists.
+- [x] artifact metadata includes stable ID, kind, MIME type, size, hash/name as applicable, storage tier, and provenance.
+- [x] artifact preview/range-read/export/delete/diff paths exist where applicable.
 - [ ] large results return artifact + useful excerpt.
-- [ ] ChatGPT top-level file inputs can be imported directly as artifacts where supported.
-- [ ] stable identity model is implemented as `stable ID + incarnation + observation cursor`.
-- [ ] PID/HWND/path reuse cannot silently alias a replaced object.
-- [ ] stdout/stderr/terminal/file/UI/browser readers support cursor/delta semantics.
+- [x] ChatGPT top-level file inputs can be imported directly as artifacts where supported.
+- [x] stable identity model is implemented as stable ID + incarnation + observation cursor.
+- [x] PID/HWND/path reuse cannot silently alias a replaced object.
+- [x] stdout/stderr/terminal/file/UI/browser readers support cursor/delta semantics.
 
-## Phase 4 — supervised versioned engine
+### Phase 3 verification evidence
+
+On 2026-09-24 the accepted artifact registry was verified to persist stable artifact IDs with incarnation, kind, MIME type, byte size, SHA-256, name, storage tier, provenance, creation time, and private backing path. Public artifact operations cover info, bounded text preview, range reads, diff, export, delete, and v2.2 artifact.import for machine-visible/materialized file inputs without exposing the private backing path. Artifact import, generated contract artifacts, and the live loopback MCP surface are covered by the accepted test suite.
+
+The identity stores independently prove stable IDs plus incarnation and observation cursors for desktop windows, UIA elements, browser targets, jobs, and artifacts. Reused HWNDs with a different process generation, disappeared/reappeared browser targets, browser type replacement, and UIA elements under a new window incarnation all advance incarnation instead of silently aliasing the old object. Job stdout/stderr, terminal attachment, artifact range reads, and UI/browser observations expose bounded cursor/range progression.
+
+The remaining Phase 3 implementation item is automatic promotion of oversized operation results into artifact references plus useful inline excerpts.
+## Phase 4 â€” supervised versioned engine
 
 - [ ] capability engine is a separate child process, never a DLL inside stable host.
 - [ ] active and previous engine versions live side by side.
@@ -94,7 +101,7 @@ The remaining Phase 2 implementation item is the bounded migration of suitable h
 - [ ] host-owned jobs/terminals/artifacts/triggers/mission state survive engine replacement/crash.
 - [ ] degraded mode without an engine retains status, raw SYSTEM/user/WSL repair execution, jobs/terminals, artifact reads, mission/trigger state, and rollback controls.
 
-## Phase 5 — workers, streams, Trigger Broker, waits
+## Phase 5 â€” workers, streams, Trigger Broker, waits
 
 - [ ] StreamJsonRpc named-pipe control path works for host/engine/worker interactions.
 - [ ] multiplexed binary streams handle stdout/stderr/VT/image/audio/file traffic.
@@ -107,7 +114,7 @@ The remaining Phase 2 implementation item is the bounded migration of suitable h
 - [ ] native waits exist for initial high-value conditions such as job/process exit, file events, service/port/session state.
 - [ ] wait sources expand with desktop/browser implementation rather than through polling loops.
 
-## Phase 6 — Eye Live and operator guidance
+## Phase 6 â€” Eye Live and operator guidance
 
 - [ ] `eye_live` returns an MCP Apps UI resource only when continuation/supervision is useful.
 - [ ] core Eye operation does not depend on UI being rendered.
@@ -117,7 +124,7 @@ The remaining Phase 2 implementation item is the bounded migration of suitable h
 - [ ] Eye Operator skill exists and teaches modality hierarchy, jobs, waits, artifacts, handles/cursors, and contract discipline.
 - [ ] MCP server initialization instructions provide compact routing rules with self-contained first 512 characters.
 
-## Phase 7 — desktop and browser capability engine
+## Phase 7 â€” desktop and browser capability engine
 
 ### Desktop
 
@@ -142,7 +149,7 @@ The remaining Phase 2 implementation item is the bounded migration of suitable h
 - [ ] optional Playwright .NET path is available only where it materially improves behavior.
 - [ ] no permanent Node daemon or bundled browser fleet exists.
 
-## Phase 8 — Blackboard, Relay, context capture, and adapters
+## Phase 8 â€” Blackboard, Relay, context capture, and adapters
 
 ### Blackboard / Relay
 
@@ -170,7 +177,7 @@ Add based on real tasks, not completeness theater:
 - [ ] deterministic adapters for Git/GitHub CLI, PowerShell/WSL, winget, FFmpeg, services/Task Scheduler, and other actually installed software.
 - [ ] resource-aware execution considers GPU memory/thermals/power/storage tier where useful.
 
-## Phase 9 — final runtime cutover
+## Phase 9 â€” final runtime cutover
 
 Only cut over when the new runtime independently operates and repairs the machine.
 

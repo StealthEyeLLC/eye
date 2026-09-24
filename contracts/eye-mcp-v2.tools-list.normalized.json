@@ -175,6 +175,89 @@
             "args": {
               "additionalProperties": false,
               "properties": {
+                "kind": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "mime_type": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "provenance": {
+                  "default": "mcp-import",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "source_path": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "storage_tier": {
+                  "default": "hot",
+                  "enum": [
+                    "hot",
+                    "cold"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source_path",
+                "kind"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "artifact.import"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
                 "artifact_id": {
                   "minLength": 1,
                   "type": "string"
@@ -566,6 +649,124 @@
             },
             "operation": {
               "const": "engine.rollback"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "artifact.import"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "created_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "kind": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "mime_type": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "provenance": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "sha256": {
+                  "maxLength": 64,
+                  "minLength": 64,
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "storage_tier": {
+                  "enum": [
+                    "hot",
+                    "cold"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "artifact_id",
+                "incarnation",
+                "kind",
+                "size_bytes",
+                "sha256",
+                "name",
+                "storage_tier",
+                "provenance",
+                "created_at"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "artifact.import"
             }
           },
           "required": [

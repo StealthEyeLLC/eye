@@ -1,6 +1,6 @@
 {
   "contract": "stealtheye.eye.mcp",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "status": "canonical-target",
   "publication_state": "generated-not-live-until-cutover",
   "server_instructions": "STEALTHEYE is a privileged Windows capability substrate controlled by ChatGPT. Prefer precise typed operations, then direct CLI/file operations, then browser CDP, then Windows UI Automation, and use raw eye_run only when no narrower operation fits. Long work should become durable jobs; wait on events instead of polling; move large data by artifact reference. Reuse stable IDs, incarnations, and cursors. For consequential effects, use stable task_id/action_id plus a deterministic postcondition so retries are idempotent and evidence-backed. ChatGPT remains the planner; STEALTHEYE does not autonomously plan or declare unverified completion.",
@@ -770,7 +770,42 @@
             "required": ["state"],
             "additionalProperties": false
           }
-        },        {
+        },
+        {
+          "id": "artifact.import",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "source_path": { "type": "string", "minLength": 1 },
+              "kind": { "type": "string", "minLength": 1 },
+              "mime_type": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 },
+              "provenance": { "type": "string", "minLength": 1, "default": "mcp-import" },
+              "storage_tier": { "type": "string", "enum": ["hot", "cold"], "default": "hot" }
+            },
+            "required": ["source_path", "kind"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "artifact_id": { "type": "string", "minLength": 1 },
+              "incarnation": { "type": "integer", "minimum": 1 },
+              "kind": { "type": "string", "minLength": 1 },
+              "mime_type": { "type": "string", "minLength": 1 },
+              "size_bytes": { "type": "integer", "minimum": 0 },
+              "sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
+              "name": { "type": "string", "minLength": 1 },
+              "storage_tier": { "type": "string", "enum": ["hot", "cold"] },
+              "provenance": { "type": "string", "minLength": 1 },
+              "created_at": { "type": "string", "format": "date-time" }
+            },
+            "required": ["artifact_id", "incarnation", "kind", "size_bytes", "sha256", "name", "storage_tier", "provenance", "created_at"],
+            "additionalProperties": false
+          }
+        },
+        {
           "id": "artifact.export",
           "args_required": true,
           "args_schema": {
