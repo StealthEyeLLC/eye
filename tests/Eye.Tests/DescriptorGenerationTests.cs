@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using StealthEye.Contract;
 using StealthEye.Tools;
+using StealthEye.Runtime;
 
 namespace Eye.Tests;
 
@@ -160,6 +161,48 @@ public sealed class DescriptorGenerationTests
         Assert.Contains("typed operations", front, StringComparison.Ordinal);
         Assert.Contains("durable jobs", front, StringComparison.Ordinal);
         Assert.Contains("artifact", front, StringComparison.Ordinal);
+    }
+    [Fact]
+    public async Task CapabilitiesOperation_ProjectsCanonicalContractFacades()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            "eye-capabilities-contract-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var contract = EyeContractCatalog.Load();
+            var jobs = new JobStore(
+                Path.Combine(root, "state"),
+                Path.Combine(root, "spool"));
+            var dispatcher = new EyeDispatcher(
+                new JobManager(jobs, new ProcessRunner()),
+                new ArtifactStore(jobs),
+                publicContract: contract);
+
+            var response = JsonSerializer.SerializeToElement(await dispatcher.ExecuteAsync(
+                EyeEffectClass.Inspect,
+                "capabilities",
+                null));
+
+            Assert.True(response.GetProperty("ok").GetBoolean(), response.ToString());
+            var facades = response.GetProperty("result").GetProperty("facades");
+
+            foreach (var tool in contract.Descriptors)
+            {
+                var actual = facades.GetProperty(tool.Name)
+                    .EnumerateArray()
+                    .Select(x => x.GetString()!)
+                    .ToArray();
+                var expected = tool.Operations.Select(x => x.Id).ToArray();
+                Assert.Equal(expected, actual);
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
     }
     [Fact]
     public void PublicDtos_MatchCurrentContractPropertySets()

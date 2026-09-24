@@ -47,6 +47,7 @@ var urls = Environment.GetEnvironmentVariable("EYE_URLS")
     ?? "http://127.0.0.1:37931";
 builder.WebHost.UseUrls(urls);
 
+builder.Services.AddSingleton(publicContract);
 builder.Services.AddSingleton<ProcessRunner>();
 builder.Services.AddSingleton<JobStore>();
 builder.Services.AddSingleton<ActionJournalStore>();

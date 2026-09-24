@@ -13,7 +13,7 @@ public enum EyeEffectClass
     External
 }
 
-public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null, UiaActionService? uiaActionService = null, BrowserObservationService? browserObservationService = null, BrowserControlService? browserControlService = null, ActionJournalStore? actionJournalStore = null, ConsequentialActionRunner? consequentialActionRunner = null, ActionReconciler? actionReconciler = null)
+public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null, UiaActionService? uiaActionService = null, BrowserObservationService? browserObservationService = null, BrowserControlService? browserControlService = null, ActionJournalStore? actionJournalStore = null, ConsequentialActionRunner? consequentialActionRunner = null, ActionReconciler? actionReconciler = null, EyeContractCatalog? publicContract = null)
 {
     private const int FastCompletionWindowMs = 1000;
     private const long InlineOutputLimitBytes = 262_144;
@@ -112,15 +112,18 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                     return Success(op, ToPublic(RequireActionJournalStore().GetRequired(request.ActionId)));
                 }
                 case "capabilities":
+                {
+                    var contract = RequirePublicContract();
                     return Success(op, new CapabilitiesResult(
                         "eye-mcp-v2",
                         new CapabilityFacades(
-                            ["system.status", "capabilities", "action.status", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff", "ui.observe", "ui.query", "browser.observe"],
-                            ["run", "job.start", "job.write", "job.resize", "job.cancel"],
-                            ["engine.activate", "engine.restart", "engine.rollback", "artifact.export", "artifact.delete"],
-                            ["ui.act", "browser.navigate", "browser.evaluate"],
-                            [],
-                            [])));
+                            OperationsFor(contract, "eye_inspect"),
+                            OperationsFor(contract, "eye_run"),
+                            OperationsFor(contract, "eye_change"),
+                            OperationsFor(contract, "eye_interact"),
+                            OperationsFor(contract, "eye_external"),
+                            OperationsFor(contract, "eye_live"))));
+                }
 
                 case "browser.observe":
                 {
@@ -618,6 +621,15 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         status.ProcessId,
         status.LastError);
 
+    private EyeContractCatalog RequirePublicContract() =>
+        publicContract ?? EyeContractCatalog.Load();
+
+    private static string[] OperationsFor(EyeContractCatalog contract, string toolName) =>
+        contract.Descriptors
+            .Single(x => string.Equals(x.Name, toolName, StringComparison.Ordinal))
+            .Operations
+            .Select(x => x.Id)
+            .ToArray();
     private ActionJournalStore RequireActionJournalStore() =>
         actionJournalStore ?? throw new InvalidOperationException("Action journal is not configured.");
 
