@@ -1,4 +1,5 @@
 using System.Text.Json;
+using StealthEye.Contract;
 
 namespace StealthEye.Runtime;
 
@@ -112,10 +113,10 @@ public sealed class ContextCaptureService
         var document = new ContextCaptureDocument(
             capturedAt,
             mission,
-            desktop,
-            foregroundUia,
+            desktop is null ? null : ToPublic(desktop),
+            foregroundUia is null ? null : ToPublic(foregroundUia),
             screenshot,
-            browser,
+            browser is null ? null : ToPublic(browser),
             desktopError,
             uiaError,
             captureError,
@@ -157,4 +158,65 @@ public sealed class ContextCaptureService
             try { File.Delete(temporary); } catch { }
         }
     }
+
+    private static UiObserveResult ToPublic(DesktopWindowSnapshot snapshot) => new(
+        snapshot.Cursor,
+        snapshot.SessionId,
+        snapshot.ObservedAt,
+        snapshot.Windows.Select(window => new UiWindowResult(
+            window.WindowId,
+            window.Incarnation,
+            window.ProcessId,
+            window.ProcessName,
+            window.Title,
+            window.ClassName,
+            window.Visible,
+            window.Minimized,
+            window.Foreground,
+            new UiWindowBoundsResult(window.Left, window.Top, window.Right, window.Bottom),
+            window.Uia is null ? null : new UiUiaRootResult(
+                window.Uia.Name,
+                window.Uia.AutomationId,
+                window.Uia.ControlType,
+                window.Uia.FrameworkId,
+                window.Uia.ClassName,
+                window.Uia.Enabled,
+                window.Uia.Offscreen))).ToArray());
+
+    private static UiQueryResult ToPublic(UiaQuerySnapshot snapshot) => new(
+        snapshot.Cursor,
+        snapshot.WindowId,
+        snapshot.WindowIncarnation,
+        snapshot.ObservedAt,
+        snapshot.Truncated,
+        snapshot.Elements.Select(element => new UiElementResult(
+            element.ElementId,
+            element.Incarnation,
+            element.ParentElementId,
+            element.Depth,
+            element.Name,
+            element.AutomationId,
+            element.ControlType,
+            element.FrameworkId,
+            element.ClassName,
+            element.Enabled,
+            element.Offscreen,
+            element.Focused,
+            new UiWindowBoundsResult(
+                element.Left,
+                element.Top,
+                element.Right,
+                element.Bottom))).ToArray());
+
+    private static BrowserObserveResult ToPublic(BrowserTargetSnapshot snapshot) => new(
+        snapshot.Cursor,
+        snapshot.ObservedAt,
+        snapshot.BrowserVersion,
+        snapshot.ProtocolVersion,
+        snapshot.Targets.Select(target => new BrowserTargetResult(
+            target.TargetId,
+            target.Incarnation,
+            target.Type,
+            target.Title,
+            target.Url)).ToArray());
 }

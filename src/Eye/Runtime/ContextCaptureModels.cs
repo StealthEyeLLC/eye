@@ -1,14 +1,15 @@
 using System.Text.Json.Serialization;
+using StealthEye.Contract;
 
 namespace StealthEye.Runtime;
 
 public sealed record ContextCaptureDocument(
     [property: JsonPropertyName("captured_at")] DateTimeOffset CapturedAt,
     [property: JsonPropertyName("mission")] MissionBlackboardRecord Mission,
-    [property: JsonPropertyName("desktop")] DesktopWindowSnapshot? Desktop,
-    [property: JsonPropertyName("foreground_uia")] UiaQuerySnapshot? ForegroundUia,
+    [property: JsonPropertyName("desktop")] UiObserveResult? Desktop,
+    [property: JsonPropertyName("foreground_uia")] UiQueryResult? ForegroundUia,
     [property: JsonPropertyName("screenshot")] DesktopCaptureSnapshot? Screenshot,
-    [property: JsonPropertyName("browser")] BrowserTargetSnapshot? Browser,
+    [property: JsonPropertyName("browser")] BrowserObserveResult? Browser,
     [property: JsonPropertyName("desktop_error")] string? DesktopError,
     [property: JsonPropertyName("uia_error")] string? UiaError,
     [property: JsonPropertyName("capture_error")] string? CaptureError,

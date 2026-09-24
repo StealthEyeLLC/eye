@@ -139,15 +139,74 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
         if (_chrome.HasExited)
             throw new InvalidOperationException($"Chrome exited with code {_chrome.ExitCode}.");
         var targets = await _http.GetFromJsonAsync<CdpTarget[]>(_baseUrl + "/json/list", cancellationToken) ?? [];
+        var mapped = new List<WorkerBrowserTargetInfo>(targets.Length);
+        foreach (var target in targets)
+        {
+            var type = target.Type ?? string.Empty;
+            var title = target.Title ?? string.Empty;
+            if (type == "page" && string.IsNullOrWhiteSpace(title))
+                title = await TryResolveDocumentTitleAsync(target, cancellationToken);
+
+            mapped.Add(new WorkerBrowserTargetInfo(
+                target.Id ?? string.Empty,
+                type,
+                title,
+                target.Url ?? string.Empty));
+        }
+
         return new WorkerBrowserTargetsResult(
             DateTimeOffset.UtcNow,
             BrowserVersion,
             ProtocolVersion,
-            targets.Select(target => new WorkerBrowserTargetInfo(
-                target.Id ?? string.Empty,
-                target.Type ?? string.Empty,
-                target.Title ?? string.Empty,
-                target.Url ?? string.Empty)).ToArray());
+            [.. mapped]);
+    }
+
+    private static async Task<string> TryResolveDocumentTitleAsync(
+        CdpTarget target,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(target.WebSocketDebuggerUrl) ||
+            !Uri.TryCreate(target.WebSocketDebuggerUrl, UriKind.Absolute, out var socket) ||
+            !socket.IsLoopback)
+            return target.Title ?? string.Empty;
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                await using var client = await BrowserCdpClient.ConnectAsync(socket, cancellationToken);
+                var result = await client.CallAsync(
+                    "Runtime.evaluate",
+                    new
+                    {
+                        expression = "document.title",
+                        returnByValue = true,
+                        awaitPromise = false
+                    },
+                    cancellationToken);
+                var remote = result.GetProperty("result");
+                if (remote.TryGetProperty("value", out var value) &&
+                    value.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    var title = value.GetString();
+                    if (!string.IsNullOrWhiteSpace(title))
+                        return title;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+            }
+
+            if (attempt < 4)
+                await Task.Delay(50, cancellationToken);
+        }
+
+        return target.Title ?? string.Empty;
     }
 
     internal async Task<WorkerBrowserNavigateResult> NavigateAsync(
