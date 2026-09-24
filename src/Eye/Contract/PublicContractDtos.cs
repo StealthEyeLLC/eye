@@ -1,8 +1,28 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace StealthEye.Contract;
 
 public sealed record EmptyArgs;
+public sealed record ActionPostconditionArgs(
+    [property: JsonPropertyName("kind")] string Kind,
+    [property: JsonPropertyName("spec")] JsonElement Spec);
+
+public sealed record ActionIdArgs(
+    [property: JsonPropertyName("action_id")] string ActionId);
+
+public sealed record ActionStatusResult(
+    [property: JsonPropertyName("action_id")] string ActionId,
+    [property: JsonPropertyName("task_id")] string TaskId,
+    [property: JsonPropertyName("capability")] string Capability,
+    [property: JsonPropertyName("input_sha256")] string InputSha256,
+    [property: JsonPropertyName("state")] string State,
+    [property: JsonPropertyName("postcondition_kind"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PostconditionKind,
+    [property: JsonPropertyName("evidence_json"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? EvidenceJson,
+    [property: JsonPropertyName("result_json"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ResultJson,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt,
+    [property: JsonPropertyName("verified_at"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DateTimeOffset? VerifiedAt);
 
 public sealed record RunArgs(
     [property: JsonPropertyName("file_name")] string FileName,

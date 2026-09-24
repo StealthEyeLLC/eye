@@ -17,6 +17,7 @@ public sealed record EyeToolDescriptor(
     [property: JsonPropertyName("description")] string Description,
     [property: JsonPropertyName("machine_effects")] string MachineEffects,
     [property: JsonPropertyName("operations")] EyeOperationDescriptor[] Operations,
+    [property: JsonPropertyName("supports_action_envelope")] bool SupportsActionEnvelope = false,
     [property: JsonPropertyName("ui_only")] bool UiOnly = false,
     [property: JsonPropertyName("resource_uri")] string? ResourceUri = null,
     [property: JsonPropertyName("input_schema")] JsonElement? InputSchema = null,
@@ -108,7 +109,7 @@ public sealed class EyeContractCatalog
 
     private static void Validate(EyeContractManifest manifest)
     {
-        if (manifest.Contract != "stealtheye.eye.mcp" || manifest.Version != "2.0.0")
+        if (manifest.Contract != "stealtheye.eye.mcp" || manifest.Version != "2.1.0")
             throw new InvalidOperationException("Unexpected public contract identity or version.");
         if (manifest.Status != "canonical-target" || manifest.PublicationState != "not-live-until-generated")
             throw new InvalidOperationException("The v2 contract must remain a non-live canonical target during Phase 1.");

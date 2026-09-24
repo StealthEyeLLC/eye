@@ -1,6 +1,6 @@
 {
   "contract": "stealtheye.eye.mcp",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "status": "canonical-target",
   "publication_state": "not-live-until-generated",
   "supersedes": "contracts/eye-mcp-v1.json",
@@ -29,6 +29,36 @@
               "started_at": { "type": "string", "format": "date-time" }
             },
             "required": ["product", "executable", "version", "contract", "process_id", "machine", "identity", "started_at"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "action.status",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "action_id": { "type": "string", "minLength": 1, "maxLength": 256 }
+            },
+            "required": ["action_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "action_id": { "type": "string" },
+              "task_id": { "type": "string" },
+              "capability": { "type": "string" },
+              "input_sha256": { "type": "string", "minLength": 64, "maxLength": 64 },
+              "state": { "type": "string" },
+              "postcondition_kind": { "type": "string" },
+              "evidence_json": { "type": "string" },
+              "result_json": { "type": "string" },
+              "created_at": { "type": "string", "format": "date-time" },
+              "updated_at": { "type": "string", "format": "date-time" },
+              "verified_at": { "type": "string", "format": "date-time" }
+            },
+            "required": ["action_id", "task_id", "capability", "input_sha256", "state", "created_at", "updated_at"],
             "additionalProperties": false
           }
         },
@@ -529,6 +559,7 @@
       "effect_class": "run",
       "description": "Run SYSTEM, active-user, WSL, process, PowerShell, terminal, and ConPTY execution operations.",
       "machine_effects": "local-execution",
+      "supports_action_envelope": true,
       "operations": [
         {
           "id": "run",
@@ -678,6 +709,7 @@
       "effect_class": "change",
       "description": "Apply precisely typed local file, machine, service, package, storage, snapshot, and configuration changes.",
       "machine_effects": "local-write",
+      "supports_action_envelope": true,
       "operations": [
         {
           "id": "engine.activate",
@@ -788,6 +820,7 @@
       "effect_class": "interact",
       "description": "Interact with Windows applications, UI Automation, input, clipboard, and Chrome/CDP user interfaces.",
       "machine_effects": "interactive",
+      "supports_action_envelope": true,
       "operations": [
         {
           "id": "ui.act",
@@ -875,6 +908,7 @@
       "effect_class": "external",
       "description": "Perform HTTP, upload, send, post, provider administration, remote transfer, and other effects leaving the laptop.",
       "machine_effects": "open-world",
+      "supports_action_envelope": true,
       "operations": []
     },
     {

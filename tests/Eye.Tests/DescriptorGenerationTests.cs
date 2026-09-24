@@ -14,13 +14,14 @@ public sealed class DescriptorGenerationTests
 
         Assert.Equal(
             [
-                "artifact.delete", "artifact.diff", "artifact.export", "artifact.info", "artifact.preview", "artifact.read_range",
+                "action.status", "artifact.delete", "artifact.diff", "artifact.export", "artifact.info", "artifact.preview", "artifact.read_range",
                 "browser.evaluate", "browser.navigate", "browser.observe", "capabilities", "engine.activate", "engine.restart", "engine.rollback", "engine.status", "job.attach", "job.cancel", "job.read",
                 "job.resize", "job.result", "job.start", "job.status", "job.wait", "job.write", "run", "system.status", "ui.act", "ui.observe", "ui.query"
             ],
             contract.PublishedOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Equal(["browser.evaluate", "browser.navigate", "browser.observe", "ui.act", "ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Equal("eye_inspect", contract.GetToolForOperation("system.status").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("action.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("engine.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("job.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("job.attach").Name);
@@ -47,8 +48,8 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(["eye_inspect", "eye_run", "eye_change", "eye_interact", "eye_live"], descriptors.Select(x => x.Name).ToArray());
 
         var inspect = descriptors.Single(x => x.Name == "eye_inspect");
-        Assert.Equal(15, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(30, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(16, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(32, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var run = descriptors.Single(x => x.Name == "eye_run");
         Assert.Equal(5, run.InputSchema.GetProperty("oneOf").GetArrayLength());
@@ -61,6 +62,18 @@ public sealed class DescriptorGenerationTests
             "job.write",
             run.InputSchema.GetProperty("oneOf").EnumerateArray()
                 .Select(x => x.GetProperty("properties").GetProperty("op").GetProperty("const").GetString()));
+        // Mutating facades support action envelopes without making them mandatory.
+        foreach (var variant in run.InputSchema.GetProperty("oneOf").EnumerateArray())
+        {
+            var properties = variant.GetProperty("properties");
+            Assert.True(properties.TryGetProperty("task_id", out _));
+            Assert.True(properties.TryGetProperty("action_id", out _));
+            Assert.True(properties.TryGetProperty("postcondition", out _));
+            var required = variant.GetProperty("required").EnumerateArray().Select(x => x.GetString()).ToArray();
+            Assert.DoesNotContain("task_id", required);
+            Assert.DoesNotContain("action_id", required);
+            Assert.DoesNotContain("postcondition", required);
+        }
 
         var change = descriptors.Single(x => x.Name == "eye_change");
         Assert.Equal(5, change.InputSchema.GetProperty("oneOf").GetArrayLength());
@@ -84,6 +97,7 @@ public sealed class DescriptorGenerationTests
     {
         var contract = EyeContractCatalog.Load();
         var systemStatus = Operation(contract, "system.status");
+        var actionStatus = Operation(contract, "action.status");
         var engineStatus = Operation(contract, "engine.status");
         var engineActivate = Operation(contract, "engine.activate");
         var engineRestart = Operation(contract, "engine.restart");
@@ -113,6 +127,8 @@ public sealed class DescriptorGenerationTests
         var browserEvaluate = Operation(contract, "browser.evaluate");
 
         AssertPropertySet<SystemStatusResult>(systemStatus.ResultSchema);
+        AssertPropertySet<ActionIdArgs>(actionStatus.ArgsSchema);
+        AssertPropertySet<ActionStatusResult>(actionStatus.ResultSchema);
         AssertPropertySet<EmptyArgs>(engineStatus.ArgsSchema);
         AssertPropertySet<EngineStatusResult>(engineStatus.ResultSchema);
         AssertPropertySet<EngineActivateArgs>(engineActivate.ArgsSchema);

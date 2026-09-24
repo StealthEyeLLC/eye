@@ -13,11 +13,65 @@ public enum EyeEffectClass
     External
 }
 
-public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null, UiaActionService? uiaActionService = null, BrowserObservationService? browserObservationService = null, BrowserControlService? browserControlService = null)
+public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null, UiaActionService? uiaActionService = null, BrowserObservationService? browserObservationService = null, BrowserControlService? browserControlService = null, ActionJournalStore? actionJournalStore = null, ConsequentialActionRunner? consequentialActionRunner = null, ActionReconciler? actionReconciler = null)
 {
     private const int FastCompletionWindowMs = 1000;
     private const long InlineOutputLimitBytes = 262_144;
 
+    public async Task<object> ExecuteAsync(
+        EyeEffectClass effectClass,
+        string op,
+        JsonElement? args,
+        ActionExecutionEnvelope? actionEnvelope,
+        CancellationToken cancellationToken = default)
+    {
+        if (actionEnvelope is null || actionEnvelope.IsEmpty)
+            return await ExecuteAsync(effectClass, op, args, cancellationToken);
+
+        try
+        {
+            var requiredClass = GetEffectClass(op);
+            if (requiredClass is null || requiredClass.Value != effectClass)
+                return await ExecuteAsync(effectClass, op, args, cancellationToken);
+
+            ValidateActionEnvelope(actionEnvelope);
+            var inputSha256 = ActionInputHasher.Compute(effectClass, op, args, actionEnvelope);
+            var request = new ConsequentialActionRequest(
+                actionEnvelope.TaskId!,
+                actionEnvelope.ActionId!,
+                $"{GetFacadeName(effectClass)}:{op}",
+                inputSha256,
+                actionEnvelope.Postcondition!);
+
+            var outcome = await RequireConsequentialActionRunner().ExecuteAsync(
+                request,
+                async ct => (object?)await ExecuteAsync(effectClass, op, args, ct),
+                cancellationToken);
+
+            if (outcome.Disposition == ActionReservationDisposition.InspectBeforeReplay)
+            {
+                await RequireActionReconciler().InspectUnknownAsync(
+                    actionEnvelope.ActionId!,
+                    cancellationToken);
+                var reconciled = RequireActionJournalStore().GetRequired(actionEnvelope.ActionId!);
+                return MaterializeActionResult(op, reconciled);
+            }
+
+            return MaterializeActionResult(op, outcome.Action);
+        }
+        catch (ArgumentException ex)
+        {
+            return Failure(op, "invalid_argument", ex.Message, true);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return Failure(op, "request_cancelled", "The Eye request was cancelled.", true);
+        }
+        catch (Exception ex)
+        {
+            return Failure(op, "operation_failed", ex.Message, false);
+        }
+    }
     public async Task<object> ExecuteAsync(
         EyeEffectClass effectClass,
         string op,
@@ -52,11 +106,16 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                         WindowsIdentity.GetCurrent().Name,
                         System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime()));
 
+                case "action.status":
+                {
+                    var request = DeserializeRequired<ActionIdArgs>(op, args);
+                    return Success(op, ToPublic(RequireActionJournalStore().GetRequired(request.ActionId)));
+                }
                 case "capabilities":
                     return Success(op, new CapabilitiesResult(
                         "eye-mcp-v2",
                         new CapabilityFacades(
-                            ["system.status", "capabilities", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff", "ui.observe", "ui.query", "browser.observe"],
+                            ["system.status", "capabilities", "action.status", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff", "ui.observe", "ui.query", "browser.observe"],
                             ["run", "job.start", "job.write", "job.resize", "job.cancel"],
                             ["engine.activate", "engine.restart", "engine.rollback", "artifact.export", "artifact.delete"],
                             ["ui.act", "browser.navigate", "browser.evaluate"],
@@ -399,6 +458,96 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
     }
 
 
+    private static void ValidateActionEnvelope(ActionExecutionEnvelope envelope)
+    {
+        if (string.IsNullOrWhiteSpace(envelope.TaskId) ||
+            string.IsNullOrWhiteSpace(envelope.ActionId) ||
+            envelope.Postcondition is null)
+            throw new ArgumentException(
+                "task_id, action_id, and postcondition must be supplied together for idempotent execution.");
+
+        if (envelope.TaskId.Length > 256)
+            throw new ArgumentException("task_id must contain at most 256 characters.");
+        if (envelope.ActionId.Length > 256)
+            throw new ArgumentException("action_id must contain at most 256 characters.");
+        if (envelope.Postcondition.Kind is not (FilePostconditionInspector.InspectorKind or CommandPostconditionInspector.InspectorKind))
+            throw new ArgumentException("postcondition.kind must be file or command.");
+
+        using var spec = JsonDocument.Parse(envelope.Postcondition.SpecJson);
+        if (spec.RootElement.ValueKind != JsonValueKind.Object)
+            throw new ArgumentException("postcondition.spec must be a JSON object.");
+    }
+
+    private object MaterializeActionResult(string op, ActionRecord action)
+    {
+        if (action.State == ActionStates.Verified)
+        {
+            if (TryReadEyeResult(action.ResultJson, out var prior))
+                return prior;
+
+            return Failure(
+                op,
+                "action_verified_result_unavailable",
+                "The action is verified and was not replayed, but its original operation result is unavailable.",
+                false,
+                ToPublic(action));
+        }
+
+        if (action.State == ActionStates.Failed)
+        {
+            if (TryReadEyeResult(action.ResultJson, out var prior) &&
+                prior.TryGetProperty("ok", out var ok) &&
+                ok.ValueKind == JsonValueKind.False)
+                return prior;
+
+            return Failure(
+                op,
+                "postcondition_failed",
+                "The operation ran but its deterministic postcondition did not pass.",
+                false,
+                ToPublic(action));
+        }
+
+        if (action.State == ActionStates.OutcomeUnknown)
+        {
+            return Failure(
+                op,
+                "action_outcome_unknown",
+                "The prior action outcome remains unknown and will not be replayed automatically.",
+                false,
+                ToPublic(action));
+        }
+
+        return Failure(
+            op,
+            "action_in_progress",
+            "The same action_id is already reserved or running.",
+            true,
+            ToPublic(action));
+    }
+
+    private static bool TryReadEyeResult(string? json, out JsonElement result)
+    {
+        result = default;
+        if (string.IsNullOrWhiteSpace(json))
+            return false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty("ok", out var ok) ||
+                ok.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                return false;
+
+            result = document.RootElement.Clone();
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
     private static void ValidateJobStartRequest(JobStartArgs request)
     {
         if (request.Columns is < 1 or > short.MaxValue)
@@ -431,6 +580,18 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
             ?? throw new ArgumentException($"Unable to deserialize {op} args.");
     }
 
+    private static ActionStatusResult ToPublic(ActionRecord action) => new(
+        action.ActionId,
+        action.TaskId,
+        action.Capability,
+        action.InputSha256,
+        action.State,
+        action.Postcondition?.Kind,
+        action.EvidenceJson,
+        action.ResultJson,
+        action.CreatedAt,
+        action.UpdatedAt,
+        action.VerifiedAt);
     private static JobStatusResult ToPublic(JobRecord job) => new(
         job.JobId,
         job.Incarnation,
@@ -457,6 +618,14 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         status.ProcessId,
         status.LastError);
 
+    private ActionJournalStore RequireActionJournalStore() =>
+        actionJournalStore ?? throw new InvalidOperationException("Action journal is not configured.");
+
+    private ConsequentialActionRunner RequireConsequentialActionRunner() =>
+        consequentialActionRunner ?? throw new InvalidOperationException("Consequential action runner is not configured.");
+
+    private ActionReconciler RequireActionReconciler() =>
+        actionReconciler ?? throw new InvalidOperationException("Action reconciler is not configured.");
     private BrowserObservationService RequireBrowserObservationService() =>
         browserObservationService ?? throw new InvalidOperationException("Browser observation service is not configured.");
 
@@ -494,7 +663,7 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
 
     private static EyeEffectClass? GetEffectClass(string op) => op switch
     {
-        "system.status" or "capabilities" or "engine.status" or "job.status" or "job.read" or "job.wait" or "job.result" or "job.attach" or
+        "system.status" or "capabilities" or "action.status" or "engine.status" or "job.status" or "job.read" or "job.wait" or "job.result" or "job.attach" or
         "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" or "ui.observe" or "ui.query" or "browser.observe" => EyeEffectClass.Inspect,
         "run" or "job.start" or "job.write" or "job.resize" or "job.cancel" => EyeEffectClass.Run,
         "engine.activate" or "engine.restart" or "engine.rollback" or "artifact.export" or "artifact.delete" => EyeEffectClass.Change,

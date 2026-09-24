@@ -2,7 +2,7 @@
 
 **Status:** Canonical public-interface design  
 **Baseline date:** 2026-08-07  
-**Canonical target contract:** v2
+**Canonical target contract:** v2.1
 
 ## Purpose
 
@@ -94,6 +94,20 @@ Each structured operation result declares an exact `outputSchema`.
 
 Routine domain errors return typed structured errors. Do not leak arbitrary exception types, stack traces, or implementation internals into model-visible results.
 
+## Consequential action envelope
+
+Starting with v2.1, the four effectful facades eye_run, eye_change, eye_interact, and eye_external accept an optional action envelope alongside op and args.
+
+The envelope fields are task_id, action_id, and postcondition. They are all-or-none. Omitting all three preserves the existing v2 call shape. Supplying all three opts the operation into durable idempotency.
+
+The Core reserves action_id before dispatch, stores a deterministic hash of task + operation + arguments + postcondition, and will not re-execute the same action while it is running or after it is verified. A duplicate action_id with different inputs is rejected. If the host dies after dispatch, recovery moves the action to outcome_unknown; the Core inspects the registered postcondition before any replay and never guesses that an unknown outcome is safe to repeat.
+
+Supported deterministic postconditions are:
+
+- file: verifies a path, minimum byte count, and optionally SHA-256.
+- command: runs a bounded observational command and verifies exit code plus optional stdout/stderr containment.
+
+eye_inspect exposes action.status for the durable action state and evidence. The public operation result shape remains unchanged for successful first executions and normal duplicate returns.
 ## Result semantics
 
 The logical result envelope contains a stable operation/status identity and the typed result, job, artifact, stream, or error information needed for continuation.

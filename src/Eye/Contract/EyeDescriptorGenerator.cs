@@ -33,6 +33,22 @@ public static class EyeDescriptorGenerator
                 ["op"] = new JsonObject { ["const"] = operation.Id },
                 ["args"] = Clone(operation.ArgsSchema)
             };
+            if (tool.SupportsActionEnvelope)
+            {
+                properties["task_id"] = new JsonObject
+                {
+                    ["type"] = "string",
+                    ["minLength"] = 1,
+                    ["maxLength"] = 256
+                };
+                properties["action_id"] = new JsonObject
+                {
+                    ["type"] = "string",
+                    ["minLength"] = 1,
+                    ["maxLength"] = 256
+                };
+                properties["postcondition"] = BuildPostconditionSchema();
+            }
             var required = new JsonArray("op");
             if (operation.ArgsRequired)
                 required.Add("args");
@@ -51,6 +67,25 @@ public static class EyeDescriptorGenerator
             : new JsonObject { ["oneOf"] = new JsonArray(variants) };
     }
 
+    private static JsonNode BuildPostconditionSchema() => new JsonObject
+    {
+        ["type"] = "object",
+        ["properties"] = new JsonObject
+        {
+            ["kind"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["enum"] = new JsonArray("file", "command")
+            },
+            ["spec"] = new JsonObject
+            {
+                ["type"] = "object",
+                ["additionalProperties"] = true
+            }
+        },
+        ["required"] = new JsonArray("kind", "spec"),
+        ["additionalProperties"] = false
+    };
     private static JsonNode BuildOutputSchema(EyeContractCatalog contract, EyeToolDescriptor tool)
     {
         if (tool.UiOnly)

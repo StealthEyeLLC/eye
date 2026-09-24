@@ -49,6 +49,7 @@ builder.Services.AddSingleton<ProcessRunner>();
 builder.Services.AddSingleton<JobStore>();
 builder.Services.AddSingleton<ActionJournalStore>();
 builder.Services.AddSingleton<IPostconditionInspector, FilePostconditionInspector>();
+builder.Services.AddSingleton<IPostconditionInspector, CommandPostconditionInspector>();
 builder.Services.AddSingleton<PostconditionInspectorRegistry>();
 builder.Services.AddSingleton<ActionReconciler>();
 builder.Services.AddSingleton<ConsequentialActionRunner>();
@@ -101,5 +102,3 @@ app.MapGet("/health", () => Results.Json(new
 app.MapMcp("/mcp");
 
 await app.RunAsync();
-
-

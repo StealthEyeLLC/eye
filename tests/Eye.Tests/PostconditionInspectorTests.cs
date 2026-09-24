@@ -1,4 +1,4 @@
-﻿using StealthEye.Runtime;
+using StealthEye.Runtime;
 
 namespace Eye.Tests;
 
@@ -47,10 +47,27 @@ public sealed class PostconditionInspectorTests : IDisposable
         Assert.Equal("file_too_small", result.FailureCode);
     }
 
+    [Fact]
+    public async Task CommandInspector_RequiresExpectedObservableResult()
+    {
+        var inspector = new CommandPostconditionInspector(new ProcessRunner());
+        var result = await inspector.InspectAsync(
+            System.Text.Json.JsonSerializer.Serialize(new
+            {
+                context = "system",
+                file_name = "cmd.exe",
+                arguments = new[] { "/d", "/c", "echo READY" },
+                timeout_ms = 5000,
+                expected_exit_code = 0,
+                stdout_contains = "READY"
+            }));
+
+        Assert.True(result.Satisfied, result.EvidenceJson);
+        Assert.Contains("stdout_satisfied", result.EvidenceJson, StringComparison.Ordinal);
+    }
     public void Dispose()
     {
         if (Directory.Exists(_root))
             Directory.Delete(_root, recursive: true);
     }
 }
-
