@@ -54,7 +54,7 @@ contracts/eye-mcp-v2.json
 
 The six v2 tool names are frozen.
 
-The checked-in implementation may lag the target contract while the stable host/generator/UI are built. Do not advertise v2 as live until the activation gates in `eye-mcp-v2.json` are satisfied.
+The v2.1 generated public surface and activation gates are complete and frozen. The contract remains non-live until the runtime cutover gate is executed and verified; generation completion alone does not replace the production service.
 
 ## Generated contract rule
 

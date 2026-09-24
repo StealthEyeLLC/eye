@@ -54,6 +54,10 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(32, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var run = descriptors.Single(x => x.Name == "eye_run");
+        AssertPropertySet<ActionPostconditionArgs>(
+            run.InputSchema.GetProperty("oneOf")[0]
+                .GetProperty("properties")
+                .GetProperty("postcondition"));
         Assert.Equal(5, run.InputSchema.GetProperty("oneOf").GetArrayLength());
         Assert.Equal(10, run.OutputSchema.GetProperty("oneOf").GetArrayLength());
         Assert.Contains(
@@ -264,6 +268,7 @@ public sealed class DescriptorGenerationTests
     public void PublicDtos_MatchCurrentContractPropertySets()
     {
         var contract = EyeContractCatalog.Load();
+        AssertPropertySet<EyeError>(contract.Manifest.ErrorSchema);
         var systemStatus = Operation(contract, "system.status");
         var actionStatus = Operation(contract, "action.status");
         var engineStatus = Operation(contract, "engine.status");
@@ -417,16 +422,219 @@ public sealed class DescriptorGenerationTests
     private static EyeOperationDescriptor Operation(EyeContractCatalog contract, string id) =>
         contract.Descriptors.SelectMany(x => x.Operations).Single(x => x.Id == id);
 
-    private static void AssertPropertySet<T>(JsonElement schema)
-    {
-        var schemaNames = schema.TryGetProperty("properties", out var properties)
-            ? properties.EnumerateObject().Select(x => x.Name).Order(StringComparer.Ordinal).ToArray()
-            : [];
-        var dtoNames = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Select(x => x.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? x.Name)
-            .Order(StringComparer.Ordinal)
-            .ToArray();
+    private static readonly NullabilityInfoContext Nullability = new();
 
-        Assert.Equal(schemaNames, dtoNames);
+    private static void AssertPropertySet<T>(JsonElement schema) =>
+        AssertDtoMatchesSchema(typeof(T), schema, typeof(T).Name);
+
+    private static void AssertDtoMatchesSchema(Type dtoType, JsonElement schema, string path)
+    {
+        var schemaProperties = schema.TryGetProperty("properties", out var properties)
+            ? properties.EnumerateObject().ToDictionary(x => x.Name, x => x.Value, StringComparer.Ordinal)
+            : new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        var dtoProperties = dtoType
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .ToDictionary(
+                x => x.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? x.Name,
+                x => x,
+                StringComparer.Ordinal);
+
+        Assert.Equal(
+            schemaProperties.Keys.Order(StringComparer.Ordinal),
+            dtoProperties.Keys.Order(StringComparer.Ordinal));
+
+        var required = schema.TryGetProperty("required", out var requiredNode)
+            ? requiredNode.EnumerateArray().Select(x => x.GetString()!).ToHashSet(StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+
+        var constructor = dtoType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .OrderByDescending(x => x.GetParameters().Length)
+            .FirstOrDefault();
+        var parameters = constructor?.GetParameters()
+            .ToDictionary(x => x.Name!, StringComparer.OrdinalIgnoreCase)
+            ?? new Dictionary<string, ParameterInfo>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var pair in schemaProperties)
+        {
+            var property = dtoProperties[pair.Key];
+            var propertyPath = path + "." + pair.Key;
+            AssertClrTypeMatchesSchema(property.PropertyType, pair.Value, propertyPath);
+
+            parameters.TryGetValue(property.Name, out var parameter);
+            var isRequired = required.Contains(pair.Key);
+            var isNullable = IsNullable(property);
+
+            if (isRequired && !property.PropertyType.IsValueType)
+            {
+                Assert.False(
+                    isNullable,
+                    $"{propertyPath} is required by contract but nullable in DTO {dtoType.Name}.");
+            }
+
+            if (!isRequired)
+            {
+                Assert.True(
+                    isNullable || parameter?.HasDefaultValue == true,
+                    $"{propertyPath} is optional in contract but has neither nullable type nor constructor default.");
+            }
+
+            if (pair.Value.TryGetProperty("default", out var defaultValue) &&
+                defaultValue.ValueKind is not JsonValueKind.Array and not JsonValueKind.Object)
+            {
+                Assert.NotNull(parameter);
+                Assert.True(
+                    parameter!.HasDefaultValue,
+                    $"{propertyPath} declares a scalar contract default but DTO parameter has no default.");
+                AssertDefaultMatches(parameter.DefaultValue, defaultValue, propertyPath);
+            }
+        }
+    }
+
+    private static void AssertClrTypeMatchesSchema(Type clrType, JsonElement schema, string path)
+    {
+        var underlying = Nullable.GetUnderlyingType(clrType) ?? clrType;
+        var schemaType = SchemaType(schema);
+
+        switch (schemaType)
+        {
+            case "string":
+                if (schema.TryGetProperty("format", out var format) &&
+                    string.Equals(format.GetString(), "date-time", StringComparison.Ordinal))
+                {
+                    Assert.True(
+                        underlying == typeof(DateTimeOffset) || underlying == typeof(DateTime),
+                        $"{path} expected date-time CLR type but found {underlying}.");
+                }
+                else
+                {
+                    Assert.Equal(typeof(string), underlying);
+                }
+                return;
+
+            case "integer":
+                Assert.True(
+                    underlying == typeof(int) || underlying == typeof(long),
+                    $"{path} expected integer CLR type but found {underlying}.");
+                return;
+
+            case "number":
+                Assert.True(
+                    underlying == typeof(double) ||
+                    underlying == typeof(float) ||
+                    underlying == typeof(decimal),
+                    $"{path} expected numeric CLR type but found {underlying}.");
+                return;
+
+            case "boolean":
+                Assert.Equal(typeof(bool), underlying);
+                return;
+
+            case "array":
+                Assert.True(underlying.IsArray, $"{path} expected CLR array but found {underlying}.");
+                Assert.True(schema.TryGetProperty("items", out var items), $"{path} array schema is missing items.");
+                AssertClrTypeMatchesSchema(
+                    underlying.GetElementType()!,
+                    items,
+                    path + "[]");
+                return;
+
+            case "any":
+                Assert.True(
+                    underlying == typeof(JsonElement) || underlying == typeof(object),
+                    $"{path} unconstrained JSON must bind to JsonElement or object, found {underlying}.");
+                return;
+
+            case "object":
+                if (underlying == typeof(JsonElement) || underlying == typeof(object))
+                    return;
+
+                Assert.False(
+                    underlying.IsPrimitive || underlying == typeof(string),
+                    $"{path} expected object DTO but found {underlying}.");
+                AssertDtoMatchesSchema(underlying, schema, path);
+                return;
+
+            default:
+                throw new Xunit.Sdk.XunitException(
+                    $"{path} uses unsupported schema type '{schemaType}'.");
+        }
+    }
+
+    private static string SchemaType(JsonElement schema)
+    {
+        if (schema.TryGetProperty("type", out var typeNode))
+            return typeNode.GetString()!;
+
+        if (schema.TryGetProperty("const", out var constNode))
+            return KindToSchemaType(constNode.ValueKind);
+
+        if (schema.TryGetProperty("enum", out var enumNode) &&
+            enumNode.ValueKind == JsonValueKind.Array &&
+            enumNode.GetArrayLength() > 0)
+            return KindToSchemaType(enumNode[0].ValueKind);
+
+        if (schema.TryGetProperty("properties", out _))
+            return "object";
+        if (schema.TryGetProperty("items", out _))
+            return "array";
+
+        if (!schema.EnumerateObject().Any())
+            return "any";
+
+        throw new Xunit.Sdk.XunitException(
+            $"Unable to infer schema type from {schema}.");
+    }
+
+    private static string KindToSchemaType(JsonValueKind kind) => kind switch
+    {
+        JsonValueKind.String => "string",
+        JsonValueKind.Number => "integer",
+        JsonValueKind.True or JsonValueKind.False => "boolean",
+        JsonValueKind.Object => "object",
+        JsonValueKind.Array => "array",
+        _ => throw new Xunit.Sdk.XunitException(
+            $"Unsupported JSON value kind for schema inference: {kind}.")
+    };
+
+    private static bool IsNullable(PropertyInfo property)
+    {
+        if (Nullable.GetUnderlyingType(property.PropertyType) is not null)
+            return true;
+        if (property.PropertyType.IsValueType)
+            return false;
+        return Nullability.Create(property).ReadState == NullabilityState.Nullable;
+    }
+
+    private static void AssertDefaultMatches(
+        object? actual,
+        JsonElement expected,
+        string path)
+    {
+        switch (expected.ValueKind)
+        {
+            case JsonValueKind.String:
+                Assert.Equal(expected.GetString(), actual as string);
+                break;
+            case JsonValueKind.Number:
+                if (actual is int intValue)
+                    Assert.Equal(expected.GetInt32(), intValue);
+                else if (actual is long longValue)
+                    Assert.Equal(expected.GetInt64(), longValue);
+                else
+                    throw new Xunit.Sdk.XunitException(
+                        $"{path} has unsupported numeric DTO default type {actual?.GetType()}.");
+                break;
+            case JsonValueKind.True:
+            case JsonValueKind.False:
+                Assert.IsType<bool>(actual);
+                Assert.Equal(expected.GetBoolean(), (bool)actual!);
+                break;
+            case JsonValueKind.Null:
+                Assert.Null(actual);
+                break;
+            default:
+                throw new Xunit.Sdk.XunitException(
+                    $"{path} has unsupported scalar default {expected}.");
+        }
     }
 }

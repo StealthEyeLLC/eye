@@ -12,7 +12,7 @@ public sealed class ContractBoundaryTests
         Assert.Equal("stealtheye.eye.mcp", contract.Manifest.Contract);
         Assert.Equal("2.1.0", contract.Manifest.Version);
         Assert.Equal("canonical-target", contract.Manifest.Status);
-        Assert.Equal("not-live-until-generated", contract.Manifest.PublicationState);
+        Assert.Equal("generated-not-live-until-cutover", contract.Manifest.PublicationState);
         Assert.Equal(
             ["eye_inspect", "eye_run", "eye_change", "eye_interact", "eye_external", "eye_live"],
             contract.Descriptors.Select(x => x.Name).ToArray());

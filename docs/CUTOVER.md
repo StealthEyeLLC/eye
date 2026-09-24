@@ -34,19 +34,19 @@ eye_external
 eye_live
 ```
 
-- [ ] `contracts/eye-mcp-v1.json` remains immutable historical material.
-- [ ] `contracts/eye-mcp-v2.json` is the canonical target contract.
-- [ ] exact descriptors/DTOs/host validation/registration/capabilities/server instructions/docs are generated from the contract source.
-- [ ] exact output schemas are published.
-- [ ] normalized `tools/list` snapshot test exists.
-- [ ] ordinary implementation changes fail if they accidentally mutate the public contract.
-- [ ] `eye_live` is UI-only; helper tools are app-only and absent from model selection.
-- [ ] wait/transfer are operation families, not extra top-level tools.
-- [ ] host/engine protocol is versioned separately from MCP contract.
-- [ ] engine handshake includes protocol version, build version, public contract hash, supported operation IDs, and worker protocol version.
-- [ ] incompatible engine cannot become active.
+- [x] `contracts/eye-mcp-v1.json` remains immutable historical material.
+- [x] `contracts/eye-mcp-v2.json` is the canonical target contract.
+- [x] exact descriptors/DTOs/host validation/registration/capabilities/server instructions/docs are generated from the contract source.
+- [x] exact output schemas are published.
+- [x] normalized `tools/list` snapshot test exists.
+- [x] ordinary implementation changes fail if they accidentally mutate the public contract.
+- [x] `eye_live` is UI-only; helper tools are app-only and absent from model selection.
+- [x] wait/transfer are operation families, not extra top-level tools.
+- [x] host/engine protocol is versioned separately from MCP contract.
+- [x] engine handshake includes protocol version, build version, public contract hash, supported operation IDs, and worker protocol version.
+- [x] incompatible engine cannot become active.
 
-Do not advertise v2 as live until its activation gate is met.
+Phase 1 activation gate is met. The canonical contract is generated but remains non-live until the runtime cutover gate is executed and verified.
 
 ## Phase 2 — stable host core
 

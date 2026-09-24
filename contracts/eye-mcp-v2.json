@@ -2,7 +2,7 @@
   "contract": "stealtheye.eye.mcp",
   "version": "2.1.0",
   "status": "canonical-target",
-  "publication_state": "not-live-until-generated",
+  "publication_state": "generated-not-live-until-cutover",
   "server_instructions": "STEALTHEYE is a privileged Windows capability substrate controlled by ChatGPT. Prefer precise typed operations, then direct CLI/file operations, then browser CDP, then Windows UI Automation, and use raw eye_run only when no narrower operation fits. Long work should become durable jobs; wait on events instead of polling; move large data by artifact reference. Reuse stable IDs, incarnations, and cursors. For consequential effects, use stable task_id/action_id plus a deterministic postcondition so retries are idempotent and evidence-backed. ChatGPT remains the planner; STEALTHEYE does not autonomously plan or declare unverified completion.",
   "supersedes": "contracts/eye-mcp-v1.json",
   "summary": "Five effect-class capability tools plus one UI-only Eye Live tool over one stable host and one supervised versioned capability engine.",

@@ -114,8 +114,8 @@ public sealed class EyeContractCatalog
             throw new InvalidOperationException("Unexpected public contract identity or version.");
         if (string.IsNullOrWhiteSpace(manifest.ServerInstructions) || manifest.ServerInstructions.Length > 4000)
             throw new InvalidOperationException("Public server instructions are missing or unreasonably large.");
-        if (manifest.Status != "canonical-target" || manifest.PublicationState != "not-live-until-generated")
-            throw new InvalidOperationException("The v2 contract must remain a non-live canonical target during Phase 1.");
+        if (manifest.Status != "canonical-target" || manifest.PublicationState != "generated-not-live-until-cutover")
+            throw new InvalidOperationException("The v2 contract must remain generated but non-live until runtime cutover.");
         if (!manifest.Tools.Select(x => x.Name).SequenceEqual(FrozenToolNames, StringComparer.Ordinal))
             throw new InvalidOperationException("The canonical v2 six-tool surface does not match the frozen tool names.");
         if (manifest.Tools.Select(x => x.Name).Distinct(StringComparer.Ordinal).Count() != FrozenToolNames.Length)

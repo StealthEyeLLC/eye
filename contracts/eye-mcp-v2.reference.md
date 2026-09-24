@@ -5,8 +5,8 @@
 - Contract: stealtheye.eye.mcp
 - Version: 2.1.0
 - Status: canonical-target
-- Publication state: not-live-until-generated
-- Canonical JSON SHA-256: 77cfb617107a41871401b507f94982c5ae2c4b2c617f42a8c9fb7fdb7c5dee6c
+- Publication state: generated-not-live-until-cutover
+- Canonical JSON SHA-256: 853025fa96bc227e73be63b572b3fc23cc028ad7f9ee9a2f0861e0a29374596a
 - Host/engine protocol: 1.0.0
 - Worker protocol: 1.0.0
 
