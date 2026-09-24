@@ -47,7 +47,7 @@ public sealed class DescriptorGenerationTests
     {
         var descriptors = EyeDescriptorGenerator.GenerateImplemented(EyeContractCatalog.Load());
 
-        Assert.Equal(["eye_inspect", "eye_run", "eye_change", "eye_interact", "eye_live"], descriptors.Select(x => x.Name).ToArray());
+        Assert.Equal(["eye_inspect", "eye_run", "eye_change", "eye_interact", "eye_external", "eye_live"], descriptors.Select(x => x.Name).ToArray());
 
         var inspect = descriptors.Single(x => x.Name == "eye_inspect");
         Assert.Equal(16, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
@@ -92,6 +92,15 @@ public sealed class DescriptorGenerationTests
         Assert.Contains("browser.navigate", interact.InputSchema.GetProperty("oneOf").EnumerateArray().Select(x => x.GetProperty("properties").GetProperty("op").GetProperty("const").GetString()));
         Assert.Contains("browser.evaluate", interact.InputSchema.GetProperty("oneOf").EnumerateArray().Select(x => x.GetProperty("properties").GetProperty("op").GetProperty("const").GetString()));
 
+        var external = descriptors.Single(x => x.Name == "eye_external");
+        Assert.Equal("object", external.InputSchema.GetProperty("type").GetString());
+        Assert.True(external.InputSchema.TryGetProperty("not", out var externalNot));
+        Assert.Equal(JsonValueKind.Object, externalNot.ValueKind);
+        Assert.Equal(
+            "No operations are currently published for this facade.",
+            external.InputSchema.GetProperty("description").GetString());
+        Assert.False(
+            external.OutputSchema.GetProperty("properties").GetProperty("ok").GetProperty("const").GetBoolean());
         var live = descriptors.Single(x => x.Name == "eye_live");
         AssertPropertySet<EmptyArgs>(live.InputSchema);
         AssertPropertySet<EyeLiveSnapshotResult>(live.OutputSchema);

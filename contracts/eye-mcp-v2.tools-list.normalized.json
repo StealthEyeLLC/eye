@@ -740,6 +740,65 @@
   {
     "_meta": null,
     "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true,
+      "readOnlyHint": false,
+      "title": "STEALTHEYE External"
+    },
+    "description": "Perform HTTP, upload, send, post, provider administration, remote transfer, and other effects leaving the laptop.",
+    "icons": null,
+    "inputSchema": {
+      "description": "No operations are currently published for this facade.",
+      "not": {},
+      "type": "object"
+    },
+    "name": "eye_external",
+    "outputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "expected": {
+              "type": "object"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "type": "object"
+        },
+        "ok": {
+          "const": false
+        },
+        "operation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "operation",
+        "error"
+      ],
+      "type": "object"
+    },
+    "title": "STEALTHEYE External"
+  },
+  {
+    "_meta": null,
+    "annotations": {
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false,

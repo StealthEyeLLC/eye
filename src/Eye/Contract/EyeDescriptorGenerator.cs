@@ -13,7 +13,6 @@ public static class EyeDescriptorGenerator
 {
     public static IReadOnlyList<GeneratedToolDescriptor> GenerateImplemented(EyeContractCatalog contract) =>
         contract.Descriptors
-            .Where(x => x.Operations.Length > 0 || x.UiOnly)
             .Select(x => new GeneratedToolDescriptor(
                 x.Name,
                 x.Description,
@@ -25,6 +24,16 @@ public static class EyeDescriptorGenerator
     {
         if (tool.UiOnly)
             return Clone(tool.InputSchema ?? throw new InvalidOperationException("UI tool input schema is missing."));
+
+        if (tool.Operations.Length == 0)
+        {
+            return new JsonObject
+            {
+                ["type"] = "object",
+                ["not"] = new JsonObject(),
+                ["description"] = "No operations are currently published for this facade."
+            };
+        }
 
         var variants = tool.Operations.Select(operation =>
         {
@@ -94,6 +103,22 @@ public static class EyeDescriptorGenerator
     {
         if (tool.UiOnly)
             return Clone(tool.ResultSchema ?? throw new InvalidOperationException("UI tool result schema is missing."));
+
+        if (tool.Operations.Length == 0)
+        {
+            return new JsonObject
+            {
+                ["type"] = "object",
+                ["properties"] = new JsonObject
+                {
+                    ["ok"] = new JsonObject { ["const"] = false },
+                    ["operation"] = new JsonObject { ["type"] = "string" },
+                    ["error"] = Clone(contract.Manifest.ErrorSchema)
+                },
+                ["required"] = new JsonArray("ok", "operation", "error"),
+                ["additionalProperties"] = false
+            };
+        }
 
         var variants = new List<JsonNode>();
         foreach (var operation in tool.Operations)

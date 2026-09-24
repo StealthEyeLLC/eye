@@ -65,10 +65,34 @@ public sealed class BrowserSessionTests
                 }
                 Assert.Throws<ArgumentException>(() => Process.GetProcessById(chromePid));
             }
-            if (Directory.Exists(profile)) Directory.Delete(profile, recursive: true);
+            await DeleteDirectoryEventuallyAsync(profile);
         }
     }
 
+    private static async Task DeleteDirectoryEventuallyAsync(string path)
+    {
+        if (!Directory.Exists(path))
+            return;
+
+        Exception? last = null;
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            try
+            {
+                Directory.Delete(path, recursive: true);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                last = ex;
+                await Task.Delay(100);
+            }
+        }
+
+        throw new IOException(
+            $"Browser test profile remained locked after browser process exit: {path}",
+            last);
+    }
     private static string WorkerExecutable()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
