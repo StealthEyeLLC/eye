@@ -98,7 +98,7 @@ public sealed class EngineInstance : IAsyncDisposable
                 throw new InvalidOperationException($"Eye engine exited before connecting with code {process.ExitCode}.");
             await connectTask;
 
-            rpc = new JsonRpc(EngineRpcTransport.CreateMessageHandler(pipe));
+            rpc = new JsonRpc(EyeRpcTransport.CreateMessageHandler(pipe));
             rpc.StartListening();
             var instance = new EngineInstance(process, jobHandle, pipe, rpc, executablePath);
 

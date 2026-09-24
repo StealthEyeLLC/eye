@@ -1,3 +1,4 @@
+using StealthEye.Contract;
 using ModelContextProtocol.Server;
 using StealthEye.Runtime;
 using StealthEye.Tools;
@@ -12,7 +13,14 @@ builder.WebHost.UseUrls(urls);
 
 builder.Services.AddSingleton<ProcessRunner>();
 builder.Services.AddSingleton<JobStore>();
+builder.Services.AddSingleton(sp => new SessionWorkerManager(
+    Environment.GetEnvironmentVariable("EYE_WORKER_EXE")
+        ?? builder.Configuration["Eye:WorkerExecutable"]
+        ?? Path.Combine(AppContext.BaseDirectory, "eye-worker.exe"),
+    WorkerRpcMethods.CurrentProtocolVersion));
 builder.Services.AddSingleton<ArtifactStore>();
+builder.Services.AddSingleton<TriggerStore>();
+builder.Services.AddSingleton<TriggerBroker>();
 builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EngineSupervisor>();
 builder.Services.AddSingleton<EyeDispatcher>();
@@ -24,6 +32,7 @@ builder.Services
 var app = builder.Build();
 _ = app.Services.GetRequiredService<JobStore>();
 _ = app.Services.GetRequiredService<ArtifactStore>();
+await app.Services.GetRequiredService<TriggerBroker>().InitializeAsync();
 var engineSupervisor = app.Services.GetRequiredService<EngineSupervisor>();
 await engineSupervisor.InitializeAsync();
 

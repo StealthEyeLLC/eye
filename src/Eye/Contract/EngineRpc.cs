@@ -11,19 +11,6 @@ public static class EngineRpcMethods
     public const string Shutdown = "engine.shutdown";
 }
 
-public static class EngineRpcTransport
-{
-    public static IJsonRpcMessageHandler CreateMessageHandler(Stream stream)
-    {
-        var formatter = new JsonMessageFormatter();
-        formatter.JsonSerializer.ContractResolver = new DefaultContractResolver
-        {
-            NamingStrategy = new SnakeCaseNamingStrategy()
-        };
-        return new HeaderDelimitedMessageHandler(stream, formatter);
-    }
-}
-
 public sealed record EnginePingResult(
     [property: JsonPropertyName("engine_version")] string EngineVersion,
     [property: JsonPropertyName("process_id")] int ProcessId);

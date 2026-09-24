@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Eye.Worker/Eye.Worker.csproj" />
     <Project Path="src/Eye/Eye.csproj" />
     <Project Path="src/Eye.Engine/Eye.Engine.csproj" />
   </Folder>

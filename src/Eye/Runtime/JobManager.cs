@@ -1,9 +1,10 @@
 using System.Collections.Concurrent;
 using System.Text;
+using StealthEye.Contract;
 
 namespace StealthEye.Runtime;
 
-public sealed class JobManager(JobStore store, ProcessRunner processRunner)
+public sealed class JobManager(JobStore store, ProcessRunner processRunner, SessionWorkerManager? sessionWorkers = null)
 {
     private readonly ConcurrentDictionary<string, ActiveJob> _active = new(StringComparer.Ordinal);
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
@@ -12,8 +13,11 @@ public sealed class JobManager(JobStore store, ProcessRunner processRunner)
     {
         if (string.IsNullOrWhiteSpace(request.FileName))
             throw new ArgumentException("file_name is required.", nameof(request));
-        if (terminal && !string.Equals(request.Context, "system", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Interactive terminals currently require context=system; active-user and WSL terminals use the later on-demand session worker.", nameof(request));
+        var terminalContext = request.Context.ToLowerInvariant();
+        if (terminal && terminalContext is not ("system" or "user" or "wsl"))
+            throw new ArgumentException("Terminal context must be system, user, or wsl.", nameof(request));
+        if (terminal && terminalContext != "system" && sessionWorkers is null)
+            throw new ArgumentException("Active-user and WSL terminals require the on-demand session worker.", nameof(request));
         if (terminal && (columns is < 1 or > short.MaxValue))
             throw new ArgumentException($"columns must be between 1 and {short.MaxValue}.", nameof(columns));
         if (terminal && (rows is < 1 or > short.MaxValue))
@@ -55,8 +59,8 @@ public sealed class JobManager(JobStore store, ProcessRunner processRunner)
         if (!_active.TryGetValue(jobId, out var active) || active.TerminalReady is null)
             throw new ArgumentException($"Terminal {jobId} is not attached to this host process.", nameof(jobId));
 
-        var session = await active.TerminalReady.Task.WaitAsync(cancellationToken);
-        return await session.WriteAsync(text, cancellationToken);
+        var terminalControl = await active.TerminalReady.Task.WaitAsync(cancellationToken);
+        return await terminalControl.WriteAsync(text, cancellationToken);
     }
 
     public JobRecord Resize(string jobId, int columns, int rows)
@@ -74,8 +78,8 @@ public sealed class JobManager(JobStore store, ProcessRunner processRunner)
         if (!_active.TryGetValue(jobId, out var active) || active.TerminalReady is null)
             throw new ArgumentException($"Terminal {jobId} is not attached to this host process.", nameof(jobId));
 
-        var session = active.TerminalReady.Task.GetAwaiter().GetResult();
-        session.Resize(columns, rows);
+        var terminalControl = active.TerminalReady.Task.GetAwaiter().GetResult();
+        terminalControl.ResizeAsync(columns, rows, CancellationToken.None).GetAwaiter().GetResult();
         return store.UpdateTerminalSize(jobId, columns, rows);
     }
     public async Task<JobWaitResult> WaitAsync(string jobId, int waitMs, CancellationToken cancellationToken = default)
@@ -273,7 +277,17 @@ decoded:
         }
     }
 
-    private async Task RunTerminalJobAsync(
+    private Task RunTerminalJobAsync(
+        JobRecord record,
+        RunRequest request,
+        ActiveJob active,
+        int columns,
+        int rows) =>
+        string.Equals(request.Context, "system", StringComparison.OrdinalIgnoreCase)
+            ? RunLocalTerminalJobAsync(record, request, active, columns, rows)
+            : RunSessionWorkerTerminalJobAsync(record, request, active, columns, rows);
+
+    private async Task RunLocalTerminalJobAsync(
         JobRecord record,
         RunRequest request,
         ActiveJob active,
@@ -296,7 +310,7 @@ decoded:
             };
 
             await using var session = ConPtySession.Start(request, columns, rows, hooks, active.Cancellation.Token);
-            active.TerminalReady!.TrySetResult(session);
+            active.TerminalReady!.TrySetResult(TerminalControl.ForLocal(session));
             var result = await session.Completion;
             var finalState = result.TimedOut ? JobStates.TimedOut : JobStates.Completed;
             Complete(active, store.Finish(record.JobId, finalState, result));
@@ -318,6 +332,97 @@ decoded:
         }
     }
 
+    private async Task RunSessionWorkerTerminalJobAsync(
+        JobRecord record,
+        RunRequest request,
+        ActiveJob active,
+        int columns,
+        int rows)
+    {
+        try
+        {
+            var manager = sessionWorkers
+                ?? throw new InvalidOperationException("Session worker manager is unavailable.");
+            await using var worker = await manager.StartAsync(active.Cancellation.Token);
+            await using var stdout = new FileStream(
+                record.StdoutPath,
+                FileMode.Append,
+                FileAccess.Write,
+                FileShare.ReadWrite,
+                65536,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+            var pumpTask = worker.CopyVtToAsync(stdout, CancellationToken.None);
+            var started = await worker.StartTerminalAsync(new WorkerTerminalStartRequest(
+                request.Context.ToLowerInvariant(),
+                request.FileName,
+                request.Arguments,
+                request.WorkingDirectory,
+                request.TimeoutMs,
+                columns,
+                rows), active.Cancellation.Token);
+            store.MarkRunning(record.JobId, started.ProcessId, started.EffectiveIdentity);
+            active.TerminalReady!.TrySetResult(TerminalControl.ForWorker(worker));
+
+            var exit = await worker.WaitTerminalAsync(active.Cancellation.Token);
+            await worker.StopAsync();
+            await pumpTask;
+            var result = new ProcessRunResult(
+                started.ProcessId,
+                exit.ExitCode,
+                exit.TimedOut,
+                string.Empty,
+                string.Empty,
+                request.Context.ToLowerInvariant(),
+                started.EffectiveIdentity,
+                exit.DurationMs);
+            var finalState = exit.TimedOut ? JobStates.TimedOut : JobStates.Completed;
+            Complete(active, store.Finish(record.JobId, finalState, result));
+        }
+        catch (OperationCanceledException) when (active.Cancellation.IsCancellationRequested)
+        {
+            active.TerminalReady?.TrySetCanceled(active.Cancellation.Token);
+            Complete(active, store.Finish(record.JobId, JobStates.Cancelled, failureCode: "cancelled", failureMessage: "Terminal cancelled."));
+        }
+        catch (Exception ex)
+        {
+            active.TerminalReady?.TrySetException(ex);
+            Complete(active, store.Finish(record.JobId, JobStates.Failed, failureCode: "terminal_failed", failureMessage: ex.Message));
+        }
+        finally
+        {
+            _active.TryRemove(record.JobId, out _);
+            active.Cancellation.Dispose();
+        }
+    }
+
+    private sealed class TerminalControl
+    {
+        private readonly Func<string, CancellationToken, Task<int>> _write;
+        private readonly Func<int, int, CancellationToken, Task> _resize;
+
+        private TerminalControl(
+            Func<string, CancellationToken, Task<int>> write,
+            Func<int, int, CancellationToken, Task> resize)
+        {
+            _write = write;
+            _resize = resize;
+        }
+
+        public Task<int> WriteAsync(string text, CancellationToken cancellationToken) => _write(text, cancellationToken);
+        public Task ResizeAsync(int columns, int rows, CancellationToken cancellationToken) => _resize(columns, rows, cancellationToken);
+
+        public static TerminalControl ForLocal(ConPtySession session) => new(
+            async (text, token) => await session.WriteAsync(text, token),
+            (columns, rows, _) =>
+            {
+                session.Resize(columns, rows);
+                return Task.CompletedTask;
+            });
+
+        public static TerminalControl ForWorker(SessionWorker worker) => new(
+            async (text, token) => (await worker.WriteTerminalAsync(text, token)).BytesWritten,
+            async (columns, rows, token) => { await worker.ResizeTerminalAsync(columns, rows, token); });
+    }
     private static void Complete(ActiveJob active, JobRecord record) =>
         active.Completion.TrySetResult(record);
 
@@ -325,7 +430,7 @@ decoded:
     {
         public CancellationTokenSource Cancellation { get; } = new();
         public TaskCompletionSource<JobRecord> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public TaskCompletionSource<ConPtySession>? TerminalReady { get; } = terminal
+        public TaskCompletionSource<TerminalControl>? TerminalReady { get; } = terminal
             ? new(TaskCreationOptions.RunContinuationsAsynchronously)
             : null;
     }

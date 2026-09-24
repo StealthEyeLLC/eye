@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.10" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.10" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.1.0" />
+    <PackageReference Include="Nerdbank.Streams" Version="2.13.16" />
     <PackageReference Include="SQLitePCLRaw.provider.winsqlite3" Version="2.1.11" />
     <PackageReference Include="StreamJsonRpc" Version="2.25.29" />
   </ItemGroup>

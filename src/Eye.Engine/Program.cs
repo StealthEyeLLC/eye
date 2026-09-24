@@ -15,7 +15,7 @@ var handshake = new EngineHandshake(
 await using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
 await pipe.ConnectAsync(10_000);
 var target = new EngineRpcTarget(handshake, new EnginePingResult(engineVersion, Environment.ProcessId));
-using var rpc = new JsonRpc(EngineRpcTransport.CreateMessageHandler(pipe), target);
+using var rpc = new JsonRpc(EyeRpcTransport.CreateMessageHandler(pipe), target);
 rpc.StartListening();
 try
 {

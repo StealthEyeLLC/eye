@@ -11,6 +11,7 @@
   <ItemGroup>
     <Compile Include="..\Eye\Contract\EngineHandshake.cs" Link="Contract\EngineHandshake.cs" />
     <Compile Include="..\Eye\Contract\EngineRpc.cs" Link="Contract\EngineRpc.cs" />
+    <Compile Include="..\Eye\Contract\RpcTransport.cs" Link="Contract\RpcTransport.cs" />
     <Compile Include="..\Eye\Contract\EyeContractCatalog.cs" Link="Contract\EyeContractCatalog.cs" />
   </ItemGroup>
   <ItemGroup>
