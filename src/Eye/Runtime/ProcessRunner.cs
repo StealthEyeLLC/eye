@@ -132,7 +132,28 @@ public sealed class ProcessRunner
                 : (channel, text) => hooks.Output(channel, NormalizeWslText(text))
         };
 
+#if EYE_SESSION_WORKER
         var result = await RunActiveUserAsync(wslRequest, cancellationToken, wslHooks, "wsl");
+#else
+        var started = Stopwatch.StartNew();
+        var sessionId = FindActiveSessionId();
+        if (!NativeMethods.WTSQueryUserToken((uint)sessionId, out var token))
+            ThrowWin32("WTSQueryUserToken(WSL)");
+
+        ProcessRunResult result;
+        using (token)
+        using (var identity = new WindowsIdentity(token.DangerousGetHandle()))
+        {
+            result = await RunActiveUserViaTaskAsync(
+                wslRequest,
+                cancellationToken,
+                wslHooks,
+                "wsl",
+                identity.Name,
+                GetProfileDirectory(token),
+                started);
+        }
+#endif
         return result with
         {
             Stdout = NormalizeWslText(result.Stdout),
