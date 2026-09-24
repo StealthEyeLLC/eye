@@ -47,6 +47,8 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly SemaphoreSlim _vtWriteGate = new(1, 1);
     private ConPtySession? _terminal;
+    private BrowserCdpSession? _browser;
+    private readonly DesktopUiaWatcher _uiaWatcher = new();
 
     [JsonRpcMethod(WorkerRpcMethods.Handshake)]
     public SessionWorkerHandshake Handshake() => new(
@@ -133,6 +135,37 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
     [JsonRpcMethod(WorkerRpcMethods.ActUia)]
     public WorkerUiaActionResult ActUia(WorkerUiaActionRequest request) =>
         DesktopUiaActor.Act(request);
+    [JsonRpcMethod(WorkerRpcMethods.ArmUiaChange)]
+    public WorkerUiaArmResult ArmUiaChange(WorkerUiaWaitRequest request) =>
+        _uiaWatcher.Arm(request);
+    [JsonRpcMethod(WorkerRpcMethods.WaitUiaChange)]
+    public Task<WorkerUiaChangeResult> WaitUiaChangeAsync(CancellationToken cancellationToken) =>
+        _uiaWatcher.WaitAsync(cancellationToken);
+    [JsonRpcMethod(WorkerRpcMethods.EnsureBrowser)]
+    public async Task<WorkerBrowserStatusResult> EnsureBrowserAsync(
+        WorkerBrowserEnsureRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_browser is null || _browser.HasExited)
+            {
+                if (_browser is not null)
+                    await _browser.DisposeAsync();
+                _browser = await BrowserCdpSession.StartAsync(request, cancellationToken);
+            }
+            return _browser.Status();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    [JsonRpcMethod(WorkerRpcMethods.ObserveBrowserTargets)]
+    public Task<WorkerBrowserTargetsResult> ObserveBrowserTargetsAsync(CancellationToken cancellationToken) =>
+        RequiredBrowser().ObserveTargetsAsync(cancellationToken);
     [JsonRpcMethod(WorkerRpcMethods.Shutdown)]
     public WorkerShutdownResult Shutdown() => new(true);
 
@@ -141,9 +174,16 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
         var terminal = Interlocked.Exchange(ref _terminal, null);
         if (terminal is not null)
             await terminal.DisposeAsync();
+        var browser = Interlocked.Exchange(ref _browser, null);
+        if (browser is not null)
+            await browser.DisposeAsync();
         _gate.Dispose();
         _vtWriteGate.Dispose();
+        _uiaWatcher.Dispose();
     }
+
+    private BrowserCdpSession RequiredBrowser() =>
+        _browser ?? throw new InvalidOperationException("No browser is active in this session worker.");
 
     private ConPtySession RequiredTerminal() =>
         _terminal ?? throw new InvalidOperationException("No terminal is active in this session worker.");

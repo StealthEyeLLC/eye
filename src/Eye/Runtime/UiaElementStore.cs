@@ -122,6 +122,22 @@ public sealed class UiaElementStore
                 reader.GetString(3));
         }
     }
+    public UiaElementTarget? TryResolveActiveByRuntimeId(string windowId, string runtimeId)
+    {
+        if (string.IsNullOrWhiteSpace(windowId) || string.IsNullOrWhiteSpace(runtimeId))
+            return null;
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT element_id, incarnation, window_incarnation FROM uia_elements WHERE window_id = $window_id AND runtime_id = $runtime_id AND active = 1;";
+            command.Parameters.AddWithValue("$window_id", windowId);
+            command.Parameters.AddWithValue("$runtime_id", runtimeId);
+            using var reader = command.ExecuteReader();
+            if (!reader.Read()) return null;
+            return new UiaElementTarget(reader.GetString(0), reader.GetInt64(1), windowId, reader.GetInt64(2), runtimeId);
+        }
+    }
     private void Initialize()
     {
         lock (_gate)

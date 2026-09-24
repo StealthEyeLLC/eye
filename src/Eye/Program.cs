@@ -28,6 +28,7 @@ builder.Services.AddSingleton<DesktopObservationService>();
 builder.Services.AddSingleton<UiaElementStore>();
 builder.Services.AddSingleton<UiaQueryService>();
 builder.Services.AddSingleton<UiaActionService>();
+builder.Services.AddSingleton<UiaTriggerSource>();
 builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EyeDispatcher>();
 builder.Services.AddSingleton<EyeLiveSnapshotService>();

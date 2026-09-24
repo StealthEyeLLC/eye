@@ -43,6 +43,17 @@ public sealed class TriggerStore
             NewId(), 1, TriggerKinds.FileExists, TriggerStates.Pending,
             DateTimeOffset.UtcNow, null, deadlineAt, null, null, null, Path.GetFullPath(filePath), null));
     }
+    public TriggerRecord CreateUiaChange(string registrationJson, DateTimeOffset? deadlineAt)
+    {
+        if (string.IsNullOrWhiteSpace(registrationJson))
+            throw new ArgumentException("registration_json is required.", nameof(registrationJson));
+        return Insert(new TriggerRecord(
+            NewId(), 1, TriggerKinds.UiaChange, TriggerStates.Pending,
+            DateTimeOffset.UtcNow, null, deadlineAt, null, null, null, null, null)
+        {
+            RegistrationJson = registrationJson
+        });
+    }
     public TriggerRecord GetRequired(string triggerId)
     {
         lock (_gate)
@@ -218,10 +229,10 @@ public sealed class TriggerStore
             command.CommandText = """
                 INSERT INTO triggers (
                     trigger_id, incarnation, kind, state, created_utc, completed_utc, deadline_utc,
-                    process_id, process_start_utc, due_utc, file_path, failure_message, next_sequence)
+                    process_id, process_start_utc, due_utc, file_path, registration_json, failure_message, next_sequence)
                 VALUES (
                     $trigger_id, $incarnation, $kind, $state, $created_utc, NULL, $deadline_utc,
-                    $process_id, $process_start_utc, $due_utc, $file_path, NULL, 1);
+                    $process_id, $process_start_utc, $due_utc, $file_path, $registration_json, NULL, 1);
                 """;
             command.Parameters.AddWithValue("$trigger_id", record.TriggerId);
             command.Parameters.AddWithValue("$incarnation", record.Incarnation);
@@ -233,6 +244,7 @@ public sealed class TriggerStore
             command.Parameters.AddWithValue("$process_start_utc", (object?)record.ProcessStartAt?.ToString("O") ?? DBNull.Value);
             command.Parameters.AddWithValue("$due_utc", (object?)record.DueAt?.ToString("O") ?? DBNull.Value);
             command.Parameters.AddWithValue("$file_path", (object?)record.FilePath ?? DBNull.Value);
+            command.Parameters.AddWithValue("$registration_json", (object?)record.RegistrationJson ?? DBNull.Value);
             command.ExecuteNonQuery();
             return record;
         }
@@ -257,6 +269,7 @@ public sealed class TriggerStore
                     process_start_utc TEXT NULL,
                     due_utc TEXT NULL,
                     file_path TEXT NULL,
+                    registration_json TEXT NULL,
                     failure_message TEXT NULL,
                     next_sequence INTEGER NOT NULL DEFAULT 1
                 );
@@ -272,9 +285,25 @@ public sealed class TriggerStore
                 );
                 """;
             command.ExecuteNonQuery();
+            EnsureColumn(connection, "triggers", "registration_json", "TEXT NULL");
         }
     }
 
+    private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)
+    {
+        using var info = connection.CreateCommand();
+        info.CommandText = $"PRAGMA table_info({table});";
+        using var reader = info.ExecuteReader();
+        while (reader.Read())
+        {
+            if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
+                return;
+        }
+        reader.Close();
+        using var alter = connection.CreateCommand();
+        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition};";
+        alter.ExecuteNonQuery();
+    }
     private SqliteConnection Open()
     {
         var connection = new SqliteConnection(_connectionString);
@@ -297,7 +326,10 @@ public sealed class TriggerStore
         GetNullableDateTime(reader, "process_start_utc"),
         GetNullableDateTime(reader, "due_utc"),
         GetNullableString(reader, "file_path"),
-        GetNullableString(reader, "failure_message"));
+        GetNullableString(reader, "failure_message"))
+    {
+        RegistrationJson = GetNullableString(reader, "registration_json")
+    };
 
     private static string? GetNullableString(SqliteDataReader reader, string name)
     {

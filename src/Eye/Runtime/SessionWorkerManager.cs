@@ -47,6 +47,22 @@ public sealed class SessionWorkerManager
         await using var worker = await StartAsync(cancellationToken);
         return await worker.ActUiaAsync(hwnd, runtimeId, action, value, cancellationToken);
     }
+    public async Task<WorkerUiaChangeResult> WaitUiaChangeAsync(
+        long hwnd,
+        string? runtimeId,
+        string[] eventTypes,
+        int maxNodes = 5000,
+        Action? onArmed = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var worker = await StartAsync(cancellationToken);
+        var armed = await worker.ArmUiaChangeAsync(hwnd, runtimeId, eventTypes, maxNodes, cancellationToken);
+        if (!armed.Armed)
+            throw new InvalidOperationException("UIA worker did not arm its change watcher.");
+        onArmed?.Invoke();
+        return await worker.WaitUiaChangeAsync(cancellationToken);
+    }
+
     public Task<SessionWorker> StartAsync(CancellationToken cancellationToken = default) =>
         SessionWorker.StartAsync(
             ResolveWorkerExecutablePath(),

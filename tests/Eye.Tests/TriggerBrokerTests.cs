@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 using System.Text.Json;
 using StealthEye.Runtime;
@@ -143,6 +144,40 @@ public sealed class TriggerBrokerTests : IDisposable
         Assert.Equal(triggerId, waited.Trigger.TriggerId);
         Assert.Equal(1, waited.Trigger.Incarnation);
         Assert.Equal(Path.GetFullPath(target), waited.Trigger.FilePath, ignoreCase: true);
+    }
+    [Fact]
+    public void ExistingTriggerTable_IsMigratedForUiaRegistration()
+    {
+        var jobs = new JobStore(Path.Combine(_root, "legacy-state"), Path.Combine(_root, "legacy-spool"));
+        using (var connection = new SqliteConnection($"Data Source={jobs.DatabasePath};Pooling=False"))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                CREATE TABLE triggers (
+                    trigger_id TEXT PRIMARY KEY,
+                    incarnation INTEGER NOT NULL,
+                    kind TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    created_utc TEXT NOT NULL,
+                    completed_utc TEXT NULL,
+                    deadline_utc TEXT NULL,
+                    process_id INTEGER NULL,
+                    process_start_utc TEXT NULL,
+                    due_utc TEXT NULL,
+                    file_path TEXT NULL,
+                    failure_message TEXT NULL,
+                    next_sequence INTEGER NOT NULL DEFAULT 1
+                );
+                """;
+            command.ExecuteNonQuery();
+        }
+
+        var store = new TriggerStore(jobs);
+        var created = store.CreateUiaChange("{\"windowId\":\"window_test\"}", null);
+        var read = store.GetRequired(created.TriggerId);
+        Assert.Equal(TriggerKinds.UiaChange, read.Kind);
+        Assert.Equal(created.RegistrationJson, read.RegistrationJson);
     }
     private TriggerStore CreateStore()
     {

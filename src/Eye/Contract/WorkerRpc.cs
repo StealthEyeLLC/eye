@@ -13,6 +13,10 @@ public static class WorkerRpcMethods
     public const string ObserveWindows = "desktop.windows";
     public const string QueryUia = "desktop.uia_query";
     public const string ActUia = "desktop.uia_act";
+    public const string ArmUiaChange = "desktop.uia_arm_change";
+    public const string WaitUiaChange = "desktop.uia_wait_change";
+    public const string EnsureBrowser = "browser.ensure";
+    public const string ObserveBrowserTargets = "browser.targets";
     public const string Shutdown = "worker.shutdown";
 }
 
@@ -122,5 +126,43 @@ public sealed record WorkerUiaActionRequest(
 public sealed record WorkerUiaActionResult(
     [property: JsonPropertyName("action")] string Action,
     [property: JsonPropertyName("completed")] bool Completed);
+public sealed record WorkerUiaWaitRequest(
+    [property: JsonPropertyName("hwnd")] long Hwnd,
+    [property: JsonPropertyName("runtime_id")] string? RuntimeId,
+    [property: JsonPropertyName("event_types")] string[] EventTypes,
+    [property: JsonPropertyName("max_nodes")] int MaxNodes = 5000);
+
+public sealed record WorkerUiaArmResult(
+    [property: JsonPropertyName("armed")] bool Armed);
+
+public sealed record WorkerUiaChangeResult(
+    [property: JsonPropertyName("occurred_at")] DateTimeOffset OccurredAt,
+    [property: JsonPropertyName("event_type")] string EventType,
+    [property: JsonPropertyName("runtime_id")] string RuntimeId,
+    [property: JsonPropertyName("property")] string? Property,
+    [property: JsonPropertyName("value")] string? Value);public sealed record WorkerBrowserEnsureRequest(
+    [property: JsonPropertyName("chrome_path")] string? ChromePath = null,
+    [property: JsonPropertyName("user_data_dir")] string? UserDataDir = null,
+    [property: JsonPropertyName("initial_url")] string InitialUrl = "about:blank");
+
+public sealed record WorkerBrowserStatusResult(
+    [property: JsonPropertyName("chrome_path")] string ChromePath,
+    [property: JsonPropertyName("user_data_dir")] string UserDataDir,
+    [property: JsonPropertyName("process_id")] int ProcessId,
+    [property: JsonPropertyName("debug_port")] int DebugPort,
+    [property: JsonPropertyName("browser_version")] string BrowserVersion,
+    [property: JsonPropertyName("protocol_version")] string ProtocolVersion);
+
+public sealed record WorkerBrowserTargetInfo(
+    [property: JsonPropertyName("cdp_target_id")] string CdpTargetId,
+    [property: JsonPropertyName("type")] string Type,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("url")] string Url);
+
+public sealed record WorkerBrowserTargetsResult(
+    [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
+    [property: JsonPropertyName("browser_version")] string BrowserVersion,
+    [property: JsonPropertyName("protocol_version")] string ProtocolVersion,
+    [property: JsonPropertyName("targets")] WorkerBrowserTargetInfo[] Targets);
 public sealed record WorkerShutdownResult(
     [property: JsonPropertyName("stopping")] bool Stopping);

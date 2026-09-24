@@ -7,6 +7,7 @@ public static class TriggerKinds
     public const string ProcessExit = "process_exit";
     public const string Time = "time";
     public const string FileExists = "file_exists";
+    public const string UiaChange = "uia_change";
 }
 
 public static class TriggerStates
@@ -32,7 +33,11 @@ public sealed record TriggerRecord(
     [property: JsonPropertyName("process_start_at")] DateTimeOffset? ProcessStartAt,
     [property: JsonPropertyName("due_at")] DateTimeOffset? DueAt,
     [property: JsonPropertyName("file_path")] string? FilePath,
-    [property: JsonPropertyName("failure_message")] string? FailureMessage);
+    [property: JsonPropertyName("failure_message")] string? FailureMessage)
+{
+    [JsonPropertyName("registration_json")]
+    public string? RegistrationJson { get; init; }
+}
 
 public sealed record TriggerEvent(
     [property: JsonPropertyName("trigger_id")] string TriggerId,

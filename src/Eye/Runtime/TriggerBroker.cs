@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace StealthEye.Runtime;
 
-public sealed class TriggerBroker(TriggerStore store) : IAsyncDisposable
+public sealed class TriggerBroker(TriggerStore store, UiaTriggerSource? uiaTriggerSource = null) : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, ActiveTrigger> _active = new(StringComparer.Ordinal);
     private int _initialized;
@@ -57,6 +57,33 @@ public sealed class TriggerBroker(TriggerStore store) : IAsyncDisposable
         var trigger = store.CreateFileExists(fullPath, deadline);
         EnsureActive(trigger);
         return trigger;
+    }
+    public TriggerRecord CreateUiaChange(
+        string windowId,
+        string? elementId = null,
+        string[]? eventTypes = null,
+        int timeoutMs = 0)
+    {
+        ThrowIfDisposed();
+        if (timeoutMs < 0 || timeoutMs > 86_400_000)
+            throw new ArgumentException("timeout_ms must be between 0 and 86400000.", nameof(timeoutMs));
+        var source = uiaTriggerSource ?? throw new InvalidOperationException("UIA trigger source is not configured.");
+        var registration = source.PrepareRegistration(windowId, elementId, eventTypes);
+        DateTimeOffset? deadline = timeoutMs > 0 ? DateTimeOffset.UtcNow.AddMilliseconds(timeoutMs) : null;
+        var trigger = store.CreateUiaChange(registration, deadline);
+        EnsureActive(trigger);
+        return trigger;
+    }
+    public async Task WaitUntilArmedAsync(string triggerId, CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        var trigger = store.GetRequired(triggerId);
+        if (trigger.Kind != TriggerKinds.UiaChange)
+            throw new ArgumentException("trigger_id is not a UIA change trigger.", nameof(triggerId));
+        if (TriggerStates.IsTerminal(trigger.State))
+            return;
+        var active = EnsureActive(trigger);
+        await active.Ready.Task.WaitAsync(cancellationToken);
     }
     public TriggerRecord Status(string triggerId) => store.GetRequired(triggerId);
 
@@ -137,6 +164,9 @@ public sealed class TriggerBroker(TriggerStore store) : IAsyncDisposable
                     break;
                 case TriggerKinds.FileExists:
                     await WatchFileExistsAsync(trigger, active);
+                    break;
+                case TriggerKinds.UiaChange:
+                    await WatchUiaChangeAsync(trigger, active);
                     break;
                 default:
                     Complete(active, TriggerStates.Failed, "trigger_failed", new { kind = trigger.Kind }, $"Unsupported trigger kind: {trigger.Kind}");
@@ -311,6 +341,45 @@ public sealed class TriggerBroker(TriggerStore store) : IAsyncDisposable
         Complete(active, TriggerStates.Satisfied, "file_exists", new { file_path = filePath, reason });
     }
 
+    private async Task WatchUiaChangeAsync(TriggerRecord trigger, ActiveTrigger active)
+    {
+        var source = uiaTriggerSource ?? throw new InvalidOperationException("UIA trigger source is not configured.");
+        var waitTask = source.WaitAsync(trigger, () => active.Ready.TrySetResult(true), active.Cancellation.Token);
+        UiaTriggerEvent change;
+        if (trigger.DeadlineAt is null)
+        {
+            change = await waitTask;
+        }
+        else
+        {
+            var remaining = trigger.DeadlineAt.Value - DateTimeOffset.UtcNow;
+            if (remaining <= TimeSpan.Zero)
+            {
+                Complete(active, TriggerStates.TimedOut, "trigger_timed_out", new { kind = trigger.Kind });
+                return;
+            }
+            var delay = Task.Delay(remaining, active.Cancellation.Token);
+            if (await Task.WhenAny(waitTask, delay) == delay)
+            {
+                await delay;
+                Complete(active, TriggerStates.TimedOut, "trigger_timed_out", new { kind = trigger.Kind });
+                return;
+            }
+            change = await waitTask;
+        }
+
+        Complete(active, TriggerStates.Satisfied, "uia_changed", new
+        {
+            occurred_at = change.OccurredAt,
+            event_type = change.EventType,
+            window_id = change.WindowId,
+            window_incarnation = change.WindowIncarnation,
+            element_id = change.ElementId,
+            element_incarnation = change.ElementIncarnation,
+            property = change.Property,
+            value = change.Value
+        });
+    }
     private static string FindExistingWatchRoot(string filePath)
     {
         var directory = Path.GetDirectoryName(filePath)
@@ -364,6 +433,7 @@ public sealed class TriggerBroker(TriggerStore store) : IAsyncDisposable
         public string TriggerId { get; } = triggerId;
         public CancellationTokenSource Cancellation { get; } = new();
         public TaskCompletionSource<TriggerRecord> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Ready { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Task WatchTask { get; set; } = Task.CompletedTask;
         public bool TryStart() => Interlocked.Exchange(ref _started, 1) == 0;
     }

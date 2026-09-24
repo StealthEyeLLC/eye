@@ -205,6 +205,28 @@ public sealed class SessionWorker : IAsyncDisposable
             WorkerRpcMethods.ActUia,
             new WorkerUiaActionRequest(hwnd, runtimeId, action, value),
             cancellationToken);
+    public Task<WorkerUiaArmResult> ArmUiaChangeAsync(
+        long hwnd,
+        string? runtimeId,
+        string[] eventTypes,
+        int maxNodes = 5000,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerUiaArmResult>(
+            WorkerRpcMethods.ArmUiaChange,
+            new WorkerUiaWaitRequest(hwnd, runtimeId, eventTypes, maxNodes),
+            cancellationToken);
+    public Task<WorkerUiaChangeResult> WaitUiaChangeAsync(CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerUiaChangeResult>(WorkerRpcMethods.WaitUiaChange, cancellationToken);
+
+    public Task<WorkerBrowserStatusResult> EnsureBrowserAsync(
+        WorkerBrowserEnsureRequest request,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerBrowserStatusResult>(WorkerRpcMethods.EnsureBrowser, request, cancellationToken);
+
+    public Task<WorkerBrowserTargetsResult> ObserveBrowserTargetsAsync(
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerBrowserTargetsResult>(WorkerRpcMethods.ObserveBrowserTargets, cancellationToken);
+
     public async Task CopyVtToAsync(Stream destination, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
