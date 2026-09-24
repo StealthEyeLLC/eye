@@ -1,7 +1,36 @@
-using StealthEye.Contract;
+﻿using System.Text.Json;
 using ModelContextProtocol.Server;
+using StealthEye.Contract;
 using StealthEye.Runtime;
 using StealthEye.Tools;
+
+if (args.Length > 0 && args[0] is "inventory" or "doctor" or "torture-test")
+{
+    if (args[0] == "torture-test")
+    {
+        var torture = await EyeFoundationTortureTest.RunAsync();
+        Console.WriteLine(JsonSerializer.Serialize(torture, new JsonSerializerOptions { WriteIndented = true }));
+        Environment.ExitCode = torture.Overall == DiagnosticStates.Fail ? 1 : 0;
+        return;
+    }
+
+    var jobs = new JobStore();
+    var actions = new ActionJournalStore(jobs);
+    var artifacts = new ArtifactStore(jobs);
+    var diagnostics = new EyeDiagnostics(jobs, actions, artifacts, EyeContractCatalog.Load());
+    var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+
+    if (args[0] == "inventory")
+    {
+        Console.WriteLine(JsonSerializer.Serialize(diagnostics.Inventory(), jsonOptions));
+        return;
+    }
+
+    var report = await diagnostics.DoctorAsync();
+    Console.WriteLine(JsonSerializer.Serialize(report, jsonOptions));
+    Environment.ExitCode = report.Overall == DiagnosticStates.Fail ? 1 : 0;
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +45,11 @@ builder.WebHost.UseUrls(urls);
 
 builder.Services.AddSingleton<ProcessRunner>();
 builder.Services.AddSingleton<JobStore>();
+builder.Services.AddSingleton<ActionJournalStore>();
+builder.Services.AddSingleton<IPostconditionInspector, FilePostconditionInspector>();
+builder.Services.AddSingleton<PostconditionInspectorRegistry>();
+builder.Services.AddSingleton<ActionReconciler>();
+builder.Services.AddSingleton<ConsequentialActionRunner>();
 builder.Services.AddSingleton<ArtifactStore>();
 builder.Services.AddSingleton<MissionBlackboardStore>();
 builder.Services.AddSingleton<TriggerStore>();
@@ -47,6 +81,8 @@ builder.Services
 
 var app = builder.Build();
 _ = app.Services.GetRequiredService<JobStore>();
+var actionJournal = app.Services.GetRequiredService<ActionJournalStore>();
+actionJournal.RecoverAfterHostRestart();
 _ = app.Services.GetRequiredService<ArtifactStore>();
 await app.Services.GetRequiredService<TriggerBroker>().InitializeAsync();
 var engineSupervisor = app.Services.GetRequiredService<EngineSupervisor>();
@@ -63,3 +99,5 @@ app.MapGet("/health", () => Results.Json(new
 app.MapMcp("/mcp");
 
 await app.RunAsync();
+
+
