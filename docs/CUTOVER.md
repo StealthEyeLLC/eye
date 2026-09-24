@@ -50,21 +50,26 @@ Phase 1 activation gate is met. The canonical contract is generated but remains 
 
 ## Phase 2 — stable host core
 
-- [ ] one LocalSystem SCM service owns the stable host.
-- [ ] stable host serves loopback MCP.
-- [ ] host provides raw SYSTEM execution.
-- [ ] host provides active-user execution through `WTSQueryUserToken` / `CreateEnvironmentBlock` / `CreateProcessAsUser`.
-- [ ] host provides WSL execution through the active-user path.
+- [x] one LocalSystem SCM service owns the stable host.
+- [x] stable host serves loopback MCP.
+- [x] host provides raw SYSTEM execution.
+- [x] host provides active-user execution through `WTSQueryUserToken` / `CreateEnvironmentBlock` / `CreateProcessAsUser`.
+- [x] host provides WSL execution through the active-user path.
 - [ ] CsWin32-generated bindings/SafeHandles replace suitable handwritten interop.
 - [x] explicit inherited-handle lists are used.
-- [ ] Job Objects own launched process trees.
-- [ ] host owns native ConPTY handles/lifecycle.
-- [ ] cancellation consistently terminates owned process trees.
-- [ ] short operations can complete synchronously.
-- [ ] long operations automatically become durable jobs.
-- [ ] output is cursor-based and spooled rather than retained indefinitely in RAM.
-- [ ] tiny authoritative SQLite state is stored under SYSTEM-owned `C:\ProgramData\StealthEye` state.
+- [x] Job Objects own launched process trees.
+- [x] host owns native ConPTY handles/lifecycle.
+- [x] cancellation consistently terminates owned process trees.
+- [x] short operations can complete synchronously.
+- [x] long operations automatically become durable jobs.
+- [x] output is cursor-based and spooled rather than retained indefinitely in RAM.
+- [x] tiny authoritative SQLite state is stored under SYSTEM-owned `C:\ProgramData\StealthEye` state.
 
+### Phase 2 verification evidence
+
+On 2026-09-24 the accepted host was installed as the single Auto-start StealthEye LocalSystem SCM service and independently verified to expose exactly one listener at 127.0.0.1:37931. Live MCP calls proved inline SYSTEM execution as NT AUTHORITY\SYSTEM, inline active-user execution as STEALTHEYELLC\StealthEye, automatic WSL promotion to a durable job, successful active-user WSL completion, and cursor-backed spool output (root::Linux). The accepted test suite also proves explicit inherited-handle isolation, host-owned native ConPTY lifecycle, and Job Object cancellation of both a job root process and its spawned descendant.
+
+The remaining Phase 2 implementation item is the bounded migration of suitable handwritten Win32 declarations to CsWin32-generated bindings/SafeHandles.
 ## Phase 3 — artifacts and identity model
 
 - [ ] host artifact registry exists.

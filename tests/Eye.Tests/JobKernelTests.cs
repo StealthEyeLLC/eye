@@ -94,11 +94,18 @@ public sealed class JobKernelTests : IDisposable
     {
         var store = Store();
         var manager = new JobManager(store, new ProcessRunner());
+        var childPidPath = Path.Combine(_root, "cancel-child.pid");
+        var escapedChildPidPath = childPidPath.Replace("'", "''", StringComparison.Ordinal);
         var job = manager.Start(new RunRequest
         {
             Context = "system",
             FileName = "powershell.exe",
-            Arguments = ["-NoProfile", "-Command", "Start-Sleep 30"],
+            Arguments =
+            [
+                "-NoProfile",
+                "-Command",
+                $"$child=Start-Process powershell.exe -ArgumentList '-NoProfile','-Command','Start-Sleep 60' -PassThru; [IO.File]::WriteAllText('{escapedChildPidPath}',[string]$child.Id); Start-Sleep 60"
+            ],
             TimeoutMs = 0
         });
 
@@ -111,10 +118,20 @@ public sealed class JobKernelTests : IDisposable
 
         Assert.Equal(JobStates.Running, running.State);
         Assert.NotNull(running.Pid);
+
+        var childDeadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while (!File.Exists(childPidPath) && DateTime.UtcNow < childDeadline)
+            await Task.Delay(25);
+        Assert.True(File.Exists(childPidPath), "Child process did not publish its PID.");
+        var childPid = int.Parse((await File.ReadAllTextAsync(childPidPath)).Trim());
+        Assert.False(Process.GetProcessById(childPid).HasExited);
+
         var cancelled = await manager.CancelAsync(job.JobId);
         Assert.Equal(JobStates.Cancelled, cancelled.State);
-        Assert.Throws<ArgumentException>(() => Process.GetProcessById(running.Pid!.Value));
+        await AssertProcessGoneAsync(running.Pid!.Value);
+        await AssertProcessGoneAsync(childPid);
     }
+
 
     [Fact]
     public void Store_MarksUnrecoverableLiveMetadataInterrupted()
@@ -128,6 +145,30 @@ public sealed class JobKernelTests : IDisposable
         var recovered = reopened.GetRequired("job_recovery_test");
         Assert.Equal(JobStates.Interrupted, recovered.State);
         Assert.Equal("host_restarted", recovered.FailureCode);
+    }
+
+    private static async Task AssertProcessGoneAsync(int processId)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                using var process = Process.GetProcessById(processId);
+                if (!process.HasExited)
+                {
+                    await Task.Delay(25);
+                    continue;
+                }
+                return;
+            }
+            catch (ArgumentException)
+            {
+                return;
+            }
+        }
+
+        Assert.Throws<ArgumentException>(() => Process.GetProcessById(processId));
     }
 
     private JobStore Store() => new(Path.Combine(_root, "state"), Path.Combine(_root, "spool"));
