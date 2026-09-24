@@ -176,8 +176,7 @@ public sealed class ConPtySession : IAsyncDisposable
                 processHandle = new SafeFileHandle(pi.hProcess, ownsHandle: true);
                 threadHandle = new SafeFileHandle(pi.hThread, ownsHandle: true);
                 jobHandle = ProcessRunner.CreateKillOnCloseJob();
-                if (!NativeMethods.AssignProcessToJobObject(jobHandle, processHandle.DangerousGetHandle()))
-                    ProcessRunner.ThrowWin32("AssignProcessToJobObject(ConPTY)");
+                Win32JobApi.AssignProcess(jobHandle, processHandle.DangerousGetHandle());
 
                 if (NativeMethods.ResumeThread(threadHandle) == uint.MaxValue)
                     ProcessRunner.ThrowWin32("ResumeThread(ConPTY)");

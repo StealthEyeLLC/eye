@@ -203,8 +203,7 @@ internal static class InteractiveTaskProcessLauncher
             var job = ProcessRunner.CreateKillOnCloseJob();
             try
             {
-                if (!NativeMethods.AssignProcessToJobObject(job, process.Handle))
-                    ProcessRunner.ThrowWin32("AssignProcessToJobObject(interactive worker)");
+                Win32JobApi.AssignProcess(job, process.Handle);
                 return new InteractiveTaskProcessLaunch(process, job, lease);
             }
             catch
@@ -301,8 +300,7 @@ internal static class InteractiveTaskProcessLauncher
             var job = ProcessRunner.CreateKillOnCloseJob();
             try
             {
-                if (!NativeMethods.AssignProcessToJobObject(job, process.Handle))
-                    ProcessRunner.ThrowWin32("AssignProcessToJobObject(direct interactive worker)");
+                Win32JobApi.AssignProcess(job, process.Handle);
                 return new InteractiveTaskProcessLaunch(process, job, lease);
             }
             catch

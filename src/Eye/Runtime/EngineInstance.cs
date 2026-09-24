@@ -86,8 +86,7 @@ public sealed class EngineInstance : IAsyncDisposable
             process = Process.Start(startInfo)
                 ?? throw new InvalidOperationException("Process.Start returned null for the Eye engine.");
             jobHandle = ProcessRunner.CreateKillOnCloseJob();
-            if (!NativeMethods.AssignProcessToJobObject(jobHandle, process.Handle))
-                ProcessRunner.ThrowWin32("AssignProcessToJobObject(engine)");
+            Win32JobApi.AssignProcess(jobHandle, process.Handle);
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(startupTimeout ?? TimeSpan.FromSeconds(10));

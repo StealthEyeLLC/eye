@@ -15,13 +15,17 @@
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.335" PrivateAssets="all" />
     <PackageReference Include="Nerdbank.Streams" Version="2.13.16" />
     <PackageReference Include="StreamJsonRpc" Version="2.25.29" />
   </ItemGroup>
   <ItemGroup>
+        <AdditionalFiles Include="..\Eye\NativeMethods.txt" Link="NativeMethods.txt" />
+    <AdditionalFiles Include="..\Eye\NativeMethods.json" Link="NativeMethods.json" />
     <Compile Include="..\Eye\Contract\RpcTransport.cs" Link="Contract\RpcTransport.cs" />
     <Compile Include="..\Eye\Contract\WorkerRpc.cs" Link="Contract\WorkerRpc.cs" />
     <Compile Include="..\Eye\Runtime\NativeMethods.cs" Link="Runtime\NativeMethods.cs" />
+    <Compile Include="..\Eye\Runtime\Win32JobApi.cs" Link="Runtime\Win32JobApi.cs" />
     <Compile Include="..\Eye\Runtime\ProcessRunHooks.cs" Link="Runtime\ProcessRunHooks.cs" />
     <Compile Include="..\Eye\Runtime\ProcessRunner.cs" Link="Runtime\ProcessRunner.cs" />
     <Compile Include="..\Eye\Runtime\ProcessStartupAttributeList.cs" Link="Runtime\ProcessStartupAttributeList.cs" />

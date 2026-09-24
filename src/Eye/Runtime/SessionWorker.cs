@@ -420,8 +420,7 @@ public sealed class SessionWorker : IAsyncDisposable
                 var jobHandle = ProcessRunner.CreateKillOnCloseJob();
                 try
                 {
-                    if (!NativeMethods.AssignProcessToJobObject(jobHandle, processHandle.DangerousGetHandle()))
-                        ProcessRunner.ThrowWin32("AssignProcessToJobObject(worker)");
+                    Win32JobApi.AssignProcess(jobHandle, processHandle.DangerousGetHandle());
                     if (NativeMethods.ResumeThread(threadHandle) == uint.MaxValue)
                         ProcessRunner.ThrowWin32("ResumeThread(worker)");
                     return (Process.GetProcessById((int)pi.dwProcessId), jobHandle, null);

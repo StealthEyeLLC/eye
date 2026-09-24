@@ -90,9 +90,9 @@ public sealed class HandleInheritanceTests
         using var processHandle = new SafeFileHandle(pi.hProcess, ownsHandle: true);
         using var threadHandle = new SafeFileHandle(pi.hThread, ownsHandle: true);
         using var jobHandle = ProcessRunner.CreateKillOnCloseJob();
-        Assert.True(NativeMethods.AssignProcessToJobObject(
+        Win32JobApi.AssignProcess(
             jobHandle,
-            processHandle.DangerousGetHandle()));
+            processHandle.DangerousGetHandle());
 
         // The parent must release its copies of the child ends so stdout reaches EOF.
         stdoutWriteHandle.Dispose();

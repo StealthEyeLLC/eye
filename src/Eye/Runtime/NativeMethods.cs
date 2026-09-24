@@ -14,7 +14,6 @@ internal static class NativeMethods
     internal static readonly IntPtr PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = new(0x00020016);
     internal const uint STARTF_USESTDHANDLES = 0x00000100;
     internal const uint HANDLE_FLAG_INHERIT = 0x00000001;
-    internal const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
     internal const uint WAIT_OBJECT_0 = 0x00000000;
     internal const uint WAIT_TIMEOUT = 0x00000102;
     internal const uint INFINITE = 0xFFFFFFFF;
@@ -118,42 +117,6 @@ internal static class NativeMethods
         internal int dwThreadId;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct IO_COUNTERS
-    {
-        internal ulong ReadOperationCount;
-        internal ulong WriteOperationCount;
-        internal ulong OtherOperationCount;
-        internal ulong ReadTransferCount;
-        internal ulong WriteTransferCount;
-        internal ulong OtherTransferCount;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct JOBOBJECT_BASIC_LIMIT_INFORMATION
-    {
-        internal long PerProcessUserTimeLimit;
-        internal long PerJobUserTimeLimit;
-        internal uint LimitFlags;
-        internal UIntPtr MinimumWorkingSetSize;
-        internal UIntPtr MaximumWorkingSetSize;
-        internal uint ActiveProcessLimit;
-        internal UIntPtr Affinity;
-        internal uint PriorityClass;
-        internal uint SchedulingClass;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    internal struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION
-    {
-        internal JOBOBJECT_BASIC_LIMIT_INFORMATION BasicLimitInformation;
-        internal IO_COUNTERS IoInfo;
-        internal UIntPtr ProcessMemoryLimit;
-        internal UIntPtr JobMemoryLimit;
-        internal UIntPtr PeakProcessMemoryUsed;
-        internal UIntPtr PeakJobMemoryUsed;
-    }
-
     [DllImport("wtsapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool WTSEnumerateSessionsW(IntPtr hServer, int Reserved, int Version, out IntPtr ppSessionInfo, out int pCount);
@@ -252,26 +215,11 @@ internal static class NativeMethods
     [DllImport("kernel32.dll")]
     internal static extern void ClosePseudoConsole(IntPtr hPC);
 
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    internal static extern IntPtr CreateJobObjectW(IntPtr lpJobAttributes, string? lpName);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool SetInformationJobObject(SafeFileHandle hJob, int JobObjectInfoClass, ref JOBOBJECT_EXTENDED_LIMIT_INFORMATION lpJobObjectInfo, uint cbJobObjectInfoLength);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool AssignProcessToJobObject(SafeFileHandle hJob, IntPtr hProcess);
-
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern uint ResumeThread(SafeFileHandle hThread);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     internal static extern uint WaitForSingleObject(SafeFileHandle hHandle, uint dwMilliseconds);
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    internal static extern bool TerminateJobObject(SafeFileHandle hJob, uint uExitCode);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

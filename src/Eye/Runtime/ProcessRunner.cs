@@ -48,8 +48,7 @@ public sealed class ProcessRunner
 
         using var process = Process.Start(psi) ?? throw new InvalidOperationException("Process.Start returned null.");
         using var jobHandle = CreateKillOnCloseJob();
-        if (!NativeMethods.AssignProcessToJobObject(jobHandle, process.Handle))
-            ThrowWin32("AssignProcessToJobObject");
+        Win32JobApi.AssignProcess(jobHandle, process.Handle);
 
         process.StandardInput.Close();
         var identity = WindowsIdentity.GetCurrent().Name;
@@ -255,8 +254,7 @@ public sealed class ProcessRunner
                 using var threadHandle = new SafeFileHandle(pi.hThread, ownsHandle: true);
                 using var jobHandle = CreateKillOnCloseJob();
 
-                if (!NativeMethods.AssignProcessToJobObject(jobHandle, processHandle.DangerousGetHandle()))
-                    ThrowWin32("AssignProcessToJobObject");
+                Win32JobApi.AssignProcess(jobHandle, processHandle.DangerousGetHandle());
 
                 stdoutWriteHandle.Dispose();
                 stderrWriteHandle.Dispose();
@@ -551,34 +549,11 @@ public sealed class ProcessRunner
             ThrowWin32("SetHandleInformation");
     }
 
-    internal static SafeFileHandle CreateKillOnCloseJob()
-    {
-        var raw = NativeMethods.CreateJobObjectW(IntPtr.Zero, null);
-        if (raw == IntPtr.Zero)
-            ThrowWin32("CreateJobObject");
+    internal static SafeFileHandle CreateKillOnCloseJob() =>
+        Win32JobApi.CreateKillOnCloseJob();
 
-        var job = new SafeFileHandle(raw, ownsHandle: true);
-        var info = new NativeMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION();
-        info.BasicLimitInformation.LimitFlags = NativeMethods.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-
-        if (!NativeMethods.SetInformationJobObject(
-                job,
-                9,
-                ref info,
-                (uint)Marshal.SizeOf<NativeMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION>()))
-        {
-            job.Dispose();
-            ThrowWin32("SetInformationJobObject");
-        }
-
-        return job;
-    }
-
-    internal static void TerminateJob(SafeFileHandle jobHandle)
-    {
-        if (!NativeMethods.TerminateJobObject(jobHandle, 1))
-            ThrowWin32("TerminateJobObject");
-    }
+    internal static void TerminateJob(SafeFileHandle jobHandle) =>
+        Win32JobApi.Terminate(jobHandle);
 
     private static async Task<string> ReadPipeAsync(
         SafeFileHandle handle,
