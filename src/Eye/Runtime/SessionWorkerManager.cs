@@ -28,6 +28,15 @@ public sealed class SessionWorkerManager
         await using var worker = await StartAsync(cancellationToken);
         return await worker.ObserveWindowsAsync(includeInvisible, cancellationToken);
     }
+    public async Task<WorkerUiaQueryResult> QueryUiaAsync(
+        long hwnd,
+        int maxDepth = 4,
+        int maxNodes = 200,
+        CancellationToken cancellationToken = default)
+    {
+        await using var worker = await StartAsync(cancellationToken);
+        return await worker.QueryUiaAsync(hwnd, maxDepth, maxNodes, cancellationToken);
+    }
     public Task<SessionWorker> StartAsync(CancellationToken cancellationToken = default) =>
         SessionWorker.StartAsync(
             ResolveWorkerExecutablePath(),

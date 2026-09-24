@@ -11,6 +11,7 @@ public static class WorkerRpcMethods
     public const string ResizeTerminal = "terminal.resize";
     public const string WaitTerminal = "terminal.wait";
     public const string ObserveWindows = "desktop.windows";
+    public const string QueryUia = "desktop.uia_query";
     public const string Shutdown = "worker.shutdown";
 }
 
@@ -87,5 +88,28 @@ public sealed record WorkerDesktopObservationResult(
     [property: JsonPropertyName("session_id")] int SessionId,
     [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
     [property: JsonPropertyName("windows")] WorkerWindowInfo[] Windows);
+public sealed record WorkerUiaQueryRequest(
+    [property: JsonPropertyName("hwnd")] long Hwnd,
+    [property: JsonPropertyName("max_depth")] int MaxDepth = 4,
+    [property: JsonPropertyName("max_nodes")] int MaxNodes = 200);
+
+public sealed record WorkerUiaElementInfo(
+    [property: JsonPropertyName("runtime_id")] string RuntimeId,
+    [property: JsonPropertyName("parent_runtime_id")] string? ParentRuntimeId,
+    [property: JsonPropertyName("depth")] int Depth,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("automation_id")] string AutomationId,
+    [property: JsonPropertyName("control_type")] string ControlType,
+    [property: JsonPropertyName("framework_id")] string FrameworkId,
+    [property: JsonPropertyName("class_name")] string ClassName,
+    [property: JsonPropertyName("enabled")] bool Enabled,
+    [property: JsonPropertyName("offscreen")] bool Offscreen,
+    [property: JsonPropertyName("focused")] bool Focused,
+    [property: JsonPropertyName("bounds")] WorkerWindowRect Bounds);
+
+public sealed record WorkerUiaQueryResult(
+    [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
+    [property: JsonPropertyName("truncated")] bool Truncated,
+    [property: JsonPropertyName("elements")] WorkerUiaElementInfo[] Elements);
 public sealed record WorkerShutdownResult(
     [property: JsonPropertyName("stopping")] bool Stopping);

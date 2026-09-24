@@ -186,6 +186,15 @@ public sealed class SessionWorker : IAsyncDisposable
             WorkerRpcMethods.ObserveWindows,
             new WorkerDesktopObserveRequest(includeInvisible),
             cancellationToken);
+    public Task<WorkerUiaQueryResult> QueryUiaAsync(
+        long hwnd,
+        int maxDepth = 4,
+        int maxNodes = 200,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerUiaQueryResult>(
+            WorkerRpcMethods.QueryUia,
+            new WorkerUiaQueryRequest(hwnd, maxDepth, maxNodes),
+            cancellationToken);
     public async Task CopyVtToAsync(Stream destination, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();

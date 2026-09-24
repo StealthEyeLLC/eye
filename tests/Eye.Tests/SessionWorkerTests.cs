@@ -85,6 +85,29 @@ public sealed class SessionWorkerTests
             window.Uia is { ControlType.Length: > 0 } &&
             !string.IsNullOrWhiteSpace(window.Uia.ClassName));
     }
+    [Fact]
+    public async Task SessionWorker_QueriesBoundedUiaTreeForObservedWindow()
+    {
+        var contract = EyeContractCatalog.Load();
+        await using var worker = await SessionWorker.StartAsync(
+            WorkerExecutable(),
+            contract.WorkerProtocolVersion,
+            TimeSpan.FromSeconds(10));
+
+        var desktop = await worker.ObserveWindowsAsync();
+        var target = desktop.Windows.First(window => window.Foreground && window.Uia is not null);
+        var query = await worker.QueryUiaAsync(target.Hwnd, maxDepth: 3, maxNodes: 100);
+
+        Assert.NotEmpty(query.Elements);
+        Assert.True(query.Elements.Length <= 100);
+        var root = query.Elements[0];
+        Assert.Equal(0, root.Depth);
+        Assert.Null(root.ParentRuntimeId);
+        Assert.False(string.IsNullOrWhiteSpace(root.RuntimeId));
+        Assert.False(string.IsNullOrWhiteSpace(root.ControlType));
+        Assert.All(query.Elements, element => Assert.InRange(element.Depth, 0, 3));
+        Assert.All(query.Elements.Skip(1), element => Assert.False(string.IsNullOrWhiteSpace(element.ParentRuntimeId)));
+    }
     private static string WorkerExecutable()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

@@ -65,6 +65,22 @@ public sealed class DesktopWindowStore
         }
     }
 
+    public DesktopWindowTarget ResolveActive(string windowId)
+    {
+        if (string.IsNullOrWhiteSpace(windowId))
+            throw new ArgumentException("window_id is required.", nameof(windowId));
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT incarnation, session_id, hwnd FROM desktop_windows WHERE window_id = $window_id AND active = 1;";
+            command.Parameters.AddWithValue("$window_id", windowId);
+            using var reader = command.ExecuteReader();
+            if (!reader.Read())
+                throw new ArgumentException($"Unknown or inactive window_id: {windowId}", nameof(windowId));
+            return new DesktopWindowTarget(windowId, reader.GetInt64(0), reader.GetInt32(1), reader.GetInt64(2));
+        }
+    }
     private void Initialize()
     {
         lock (_gate)

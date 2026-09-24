@@ -34,3 +34,8 @@ public sealed record DesktopWindowSnapshot(
     [property: JsonPropertyName("session_id")] int SessionId,
     [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
     [property: JsonPropertyName("windows")] DesktopWindowState[] Windows);
+public sealed record DesktopWindowTarget(
+    string WindowId,
+    long Incarnation,
+    int SessionId,
+    long Hwnd);

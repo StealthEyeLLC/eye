@@ -25,6 +25,8 @@ builder.Services.AddSingleton(sp => new SessionWorkerManager(
     WorkerRpcMethods.CurrentProtocolVersion));
 builder.Services.AddSingleton<DesktopWindowStore>();
 builder.Services.AddSingleton<DesktopObservationService>();
+builder.Services.AddSingleton<UiaElementStore>();
+builder.Services.AddSingleton<UiaQueryService>();
 builder.Services.AddSingleton<JobManager>();
 builder.Services.AddSingleton<EyeDispatcher>();
 builder.Services.AddSingleton<EyeLiveSnapshotService>();

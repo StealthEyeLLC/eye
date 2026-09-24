@@ -18,7 +18,7 @@ public sealed class ContractBoundaryTests
             contract.Descriptors.Select(x => x.Name).ToArray());
         Assert.Equal("1.0.0", contract.EngineProtocolVersion);
         Assert.Equal("1.0.0", contract.WorkerProtocolVersion);
-        Assert.Equal(["ui.observe"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal(["ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Equal(64, contract.PublicContractHash.Length);
         Assert.Matches("^[0-9a-f]{64}$", contract.PublicContractHash);
     }
@@ -67,7 +67,7 @@ public sealed class ContractBoundaryTests
     public void UnpublishedEngineOperationId_IsRejected()
     {
         var contract = EyeContractCatalog.Load();
-        var handshake = MatchingHandshake(contract) with { SupportedOperationIds = ["ui.query"] };
+        var handshake = MatchingHandshake(contract) with { SupportedOperationIds = ["ui.subscribe"] };
 
         var result = EngineHandshakeValidator.Validate(contract, handshake);
 

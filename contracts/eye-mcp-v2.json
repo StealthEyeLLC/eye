@@ -427,6 +427,65 @@
             "required": ["cursor", "session_id", "observed_at", "windows"],
             "additionalProperties": false
           }
+        },
+        {
+          "id": "ui.query",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "window_id": { "type": "string", "minLength": 1 },
+              "max_depth": { "type": "integer", "minimum": 0, "maximum": 12, "default": 4 },
+              "max_nodes": { "type": "integer", "minimum": 1, "maximum": 2000, "default": 200 }
+            },
+            "required": ["window_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "cursor": { "type": "integer", "minimum": 1 },
+              "window_id": { "type": "string", "minLength": 1 },
+              "window_incarnation": { "type": "integer", "minimum": 1 },
+              "observed_at": { "type": "string", "format": "date-time" },
+              "truncated": { "type": "boolean" },
+              "elements": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "element_id": { "type": "string", "minLength": 1 },
+                    "incarnation": { "type": "integer", "minimum": 1 },
+                    "parent_element_id": { "type": "string", "minLength": 1 },
+                    "depth": { "type": "integer", "minimum": 0 },
+                    "name": { "type": "string" },
+                    "automation_id": { "type": "string" },
+                    "control_type": { "type": "string" },
+                    "framework_id": { "type": "string" },
+                    "class_name": { "type": "string" },
+                    "enabled": { "type": "boolean" },
+                    "offscreen": { "type": "boolean" },
+                    "focused": { "type": "boolean" },
+                    "bounds": {
+                      "type": "object",
+                      "properties": {
+                        "left": { "type": "integer" },
+                        "top": { "type": "integer" },
+                        "right": { "type": "integer" },
+                        "bottom": { "type": "integer" }
+                      },
+                      "required": ["left", "top", "right", "bottom"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["element_id", "incarnation", "depth", "name", "automation_id", "control_type", "framework_id", "class_name", "enabled", "offscreen", "focused", "bounds"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["cursor", "window_id", "window_incarnation", "observed_at", "truncated", "elements"],
+            "additionalProperties": false
+          }
         }
       ]
     },
@@ -807,7 +866,7 @@
     "version": "1.0.0",
     "transport": "stream-json-rpc-over-named-pipes",
     "worker_protocol_version": "1.0.0",
-    "engine_operation_ids": ["ui.observe"],
+    "engine_operation_ids": ["ui.observe", "ui.query"],
     "contract_hash": {
       "algorithm": "sha256",
       "encoding": "lowercase-hex",

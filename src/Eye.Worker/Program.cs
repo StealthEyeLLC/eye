@@ -127,6 +127,9 @@ sealed class SessionWorkerRpcTarget(Stream vtStream) : IAsyncDisposable
     [JsonRpcMethod(WorkerRpcMethods.ObserveWindows)]
     public WorkerDesktopObservationResult ObserveWindows(WorkerDesktopObserveRequest request) =>
         DesktopWindowInventory.Observe(request.IncludeInvisible);
+    [JsonRpcMethod(WorkerRpcMethods.QueryUia)]
+    public WorkerUiaQueryResult QueryUia(WorkerUiaQueryRequest request) =>
+        DesktopUiaTreeReader.Query(request);
     [JsonRpcMethod(WorkerRpcMethods.Shutdown)]
     public WorkerShutdownResult Shutdown() => new(true);
 

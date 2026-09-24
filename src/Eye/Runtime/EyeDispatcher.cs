@@ -13,7 +13,7 @@ public enum EyeEffectClass
     External
 }
 
-public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null)
+public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null)
 {
     private const int FastCompletionWindowMs = 1000;
     private const long InlineOutputLimitBytes = 262_144;
@@ -56,7 +56,7 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                     return Success(op, new CapabilitiesResult(
                         "eye-mcp-v2",
                         new CapabilityFacades(
-                            ["system.status", "capabilities", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff", "ui.observe"],
+                            ["system.status", "capabilities", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff", "ui.observe", "ui.query"],
                             ["run", "job.start", "job.write", "job.resize", "job.cancel"],
                             ["engine.activate", "engine.restart", "engine.rollback", "artifact.export", "artifact.delete"],
                             [],
@@ -92,6 +92,35 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                                 window.Uia.ClassName,
                                 window.Uia.Enabled,
                                 window.Uia.Offscreen))).ToArray()));
+                }
+                case "ui.query":
+                {
+                    var request = DeserializeRequired<UiQueryArgs>(op, args);
+                    var snapshot = await RequireUiaQueryService().QueryAsync(
+                        request.WindowId,
+                        request.MaxDepth,
+                        request.MaxNodes,
+                        cancellationToken);
+                    return Success(op, new UiQueryResult(
+                        snapshot.Cursor,
+                        snapshot.WindowId,
+                        snapshot.WindowIncarnation,
+                        snapshot.ObservedAt,
+                        snapshot.Truncated,
+                        snapshot.Elements.Select(element => new UiElementResult(
+                            element.ElementId,
+                            element.Incarnation,
+                            element.ParentElementId,
+                            element.Depth,
+                            element.Name,
+                            element.AutomationId,
+                            element.ControlType,
+                            element.FrameworkId,
+                            element.ClassName,
+                            element.Enabled,
+                            element.Offscreen,
+                            element.Focused,
+                            new UiWindowBoundsResult(element.Left, element.Top, element.Right, element.Bottom))).ToArray()));
                 }
                 case "run":
                 {
@@ -366,6 +395,8 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         status.ProcessId,
         status.LastError);
 
+    private UiaQueryService RequireUiaQueryService() =>
+        uiaQueryService ?? throw new InvalidOperationException("UIA query service is not configured.");
     private DesktopObservationService RequireDesktopObservationService() =>
         desktopObservationService ?? throw new InvalidOperationException("Desktop observation service is not configured.");
     private EngineSupervisor RequireEngineSupervisor() =>
@@ -394,7 +425,7 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
     private static EyeEffectClass? GetEffectClass(string op) => op switch
     {
         "system.status" or "capabilities" or "engine.status" or "job.status" or "job.read" or "job.wait" or "job.result" or "job.attach" or
-        "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" or "ui.observe" => EyeEffectClass.Inspect,
+        "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" or "ui.observe" or "ui.query" => EyeEffectClass.Inspect,
         "run" or "job.start" or "job.write" or "job.resize" or "job.cancel" => EyeEffectClass.Run,
         "engine.activate" or "engine.restart" or "engine.rollback" or "artifact.export" or "artifact.delete" => EyeEffectClass.Change,
         _ => null
