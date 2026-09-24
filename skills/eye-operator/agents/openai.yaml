@@ -1,0 +1,3 @@
+interface:
+  display_name: "Eye Operator"
+  short_description: "Operate StealthEye efficiently through the Eye MCP app"
