@@ -27,6 +27,8 @@ public sealed class BrowserControlService(BrowserSessionManager sessions, Browse
         string expression,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(expression))
+            throw new ArgumentException("expression is required.", nameof(expression));
         var target = targets.ResolveActive(targetId);
         if (!string.Equals(target.Type, "page", StringComparison.Ordinal))
             throw new ArgumentException($"Target {targetId} is not a page.", nameof(targetId));

@@ -13,7 +13,7 @@ public enum EyeEffectClass
     External
 }
 
-public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null, UiaActionService? uiaActionService = null)
+public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null, UiaActionService? uiaActionService = null, BrowserObservationService? browserObservationService = null, BrowserControlService? browserControlService = null)
 {
     private const int FastCompletionWindowMs = 1000;
     private const long InlineOutputLimitBytes = 262_144;
@@ -56,13 +56,28 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                     return Success(op, new CapabilitiesResult(
                         "eye-mcp-v2",
                         new CapabilityFacades(
-                            ["system.status", "capabilities", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff", "ui.observe", "ui.query"],
+                            ["system.status", "capabilities", "engine.status", "job.status", "job.read", "job.wait", "job.result", "job.attach", "artifact.info", "artifact.preview", "artifact.read_range", "artifact.diff", "ui.observe", "ui.query", "browser.observe"],
                             ["run", "job.start", "job.write", "job.resize", "job.cancel"],
                             ["engine.activate", "engine.restart", "engine.rollback", "artifact.export", "artifact.delete"],
-                            ["ui.act"],
+                            ["ui.act", "browser.navigate", "browser.evaluate"],
                             [],
                             [])));
 
+                case "browser.observe":
+                {
+                    var snapshot = await RequireBrowserObservationService().ObserveAsync(cancellationToken);
+                    return Success(op, new BrowserObserveResult(
+                        snapshot.Cursor,
+                        snapshot.ObservedAt,
+                        snapshot.BrowserVersion,
+                        snapshot.ProtocolVersion,
+                        snapshot.Targets.Select(target => new BrowserTargetResult(
+                            target.TargetId,
+                            target.Incarnation,
+                            target.Type,
+                            target.Title,
+                            target.Url)).ToArray()));
+                }
                 case "ui.observe":
                 {
                     var request = args is null || args.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined
@@ -231,6 +246,38 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                     return Success(op, new JobAttachResult(ToPublic(attached.Job), attached.StdoutCursor, attached.StderrCursor));
                 }
 
+                case "browser.navigate":
+                {
+                    var request = DeserializeRequired<BrowserNavigateArgs>(op, args);
+                    var result = await RequireBrowserControlService().NavigateAsync(
+                        request.TargetId,
+                        request.Url,
+                        cancellationToken);
+                    return Success(op, new BrowserNavigateResult(
+                        result.TargetId,
+                        result.Incarnation,
+                        result.Url,
+                        result.FrameId,
+                        result.LoaderId,
+                        result.ErrorText));
+                }
+
+                case "browser.evaluate":
+                {
+                    var request = DeserializeRequired<BrowserEvaluateArgs>(op, args);
+                    var result = await RequireBrowserControlService().EvaluateAsync(
+                        request.TargetId,
+                        request.Expression,
+                        cancellationToken);
+                    return Success(op, new BrowserEvaluateResult(
+                        result.TargetId,
+                        result.Incarnation,
+                        result.Type,
+                        result.Value,
+                        result.Description,
+                        result.Threw,
+                        result.ExceptionText));
+                }
                 case "ui.act":
                 {
                     var request = DeserializeRequired<UiActArgs>(op, args);
@@ -410,6 +457,12 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
         status.ProcessId,
         status.LastError);
 
+    private BrowserObservationService RequireBrowserObservationService() =>
+        browserObservationService ?? throw new InvalidOperationException("Browser observation service is not configured.");
+
+    private BrowserControlService RequireBrowserControlService() =>
+        browserControlService ?? throw new InvalidOperationException("Browser control service is not configured.");
+
     private UiaActionService RequireUiaActionService() =>
         uiaActionService ?? throw new InvalidOperationException("UIA action service is not configured.");
     private UiaQueryService RequireUiaQueryService() =>
@@ -442,10 +495,10 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
     private static EyeEffectClass? GetEffectClass(string op) => op switch
     {
         "system.status" or "capabilities" or "engine.status" or "job.status" or "job.read" or "job.wait" or "job.result" or "job.attach" or
-        "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" or "ui.observe" or "ui.query" => EyeEffectClass.Inspect,
+        "artifact.info" or "artifact.preview" or "artifact.read_range" or "artifact.diff" or "ui.observe" or "ui.query" or "browser.observe" => EyeEffectClass.Inspect,
         "run" or "job.start" or "job.write" or "job.resize" or "job.cancel" => EyeEffectClass.Run,
         "engine.activate" or "engine.restart" or "engine.rollback" or "artifact.export" or "artifact.delete" => EyeEffectClass.Change,
-        "ui.act" => EyeEffectClass.Interact,
+        "ui.act" or "browser.navigate" or "browser.evaluate" => EyeEffectClass.Interact,
         _ => null
     };
 

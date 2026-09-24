@@ -18,7 +18,7 @@ public sealed class ContractBoundaryTests
             contract.Descriptors.Select(x => x.Name).ToArray());
         Assert.Equal("1.0.0", contract.EngineProtocolVersion);
         Assert.Equal("1.0.0", contract.WorkerProtocolVersion);
-        Assert.Equal(["ui.act", "ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal(["browser.evaluate", "browser.navigate", "browser.observe", "ui.act", "ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Equal(64, contract.PublicContractHash.Length);
         Assert.Matches("^[0-9a-f]{64}$", contract.PublicContractHash);
     }

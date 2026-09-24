@@ -486,6 +486,41 @@
             "required": ["cursor", "window_id", "window_incarnation", "observed_at", "truncated", "elements"],
             "additionalProperties": false
           }
+        },
+        {
+          "id": "browser.observe",
+          "args_required": false,
+          "args_schema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "cursor": { "type": "integer", "minimum": 1 },
+              "observed_at": { "type": "string", "format": "date-time" },
+              "browser_version": { "type": "string" },
+              "protocol_version": { "type": "string" },
+              "targets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "target_id": { "type": "string", "minLength": 1 },
+                    "incarnation": { "type": "integer", "minimum": 1 },
+                    "type": { "type": "string" },
+                    "title": { "type": "string" },
+                    "url": { "type": "string" }
+                  },
+                  "required": ["target_id", "incarnation", "type", "title", "url"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["cursor", "observed_at", "browser_version", "protocol_version", "targets"],
+            "additionalProperties": false
+          }
         }
       ]
     },
@@ -779,6 +814,59 @@
             "required": ["element_id", "incarnation", "action", "completed", "completed_at"],
             "additionalProperties": false
           }
+        },
+        {
+          "id": "browser.navigate",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "target_id": { "type": "string", "minLength": 1 },
+              "url": { "type": "string", "minLength": 1 }
+            },
+            "required": ["target_id", "url"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "target_id": { "type": "string", "minLength": 1 },
+              "incarnation": { "type": "integer", "minimum": 1 },
+              "url": { "type": "string" },
+              "frame_id": { "type": "string" },
+              "loader_id": { "type": "string" },
+              "error_text": { "type": "string" }
+            },
+            "required": ["target_id", "incarnation", "url"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "browser.evaluate",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "target_id": { "type": "string", "minLength": 1 },
+              "expression": { "type": "string", "minLength": 1 }
+            },
+            "required": ["target_id", "expression"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "target_id": { "type": "string", "minLength": 1 },
+              "incarnation": { "type": "integer", "minimum": 1 },
+              "type": { "type": "string" },
+              "value": {},
+              "description": { "type": "string" },
+              "threw": { "type": "boolean" },
+              "exception_text": { "type": "string" }
+            },
+            "required": ["target_id", "incarnation", "type", "threw"],
+            "additionalProperties": false
+          }
         }
       ]
     },
@@ -893,7 +981,7 @@
     "version": "1.0.0",
     "transport": "stream-json-rpc-over-named-pipes",
     "worker_protocol_version": "1.0.0",
-    "engine_operation_ids": ["ui.act", "ui.observe", "ui.query"],
+    "engine_operation_ids": ["browser.evaluate", "browser.navigate", "browser.observe", "ui.act", "ui.observe", "ui.query"],
     "contract_hash": {
       "algorithm": "sha256",
       "encoding": "lowercase-hex",

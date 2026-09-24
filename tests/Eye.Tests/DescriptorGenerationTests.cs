@@ -15,11 +15,11 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(
             [
                 "artifact.delete", "artifact.diff", "artifact.export", "artifact.info", "artifact.preview", "artifact.read_range",
-                "capabilities", "engine.activate", "engine.restart", "engine.rollback", "engine.status", "job.attach", "job.cancel", "job.read",
+                "browser.evaluate", "browser.navigate", "browser.observe", "capabilities", "engine.activate", "engine.restart", "engine.rollback", "engine.status", "job.attach", "job.cancel", "job.read",
                 "job.resize", "job.result", "job.start", "job.status", "job.wait", "job.write", "run", "system.status", "ui.act", "ui.observe", "ui.query"
             ],
             contract.PublishedOperationIds.Order(StringComparer.Ordinal).ToArray());
-        Assert.Equal(["ui.act", "ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal(["browser.evaluate", "browser.navigate", "browser.observe", "ui.act", "ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Equal("eye_inspect", contract.GetToolForOperation("system.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("engine.status").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("job.status").Name);
@@ -27,7 +27,10 @@ public sealed class DescriptorGenerationTests
         Assert.Equal("eye_inspect", contract.GetToolForOperation("artifact.info").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("ui.observe").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("ui.query").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("browser.observe").Name);
         Assert.Equal("eye_interact", contract.GetToolForOperation("ui.act").Name);
+        Assert.Equal("eye_interact", contract.GetToolForOperation("browser.navigate").Name);
+        Assert.Equal("eye_interact", contract.GetToolForOperation("browser.evaluate").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("run").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("job.start").Name);
         Assert.Equal("eye_run", contract.GetToolForOperation("job.write").Name);
@@ -44,8 +47,8 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(["eye_inspect", "eye_run", "eye_change", "eye_interact", "eye_live"], descriptors.Select(x => x.Name).ToArray());
 
         var inspect = descriptors.Single(x => x.Name == "eye_inspect");
-        Assert.Equal(14, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(28, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(15, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(30, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var run = descriptors.Single(x => x.Name == "eye_run");
         Assert.Equal(5, run.InputSchema.GetProperty("oneOf").GetArrayLength());
@@ -64,8 +67,11 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(10, change.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var interact = descriptors.Single(x => x.Name == "eye_interact");
-        Assert.Equal("ui.act", interact.InputSchema.GetProperty("properties").GetProperty("op").GetProperty("const").GetString());
-        Assert.Equal(2, interact.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(3, interact.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(6, interact.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Contains("ui.act", interact.InputSchema.GetProperty("oneOf").EnumerateArray().Select(x => x.GetProperty("properties").GetProperty("op").GetProperty("const").GetString()));
+        Assert.Contains("browser.navigate", interact.InputSchema.GetProperty("oneOf").EnumerateArray().Select(x => x.GetProperty("properties").GetProperty("op").GetProperty("const").GetString()));
+        Assert.Contains("browser.evaluate", interact.InputSchema.GetProperty("oneOf").EnumerateArray().Select(x => x.GetProperty("properties").GetProperty("op").GetProperty("const").GetString()));
 
         var live = descriptors.Single(x => x.Name == "eye_live");
         AssertPropertySet<EmptyArgs>(live.InputSchema);
@@ -102,6 +108,9 @@ public sealed class DescriptorGenerationTests
         var uiObserve = Operation(contract, "ui.observe");
         var uiQuery = Operation(contract, "ui.query");
         var uiAct = Operation(contract, "ui.act");
+        var browserObserve = Operation(contract, "browser.observe");
+        var browserNavigate = Operation(contract, "browser.navigate");
+        var browserEvaluate = Operation(contract, "browser.evaluate");
 
         AssertPropertySet<SystemStatusResult>(systemStatus.ResultSchema);
         AssertPropertySet<EmptyArgs>(engineStatus.ArgsSchema);
@@ -164,6 +173,13 @@ public sealed class DescriptorGenerationTests
         AssertPropertySet<UiWindowBoundsResult>(uiElement.GetProperty("properties").GetProperty("bounds"));
         AssertPropertySet<UiActArgs>(uiAct.ArgsSchema);
         AssertPropertySet<UiActResult>(uiAct.ResultSchema);
+        AssertPropertySet<EmptyArgs>(browserObserve.ArgsSchema);
+        AssertPropertySet<BrowserObserveResult>(browserObserve.ResultSchema);
+        AssertPropertySet<BrowserTargetResult>(browserObserve.ResultSchema.GetProperty("properties").GetProperty("targets").GetProperty("items"));
+        AssertPropertySet<BrowserNavigateArgs>(browserNavigate.ArgsSchema);
+        AssertPropertySet<BrowserNavigateResult>(browserNavigate.ResultSchema);
+        AssertPropertySet<BrowserEvaluateArgs>(browserEvaluate.ArgsSchema);
+        AssertPropertySet<BrowserEvaluateResult>(browserEvaluate.ResultSchema);
         var live = contract.Descriptors.Single(x => x.Name == "eye_live");
         AssertPropertySet<EmptyArgs>(live.InputSchema!.Value);
         AssertPropertySet<EyeLiveSnapshotResult>(live.ResultSchema!.Value);
@@ -198,6 +214,10 @@ public sealed class DescriptorGenerationTests
         Assert.DoesNotContain("pseudo_console", serialized, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("native_handle", serialized, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("runtime_id", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("cdp_target_id", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("debug_port", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("chrome_path", serialized, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("user_data_dir", serialized, StringComparison.OrdinalIgnoreCase);
     }
 
     private static EyeOperationDescriptor Operation(EyeContractCatalog contract, string id) =>
