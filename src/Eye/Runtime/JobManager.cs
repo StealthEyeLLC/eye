@@ -241,26 +241,32 @@ decoded:
     {
         try
         {
-            await using var stdoutFile = new FileStream(record.StdoutPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite, 4096, FileOptions.Asynchronous);
-            await using var stderrFile = new FileStream(record.StderrPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite, 4096, FileOptions.Asynchronous);
-            await using var stdout = new StreamWriter(stdoutFile, new UTF8Encoding(false)) { AutoFlush = true };
-            await using var stderr = new StreamWriter(stderrFile, new UTF8Encoding(false)) { AutoFlush = true };
-
-            var hooks = new ProcessRunHooks
+            JobRecord completed;
+            await using (var stdoutFile = new FileStream(record.StdoutPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite, 4096, FileOptions.Asynchronous))
+            await using (var stderrFile = new FileStream(record.StderrPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite, 4096, FileOptions.Asynchronous))
+            await using (var stdout = new StreamWriter(stdoutFile, new UTF8Encoding(false)) { AutoFlush = true })
+            await using (var stderr = new StreamWriter(stderrFile, new UTF8Encoding(false)) { AutoFlush = true })
             {
-                CaptureOutput = false,
-                Started = (pid, identity) => store.MarkRunning(record.JobId, pid, identity),
-                Output = async (channel, text) =>
+                var hooks = new ProcessRunHooks
                 {
-                    var writer = channel == ProcessOutputChannel.Stdout ? stdout : stderr;
-                    await writer.WriteAsync(text);
-                    await writer.FlushAsync();
-                }
-            };
+                    CaptureOutput = false,
+                    Started = (pid, identity) => store.MarkRunning(record.JobId, pid, identity),
+                    Output = async (channel, text) =>
+                    {
+                        var writer = channel == ProcessOutputChannel.Stdout ? stdout : stderr;
+                        await writer.WriteAsync(text);
+                        await writer.FlushAsync();
+                    }
+                };
 
-            var result = await processRunner.RunAsync(request, active.Cancellation.Token, hooks);
-            var finalState = result.TimedOut ? JobStates.TimedOut : JobStates.Completed;
-            Complete(active, store.Finish(record.JobId, finalState, result));
+                var result = await processRunner.RunAsync(request, active.Cancellation.Token, hooks);
+                var finalState = result.TimedOut ? JobStates.TimedOut : JobStates.Completed;
+                completed = store.Finish(record.JobId, finalState, result);
+            }
+
+            // Publish completion only after stdout/stderr writers have closed. This prevents
+            // inline-result and large-output promotion from racing an open spool writer.
+            Complete(active, completed);
         }
         catch (OperationCanceledException) when (active.Cancellation.IsCancellationRequested)
         {

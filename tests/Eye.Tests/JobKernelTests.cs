@@ -35,6 +35,43 @@ public sealed class JobKernelTests : IDisposable
     }
 
     [Fact]
+    public async Task JobCompletion_ClosesSpoolWritersBeforePublishingCompletion()
+    {
+        var store = Store();
+        var manager = new JobManager(store, new ProcessRunner());
+
+        for (var iteration = 0; iteration < 40; iteration++)
+        {
+            var job = manager.Start(new RunRequest
+            {
+                Context = "system",
+                FileName = "cmd.exe",
+                Arguments = ["/c", $"echo spool-close-{iteration}"],
+                TimeoutMs = 10000
+            });
+
+            var waited = await manager.WaitAsync(job.JobId, 10000);
+            Assert.False(waited.WaitTimedOut);
+            Assert.Equal(JobStates.Completed, waited.Job.State);
+
+            using (File.Open(waited.Job.StdoutPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+            }
+            using (File.Open(waited.Job.StderrPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+            }
+
+            var inline = await manager.TryGetInlineProcessResultAsync(
+                waited.Job,
+                262_144);
+            Assert.NotNull(inline);
+            Assert.Contains(
+                $"spool-close-{iteration}",
+                inline!.Stdout,
+                StringComparison.OrdinalIgnoreCase);
+        }
+    }
+    [Fact]
     public async Task JobRead_DoesNotSplitUtf8Characters()
     {
         var store = Store();
