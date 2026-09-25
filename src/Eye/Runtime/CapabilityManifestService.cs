@@ -1,12 +1,25 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Text.Json;
 using StealthEye.Contract;
 
 namespace StealthEye.Runtime;
 
 public sealed class CapabilityManifestService
 {
+    private readonly string? suiteCatalogPath;
+
+    public CapabilityManifestService()
+    {
+    }
+
+    public CapabilityManifestService(string suiteCatalogPath)
+    {
+        this.suiteCatalogPath = string.IsNullOrWhiteSpace(suiteCatalogPath)
+            ? throw new ArgumentException("Suite catalog path is required.", nameof(suiteCatalogPath))
+            : Path.GetFullPath(suiteCatalogPath);
+    }
     private static readonly SoftwareProbe[] SoftwareProbes =
     [
         new("git", ["git.exe"]),
@@ -149,19 +162,101 @@ public sealed class CapabilityManifestService
     }
 
     public OperationListResult OperationList() =>
-        new(OperationTemplates
+        new(AllOperationTemplates()
             .Select(ToOperation)
             .OrderBy(x => x.Name, StringComparer.Ordinal)
             .ToArray());
 
     public OperationDescribeResult OperationDescribe(string name)
     {
-        var match = OperationTemplates.FirstOrDefault(x =>
+        var match = AllOperationTemplates().FirstOrDefault(x =>
             string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
         if (match is null)
             throw new ArgumentException($"Unknown operation manifest: {name}", nameof(name));
         return new OperationDescribeResult(ToOperation(match));
     }
+
+    private IEnumerable<AdapterTemplate> AllOperationTemplates() =>
+        OperationTemplates.Concat(LoadSuiteOperationTemplates());
+
+    private AdapterTemplate[] LoadSuiteOperationTemplates()
+    {
+        var programDataPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "StealthEye",
+            "suite-capabilities.json");
+        var packagedPath = Path.Combine(AppContext.BaseDirectory, "suite-capabilities.json");
+        var path = suiteCatalogPath ??
+            (File.Exists(programDataPath) ? programDataPath : packagedPath);
+
+        if (!File.Exists(path))
+            return [];
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllBytes(path));
+            if (!document.RootElement.TryGetProperty("apps", out var apps) ||
+                apps.ValueKind != JsonValueKind.Array)
+                return [];
+
+            var result = new List<AdapterTemplate>();
+            foreach (var app in apps.EnumerateArray())
+            {
+                var id = JsonString(app, "id");
+                var manifestName = JsonString(app, "manifest_name");
+                if (string.IsNullOrWhiteSpace(manifestName) && !string.IsNullOrWhiteSpace(id))
+                    manifestName = $"suite.{id}";
+                if (string.IsNullOrWhiteSpace(manifestName))
+                    continue;
+
+                var category = JsonString(app, "category") ?? "suite";
+                var provider = JsonString(app, "provider") ?? "STEALTHEYE Suite";
+                var authority = JsonString(app, "authority") ?? "eye";
+                var summary = JsonString(app, "summary") ?? "STEALTHEYE suite capability.";
+                var optionalExternal = JsonBool(app, "optional_external") ?? false;
+                var configured = JsonBool(app, "configured") ?? true;
+                var localPath = JsonString(app, "available_local_path");
+
+                var available = optionalExternal
+                    ? configured
+                    : string.IsNullOrWhiteSpace(localPath) ||
+                      File.Exists(localPath) ||
+                      Directory.Exists(localPath);
+
+                var detail =
+                    $"{summary} Authority={authority}. " +
+                    $"Canonical recipe={path}#{id}. " +
+                    "Read the full recipe before first use; prefer its preferred_control; " +
+                    "verify the listed postconditions; use its recovery path before retrying unknown outcomes.";
+
+                result.Add(new AdapterTemplate(
+                    manifestName,
+                    category,
+                    provider,
+                    available,
+                    optionalExternal,
+                    detail));
+            }
+
+            return result.ToArray();
+        }
+        catch
+        {
+            // A bad optional suite catalog must never take down the core capability manifest.
+            return [];
+        }
+    }
+
+    private static string? JsonString(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static bool? JsonBool(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) &&
+        value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? value.GetBoolean()
+            : null;
 
     private static OperationManifestResult ToOperation(AdapterTemplate x) =>
         new(

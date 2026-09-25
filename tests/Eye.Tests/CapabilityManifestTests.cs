@@ -1,3 +1,4 @@
+using System.Text.Json;
 using StealthEye.Runtime;
 
 namespace Eye.Tests;
@@ -48,4 +49,81 @@ public sealed class CapabilityManifestTests
             manifests.FindSoftware("duckdb").Software.Single().Available,
             duckdb.Available);
     }
-}
+
+    [Fact]
+    public void SuiteCatalogExtendsOperationManifestsWithoutChangingPublicTools()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "eye-suite-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var localApp = Path.Combine(root, "studio");
+        Directory.CreateDirectory(localApp);
+        var missingApp = Path.Combine(root, "missing");
+        var catalog = Path.Combine(root, "suite-capabilities.json");
+
+        var payload = new
+        {
+            apps = new object[]
+            {
+                new
+                {
+                    id = "studio",
+                    manifest_name = "suite.studio",
+                    category = "image-video",
+                    provider = "STEALTHEYE Suite",
+                    authority = "eye",
+                    optional_external = false,
+                    available_local_path = localApp,
+                    summary = "Local Studio recipe."
+                },
+                new
+                {
+                    id = "missing",
+                    manifest_name = "suite.missing",
+                    category = "suite",
+                    provider = "STEALTHEYE Suite",
+                    authority = "eye",
+                    optional_external = false,
+                    available_local_path = missingApp,
+                    summary = "Missing local recipe."
+                },
+                new
+                {
+                    id = "remote",
+                    manifest_name = "suite.remote",
+                    category = "device-control",
+                    provider = "STEALTHEYE Suite",
+                    authority = "StealthEye Desktop",
+                    optional_external = true,
+                    configured = true,
+                    summary = "Desktop-owned recipe."
+                }
+            }
+        };
+
+        File.WriteAllText(catalog, JsonSerializer.Serialize(payload));
+        try
+        {
+            var manifests = new CapabilityManifestService(catalog);
+            var list = manifests.OperationList().Operations;
+
+            var studio = Assert.Single(list, x => x.Name == "suite.studio");
+            Assert.True(studio.Available);
+            Assert.False(studio.OptionalExternal);
+            Assert.Contains("Authority=eye", studio.Detail, StringComparison.Ordinal);
+            Assert.Contains(catalog, studio.Detail, StringComparison.Ordinal);
+
+            var missing = Assert.Single(list, x => x.Name == "suite.missing");
+            Assert.False(missing.Available);
+
+            var remote = Assert.Single(list, x => x.Name == "suite.remote");
+            Assert.True(remote.Available);
+            Assert.True(remote.OptionalExternal);
+            Assert.Contains("Authority=StealthEye Desktop", remote.Detail, StringComparison.Ordinal);
+
+            Assert.Equal(studio, manifests.OperationDescribe("suite.studio").Operation);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }}

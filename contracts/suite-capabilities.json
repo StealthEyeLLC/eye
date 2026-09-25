@@ -1,0 +1,640 @@
+﻿{
+    "schema":  "stealtheye.suite-capabilities",
+    "version":  "1.0.0",
+    "generated_utc":  "2026-09-25T13:33:58.0835542Z",
+    "doctrine":  {
+                     "controller":  "ChatGPT/GPT-5.6 Sol",
+                     "rule":  "Apps are capabilities beneath the existing six Eye tools; recipes do not create another controller or daemon.",
+                     "first_use":  "Read the full recipe before first use in a fresh chat.",
+                     "execution":  "Prefer direct API/native primitives, then filesystem/CLI, then UIA/DOM, and raw coordinates only as a last resort.",
+                     "verification":  "Every effectful action requires an observed postcondition before completion is declared."
+                 },
+    "apps":  [
+                 {
+                     "id":  "core",
+                     "name":  "STEALTHEYE Core",
+                     "manifest_name":  "suite.core",
+                     "category":  "suite-core",
+                     "provider":  "STEALTHEYE",
+                     "machine":  "STEALTHEYELLC",
+                     "authority":  "eye",
+                     "optional_external":  false,
+                     "available_local_path":  "C:\\Program Files\\StealthEye",
+                     "summary":  "Primary local control plane. Use the existing six Eye facades; do not build a parallel controller.",
+                     "lifecycle":  {
+                                       "mode":  "always_on_service",
+                                       "service":  "StealthEye",
+                                       "health":  "http://127.0.0.1:37931/health"
+                                   },
+                     "preferred_control":  "eye_native",
+                     "operations":  [
+                                        "eye_inspect",
+                                        "eye_run",
+                                        "eye_change",
+                                        "eye_interact",
+                                        "eye_external",
+                                        "eye_live"
+                                    ],
+                     "verification":  [
+                                          "Windows service StealthEye is Running",
+                                          "GET /health succeeds",
+                                          "MCP contract exposes exactly the frozen six tools"
+                                      ],
+                     "recovery":  [
+                                      "Inspect service and health before restart",
+                                      "Use StealthEyeConnection only for machine repair when needed",
+                                      "Never replay unknown consequential actions without postcondition inspection"
+                                  ]
+                 },
+                 {
+                     "id":  "studio",
+                     "name":  "Stealth Studio",
+                     "manifest_name":  "suite.studio",
+                     "category":  "image-video",
+                     "provider":  "STEALTHEYE Suite",
+                     "machine":  "STEALTHEYELLC",
+                     "authority":  "eye",
+                     "optional_external":  false,
+                     "available_local_path":  "X:\\StealthEye\\Apps\\Studio",
+                     "summary":  "Local image/video generation and editing. Prefer its HTTP API over visible UI automation.",
+                     "lifecycle":  {
+                                       "mode":  "always_on_task",
+                                       "task":  "StealthStudio",
+                                       "health":  "GET http://127.0.0.1:7878/api/status"
+                                   },
+                     "preferred_control":  "http_api",
+                     "operations":  [
+                                        {
+                                            "id":  "status",
+                                            "method":  "GET",
+                                            "path":  "/api/status",
+                                            "purpose":  "engine/video readiness"
+                                        },
+                                        {
+                                            "id":  "generate",
+                                            "method":  "POST",
+                                            "path":  "/api/generate",
+                                            "inputs":  "prompt, mode, engine, size, steps, seed, loras; optional imageData/strength/preserveIdentity",
+                                            "output":  "filename plus generation metadata"
+                                        },
+                                        {
+                                            "id":  "edit",
+                                            "method":  "POST",
+                                            "path":  "/api/edit",
+                                            "inputs":  "imageData, prompt, engine, strength, mode, quality; optional mask/reference/insert data",
+                                            "output":  "filename plus edit metadata"
+                                        },
+                                        {
+                                            "id":  "auto_plan",
+                                            "method":  "POST",
+                                            "path":  "/api/auto/plan",
+                                            "purpose":  "deterministic route planning before auto execution"
+                                        },
+                                        {
+                                            "id":  "auto",
+                                            "method":  "POST",
+                                            "path":  "/api/auto",
+                                            "purpose":  "natural-language auto route"
+                                        },
+                                        {
+                                            "id":  "animate",
+                                            "method":  "POST",
+                                            "path":  "/api/animate",
+                                            "purpose":  "queue animation; poll GET /api/animate/{id}"
+                                        },
+                                        {
+                                            "id":  "profiles",
+                                            "method":  "GET",
+                                            "path":  "/api/profiles",
+                                            "purpose":  "identity/model profiles"
+                                        },
+                                        {
+                                            "id":  "loras",
+                                            "method":  "GET",
+                                            "path":  "/api/loras?engine={engine}",
+                                            "purpose":  "compatible LoRA inventory"
+                                        },
+                                        {
+                                            "id":  "recent",
+                                            "method":  "GET",
+                                            "path":  "/api/recent",
+                                            "purpose":  "recent outputs"
+                                        },
+                                        {
+                                            "id":  "synthetic_register",
+                                            "method":  "POST",
+                                            "path":  "/api/synthetic/register",
+                                            "purpose":  "register authorized synthetic subject; requires confirmSynthetic=true"
+                                        }
+                                    ],
+                     "verification":  [
+                                          "HTTP response is successful",
+                                          "Returned output filename exists under Studio output",
+                                          "For queued animation poll job until done/error",
+                                          "Never infer success from request acceptance alone"
+                                      ],
+                     "recovery":  [
+                                      "Check /api/status",
+                                      "Restart scheduled task StealthStudio only if health is down",
+                                      "Inspect Studio logs/output before retrying a generation"
+                                  ]
+                 },
+                 {
+                     "id":  "audio",
+                     "name":  "Stealth Audio",
+                     "manifest_name":  "suite.audio",
+                     "category":  "audio",
+                     "provider":  "STEALTHEYE Suite",
+                     "machine":  "STEALTHEYELLC",
+                     "authority":  "eye",
+                     "optional_external":  false,
+                     "available_local_path":  "X:\\StealthEye\\Apps\\Audio",
+                     "summary":  "On-demand local music, voice, autotune, mixing, mastering and RVC workspace.",
+                     "lifecycle":  {
+                                       "mode":  "on_demand_task",
+                                       "task":  "Stealth Music App",
+                                       "start":  "Start-ScheduledTask Stealth Music App",
+                                       "health":  "GET http://127.0.0.1:8235/api/health",
+                                       "windowless":  "pythonw.exe",
+                                       "dependency":  {
+                                                          "task":  "Stealth Music ACE",
+                                                          "health":  "GET http://127.0.0.1:8211/health",
+                                                          "policy":  "Start and verify ACE only for ACE/song-generation operations; RVC/autotune/mix/master may operate without ACE when their own readiness checks pass."
+                                                      }
+                                   },
+                     "preferred_control":  "http_api",
+                     "operations":  [
+                                        {
+                                            "id":  "health",
+                                            "method":  "GET",
+                                            "path":  "/api/health"
+                                        },
+                                        {
+                                            "id":  "files",
+                                            "method":  "GET",
+                                            "path":  "/api/files"
+                                        },
+                                        {
+                                            "id":  "generate",
+                                            "method":  "POST",
+                                            "path":  "/api/generate"
+                                        },
+                                        {
+                                            "id":  "audio_task",
+                                            "method":  "POST",
+                                            "path":  "/api/audio-task",
+                                            "verify":  "poll GET /api/job/{task_id}"
+                                        },
+                                        {
+                                            "id":  "upload",
+                                            "method":  "POST",
+                                            "path":  "/api/upload"
+                                        },
+                                        {
+                                            "id":  "voice_upload",
+                                            "method":  "POST",
+                                            "path":  "/api/voice/upload"
+                                        },
+                                        {
+                                            "id":  "autotune",
+                                            "method":  "POST",
+                                            "path":  "/api/autotune"
+                                        },
+                                        {
+                                            "id":  "mix",
+                                            "method":  "POST",
+                                            "path":  "/api/mix"
+                                        },
+                                        {
+                                            "id":  "master",
+                                            "method":  "POST",
+                                            "path":  "/api/master"
+                                        },
+                                        {
+                                            "id":  "rvc_convert",
+                                            "method":  "POST",
+                                            "path":  "/api/rvc/convert"
+                                        },
+                                        {
+                                            "id":  "rvc_train",
+                                            "method":  "POST",
+                                            "path":  "/api/rvc/train",
+                                            "verify":  "GET /api/rvc/train/status"
+                                        }
+                                    ],
+                     "verification":  [
+                                          "Start Stealth Music App if port 8235 is not listening",
+                                          "GET /api/health succeeds before work",
+                                          "For ACE/song generation: start Stealth Music ACE and require GET http://127.0.0.1:8211/health before submitting",
+                                          "Poll returned task/job IDs to terminal state",
+                                          "Verify produced media path/file"
+                                      ],
+                     "recovery":  [
+                                      "Inspect task state and Logs/app-errors.log",
+                                      "Restart only the Audio task if health fails",
+                                      "Do not relaunch completed jobs blindly"
+                                  ]
+                 },
+                 {
+                     "id":  "health",
+                     "name":  "Stealth Health",
+                     "manifest_name":  "suite.health",
+                     "category":  "synthetic-health",
+                     "provider":  "STEALTHEYE Suite",
+                     "machine":  "STEALTHEYELLC",
+                     "authority":  "eye",
+                     "optional_external":  false,
+                     "available_local_path":  "X:\\StealthEye\\Apps\\Health",
+                     "summary":  "Synthetic-only health baseline/condition study. Operate only on certified/registered synthetic subjects.",
+                     "lifecycle":  {
+                                       "mode":  "on_demand_task",
+                                       "task":  "Stealth Health App",
+                                       "start":  "Start-ScheduledTask Stealth Health App",
+                                       "health":  "GET http://127.0.0.1:7879/api/status"
+                                   },
+                     "preferred_control":  "http_api",
+                     "operations":  [
+                                        {
+                                            "id":  "status",
+                                            "method":  "GET",
+                                            "path":  "/api/status"
+                                        },
+                                        {
+                                            "id":  "conditions",
+                                            "method":  "GET",
+                                            "path":  "/api/conditions"
+                                        },
+                                        {
+                                            "id":  "certify",
+                                            "method":  "POST",
+                                            "path":  "/api/certify"
+                                        },
+                                        {
+                                            "id":  "engine_start",
+                                            "method":  "POST",
+                                            "path":  "/api/engine/start"
+                                        },
+                                        {
+                                            "id":  "baseline_generate",
+                                            "method":  "POST",
+                                            "path":  "/api/baseline/generate",
+                                            "inputs":  "slotId required; candidates 1-2; quality optional",
+                                            "verify":  "poll GET /api/render-job/{id}"
+                                        },
+                                        {
+                                            "id":  "baseline_accept",
+                                            "method":  "POST",
+                                            "path":  "/api/baseline/accept",
+                                            "inputs":  "baselineId"
+                                        },
+                                        {
+                                            "id":  "baseline_revoke",
+                                            "method":  "POST",
+                                            "path":  "/api/baseline/revoke",
+                                            "inputs":  "baselineId"
+                                        },
+                                        {
+                                            "id":  "condition",
+                                            "method":  "POST",
+                                            "path":  "/api/condition",
+                                            "inputs":  "name, category, region, description required; optional morphology/severityScale"
+                                        },
+                                        {
+                                            "id":  "scan",
+                                            "method":  "POST",
+                                            "path":  "/api/scan",
+                                            "inputs":  "optional baselineId, conditionId, status, metadata"
+                                        }
+                                    ],
+                     "verification":  [
+                                          "GET /api/status succeeds",
+                                          "Render jobs reach terminal state before acceptance",
+                                          "Baseline/scan identifiers exist in SQLite-backed status/results"
+                                      ],
+                     "recovery":  [
+                                      "Start task if service is offline",
+                                      "Inspect render job and Health logs before retry",
+                                      "Do not bypass synthetic-subject certification/registry checks"
+                                  ]
+                 },
+                 {
+                     "id":  "flix",
+                     "name":  "StealthFlix",
+                     "manifest_name":  "suite.flix",
+                     "category":  "media",
+                     "provider":  "STEALTHEYE Suite",
+                     "machine":  "STEALTHEYELLC-D",
+                     "authority":  "StealthEye Desktop",
+                     "optional_external":  true,
+                     "configured":  true,
+                     "summary":  "Desktop Jellyfin media service plus guarded intake, requests, backups, casting and TV-Forever behavior.",
+                     "lifecycle":  {
+                                       "mode":  "always_on",
+                                       "health":  "GET http://127.0.0.1:8096/System/Info/Public",
+                                       "expected_server":  "StealthFlix"
+                                   },
+                     "preferred_control":  "desktop_system_then_jellyfin_http",
+                     "operations":  [
+                                        {
+                                            "id":  "health",
+                                            "method":  "GET",
+                                            "path":  "http://127.0.0.1:8096/System/Info/Public"
+                                        },
+                                        {
+                                            "id":  "library",
+                                            "control":  "Jellyfin HTTP API",
+                                            "note":  "Resolve existing local authentication at runtime without surfacing tokens in chat"
+                                        },
+                                        {
+                                            "id":  "intake",
+                                            "control":  "filesystem",
+                                            "path":  "D:\\StealthDrop",
+                                            "note":  "Use intake instead of writing finished media directly into library"
+                                        },
+                                        {
+                                            "id":  "cast",
+                                            "control":  "scheduled task/server",
+                                            "task":  "StealthFlix Cast"
+                                        },
+                                        {
+                                            "id":  "requests",
+                                            "control":  "scheduled task/server",
+                                            "task":  "StealthFlix Requests"
+                                        }
+                                    ],
+                     "verification":  [
+                                          "Public server info returns ServerName StealthFlix",
+                                          "Media intake ends in D:\\Media or D:\\StealthDrop\\Review",
+                                          "Verify Jellyfin item/library state after mutation"
+                                      ],
+                     "recovery":  [
+                                      "Use StealthEye Desktop SYSTEM authority",
+                                      "Inspect StealthFlix Guardian/Intake/Requests task state and logs",
+                                      "Never overwrite an existing media file during intake"
+                                  ]
+                 },
+                 {
+                     "id":  "remote",
+                     "name":  "Stealth Remote",
+                     "manifest_name":  "suite.remote",
+                     "category":  "device-control",
+                     "provider":  "STEALTHEYE Suite",
+                     "machine":  "STEALTHEYELLC-D",
+                     "authority":  "StealthEye Desktop",
+                     "optional_external":  true,
+                     "configured":  true,
+                     "summary":  "Vizio TV control API hosted by the existing desktop remote server.",
+                     "lifecycle":  {
+                                       "mode":  "always_on",
+                                       "health":  "GET http://127.0.0.1:9878/api/status"
+                                   },
+                     "preferred_control":  "desktop_local_http_api",
+                     "operations":  [
+                                        {
+                                            "id":  "status",
+                                            "method":  "GET",
+                                            "path":  "/api/status"
+                                        },
+                                        {
+                                            "id":  "current_app",
+                                            "method":  "GET",
+                                            "path":  "/api/app/current"
+                                        },
+                                        {
+                                            "id":  "hulu",
+                                            "method":  "POST",
+                                            "path":  "/api/app/hulu"
+                                        },
+                                        {
+                                            "id":  "key",
+                                            "method":  "POST",
+                                            "path":  "/api/cmd/{volDown|volUp|mute|up|down|left|right|ok|back|home|powerOff}"
+                                        },
+                                        {
+                                            "id":  "pair_start",
+                                            "method":  "POST",
+                                            "path":  "/api/pair/start"
+                                        },
+                                        {
+                                            "id":  "pair_complete",
+                                            "method":  "POST",
+                                            "path":  "/api/pair/complete",
+                                            "inputs":  "4-digit pin only when TV requests pairing"
+                                        }
+                                    ],
+                     "verification":  [
+                                          "API response ok=true where applicable",
+                                          "GET /api/app/current or /api/status confirms resulting TV state"
+                                      ],
+                     "recovery":  [
+                                      "Check pairing state first",
+                                      "Use pair flow only when auth is missing",
+                                      "Inspect desktop remote server/task before restarting"
+                                  ]
+                 },
+                 {
+                     "id":  "drop",
+                     "name":  "Stealth Drop",
+                     "manifest_name":  "suite.drop",
+                     "category":  "media-intake",
+                     "provider":  "STEALTHEYE Suite",
+                     "machine":  "STEALTHEYELLC-D",
+                     "authority":  "StealthEye Desktop",
+                     "optional_external":  true,
+                     "configured":  true,
+                     "summary":  "Verified StealthFlix media intake. Finished media is staged here, validated with ffprobe, then merged or quarantined.",
+                     "lifecycle":  {
+                                       "mode":  "filesystem_watch",
+                                       "root":  "D:\\StealthDrop",
+                                       "task":  "StealthFlix Intake"
+                                   },
+                     "preferred_control":  "desktop_filesystem",
+                     "operations":  [
+                                        {
+                                            "id":  "movie_intake",
+                                            "path":  "D:\\StealthDrop\\Movies"
+                                        },
+                                        {
+                                            "id":  "tv_intake",
+                                            "path":  "D:\\StealthDrop\\TV",
+                                            "layout":  "Show Name\\Season 03\\Show Name - S03E01 - Title.mkv"
+                                        },
+                                        {
+                                            "id":  "review",
+                                            "path":  "D:\\StealthDrop\\Review"
+                                        }
+                                    ],
+                     "verification":  [
+                                          "Wait for source file to stop changing before treating intake as complete",
+                                          "Verify destination under D:\\Media or Review",
+                                          "Intake never overwrites existing media"
+                                      ],
+                     "recovery":  [
+                                      "Inspect StealthFlix Intake task/logs",
+                                      "If ambiguous/broken/duplicate, leave item in Review for explicit resolution"
+                                  ]
+                 },
+                 {
+                     "id":  "rewards",
+                     "name":  "Stealth Rewards",
+                     "manifest_name":  "suite.rewards",
+                     "category":  "interactive-workspace",
+                     "provider":  "STEALTHEYE Suite",
+                     "machine":  "STEALTHEYELLC-D",
+                     "authority":  "StealthEye Desktop",
+                     "optional_external":  true,
+                     "configured":  true,
+                     "summary":  "Desktop Android-emulator/browser/UIA workspace. Prefer ADB/UIA/DOM evidence over coordinate-only automation.",
+                     "lifecycle":  {
+                                       "mode":  "on_demand_interactive",
+                                       "launcher":  "D:\\StealthRewards\\launch-interactive.ps1",
+                                       "avd":  "StealthRewards34",
+                                       "environment":  {
+                                                           "ANDROID_SDK_ROOT":  "D:\\StealthRewards\\AndroidSDK",
+                                                           "ANDROID_AVD_HOME":  "D:\\StealthRewards\\AVD"
+                                                       }
+                                   },
+                     "preferred_control":  "desktop_system_plus_adb_uia_browser",
+                     "operations":  [
+                                        {
+                                            "id":  "launch",
+                                            "control":  "PowerShell",
+                                            "path":  "D:\\StealthRewards\\launch-interactive.ps1"
+                                        },
+                                        {
+                                            "id":  "android",
+                                            "control":  "ADB",
+                                            "root":  "D:\\StealthRewards\\AndroidSDK"
+                                        },
+                                        {
+                                            "id":  "windows",
+                                            "control":  "UIA",
+                                            "note":  "Use stable automation IDs/classes where available"
+                                        },
+                                        {
+                                            "id":  "browser",
+                                            "control":  "Edge/UIA/DOM",
+                                            "note":  "Use authenticated user browser only when workflow requires it"
+                                        }
+                                    ],
+                     "verification":  [
+                                          "Set ANDROID_SDK_ROOT and ANDROID_AVD_HOME before emulator/ADB discovery",
+                                          "emulator -list-avds must include StealthRewards34 before launch",
+                                          "ADB reports expected emulator/device before Android actions",
+                                          "Re-query UIA/DOM after every consequential interaction",
+                                          "Use screenshots only as supplemental evidence, not blind coordinate replay"
+                                      ],
+                     "recovery":  [
+                                      "Relaunch emulator if ADB/device is absent",
+                                      "Re-discover UI elements after layout changes",
+                                      "Do not reuse stale coordinates across sessions"
+                                  ]
+                 },
+                 {
+                     "id":  "vpn",
+                     "name":  "Stealth VPN",
+                     "manifest_name":  "suite.vpn",
+                     "category":  "network-profile",
+                     "provider":  "STEALTHEYE Suite",
+                     "machine":  "STEALTHEYELLC-D",
+                     "authority":  "StealthEye Desktop",
+                     "optional_external":  true,
+                     "configured":  true,
+                     "summary":  "Guarded account-browser network profile. Run preflight before launch; watchdog closes the account browser if configured egress no longer matches.",
+                     "lifecycle":  {
+                                       "mode":  "guarded_on_demand",
+                                       "account_root":  "D:\\StealthVPN\\Accounts\\P01_HOME",
+                                       "preflight":  "preflight.ps1",
+                                       "launch":  "launch.ps1",
+                                       "watchdog":  "watchdog.ps1"
+                                   },
+                     "preferred_control":  "desktop_powershell",
+                     "operations":  [
+                                        {
+                                            "id":  "preflight",
+                                            "control":  "PowerShell",
+                                            "path":  "D:\\StealthVPN\\Accounts\\P01_HOME\\preflight.ps1",
+                                            "success":  "exit 0 and state\\last-preflight.json ok=true"
+                                        },
+                                        {
+                                            "id":  "launch",
+                                            "control":  "PowerShell",
+                                            "path":  "D:\\StealthVPN\\Accounts\\P01_HOME\\launch.ps1",
+                                            "guard":  "must pass preflight"
+                                        },
+                                        {
+                                            "id":  "watchdog",
+                                            "control":  "PowerShell",
+                                            "path":  "D:\\StealthVPN\\Accounts\\P01_HOME\\watchdog.ps1"
+                                        }
+                                    ],
+                     "verification":  [
+                                          "Read redacted preflight state; never surface stored account/network secrets",
+                                          "Do not launch profile when preflight fails",
+                                          "Confirm watchdog process/state when profile is active"
+                                      ],
+                     "recovery":  [
+                                      "Re-run preflight after network changes",
+                                      "If mismatch occurs, keep account browser closed until configured egress is restored"
+                                  ]
+                 },
+                 {
+                     "id":  "revenue",
+                     "name":  "Revenue Factory",
+                     "manifest_name":  "suite.revenue",
+                     "category":  "production-workspace",
+                     "provider":  "STEALTHEYE Suite",
+                     "machine":  "STEALTHEYELLC-D",
+                     "authority":  "StealthEye Desktop",
+                     "optional_external":  true,
+                     "configured":  true,
+                     "summary":  "Original digital-product production workspace: research, build, validate, render, package, list, submit, track, iterate.",
+                     "lifecycle":  {
+                                       "mode":  "workspace",
+                                       "root":  "D:\\RevenueFactory"
+                                   },
+                     "preferred_control":  "desktop_filesystem_tools_and_browser",
+                     "operations":  [
+                                        {
+                                            "id":  "research",
+                                            "control":  "files/web",
+                                            "path":  "D:\\RevenueFactory\\research"
+                                        },
+                                        {
+                                            "id":  "build",
+                                            "control":  "local tools",
+                                            "note":  "Use installed/local design and rendering tools"
+                                        },
+                                        {
+                                            "id":  "package",
+                                            "control":  "filesystem",
+                                            "root":  "D:\\RevenueFactory"
+                                        },
+                                        {
+                                            "id":  "track",
+                                            "control":  "ledger",
+                                            "path":  "D:\\RevenueFactory\\sales\\master-ledger.csv"
+                                        },
+                                        {
+                                            "id":  "submit",
+                                            "control":  "browser",
+                                            "note":  "External submission only when account/session is available"
+                                        }
+                                    ],
+                     "verification":  [
+                                          "Keep original source files and generation parameters",
+                                          "Validate package before submission",
+                                          "Record external submission/rejection/outcome in ledger"
+                                      ],
+                     "boundaries":  [
+                                        "User enters legal identity, tax and payout information directly",
+                                        "User handles OTP/CAPTCHA/identity checks when required",
+                                        "Never request or store passwords, SSN, bank routing/account numbers or identity-document numbers"
+                                    ],
+                     "recovery":  [
+                                      "Read NEEDS_USER.txt before blocked external steps",
+                                      "Resume from ledger/workspace state instead of rebuilding completed assets"
+                                  ]
+                 }
+             ]
+}

@@ -18,5 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="..\..\contracts\eye-mcp-v2.json" LogicalName="StealthEye.Contract.eye-mcp-v2.json" />
+    <Content Include="..\..\contracts\suite-capabilities.json" Link="suite-capabilities.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Always" />
   </ItemGroup>
 </Project>
