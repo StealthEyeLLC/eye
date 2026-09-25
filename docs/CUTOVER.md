@@ -240,28 +240,62 @@ Acceptance evidence on this tree:
 - frozen v2.7 contract SHA-256: 607e811d7273bd91f382f6270969157c152d46d2abc1a01817f3d757ca48b82d.
 
 Phase 8 is complete.
-## Phase 9 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â final runtime cutover
-
+## Phase 9 - final runtime cutover
 Only cut over when the new runtime independently operates and repairs the machine.
 
-- [ ] stable host survives cold reboot.
-- [ ] Secure MCP Tunnel reconnects to the host.
-- [ ] v2 generated public contract is the served surface.
-- [ ] SYSTEM/user/WSL execution works.
-- [ ] durable jobs/terminal continuity across MCP/tunnel disconnects works.
-- [ ] artifacts and cursor reads work.
-- [ ] engine activation/rollback works.
-- [ ] deliberate engine failure leaves degraded-mode repair path intact.
-- [ ] desktop worker can be created/destroyed repeatedly.
-- [ ] desktop observation/control works.
-- [ ] browser/CDP works.
-- [ ] Eye Live failure does not block ordinary MCP operation.
-- [ ] structured errors/cancellation behave correctly.
-- [ ] machine-secret persistence works.
-- [ ] switch production tunnel target only after these checks pass.
-- [ ] observe normal operation before removing compatibility mechanisms.
-- [ ] remove obsolete prototype runtime/session-helper residue.
-- [ ] cold reboot and prove final architecture end to end.
+- [x] stable host survives cold reboot.
+- [x] Secure MCP Tunnel reconnects to the host.
+- [x] v2 generated public contract is the served surface.
+- [x] SYSTEM/user/WSL execution works.
+- [x] durable jobs/terminal continuity across MCP/tunnel disconnects works.
+- [x] artifacts and cursor reads work.
+- [x] engine activation/rollback works.
+- [x] deliberate engine failure leaves degraded-mode repair path intact.
+- [x] desktop worker can be created/destroyed repeatedly.
+- [x] desktop observation/control works.
+- [x] browser/CDP works.
+- [x] Eye Live failure does not block ordinary MCP operation.
+- [x] structured errors/cancellation behave correctly.
+- [x] machine-secret persistence works.
+- [x] production tunnel target is the stable host. It was already cut over before this final acceptance pass, so no redundant second switch was performed.
+- [x] normal production operation was observed across host, engine, worker, browser, WSL, artifacts, cancellation, and a real tunnel restart before compatibility cleanup.
+- [x] obsolete StealthEyeSystem/StealthEyeSystemBroker prototype services and runtime were removed; canonical session-helper residue is empty.
+- [x] cold reboot and final end-to-end production proof completed.
+
+### Phase 9 verification evidence
+
+Final production acceptance was performed against the installed Windows service, not a temporary host. StealthEye is one LocalSystem Automatic SCM service, owns 127.0.0.1:37931, and runs the byte-identical accepted host binary SHA-256 7FA036CBADB65B2CA1AAFE9417087F251C81B20BFAC9AAACC7FF194000E275CE. Native SCM recovery is configured for restart after 5 s, 15 s, then 60 s.
+
+The official CALLID OpenAI Secure MCP Tunnel boot task targets http://127.0.0.1:37931/mcp. During acceptance the tunnel process was stopped completely while a durable WSL job continued under host ownership. The stable host remained Running and listening. The tunnel restarted with a new PID, initialized a fresh MCP session to eye, and a new MCP client recovered the original job by the same job ID and read TUNNEL_BEFORE and TUNNEL_AFTER through the persisted stdout cursor.
+
+Live production MCP acceptance proved the frozen six-tool surface and server instructions, system.status, machine.describe, SYSTEM execution, active-user execution as STEALTHEYELLC\StealthEye, WSL execution (root, Linux, exit 0), cursor-backed job output, ui.observe, Chrome/CDP observation, and safe A/B engine rollback followed by re-activation of the accepted engine.
+
+Deliberate degraded-mode acceptance temporarily made both staged engine executables unavailable and terminated the active engine. engine.status became unavailable while the stable host/listener, system.status, raw SYSTEM repair execution, machine manifests, mission state, and MCP remained usable. Both engine files were restored and the accepted engine v2.7-4e97abcf6d28 was re-activated healthy.
+
+The active-session worker was force-terminated twice in production. It was recreated with PIDs 36644 -> 25320 -> 15040 while the stable host remained PID 7684, Running, with unchanged start time. Live structured-error, durable-job cancellation, and invalid Eye Live app-action tests also left ordinary MCP healthy.
+
+Machine-secret persistence was re-proven with throwaway random material using DPAPI-NG descriptor LOCAL=user under LocalSystem. Before reboot the encrypted blob decrypted to SHA-256 8B220CC8849CD886BA3705CDC3698E91F49E937A08DF2D1E856FE4745B17812A. The same encrypted blob decrypted to the identical SHA after the cold reboot; no plaintext secret was persisted.
+
+Cold reboot acceptance:
+- pre-reboot Windows boot time: 2026-09-23T09:44:30.5000000-04:00;
+- reboot requested: 2026-09-25T01:36:13-04:00;
+- post-reboot Windows boot time: 2026-09-25T01:36:37.5000000-04:00;
+- stable host PID changed 7684 -> 4992;
+- official tunnel PID changed 45028 -> 3644;
+- stable host returned Running/Automatic, listener returned on 127.0.0.1:37931, /health returned 200, accepted engine returned, tunnel boot task returned Running, and all Direct V2 broker/core/keeper services returned Running;
+- host binary SHA-256 remained unchanged;
+- post-reboot production MCP acceptance passed again, including SYSTEM/user/WSL, desktop/UIA, browser/CDP, artifacts/cursors, and engine rollback/restore.
+
+The superseded disabled StealthEyeSystem and StealthEyeSystemBroker service registrations and C:\Program Files\StealthEye System prototype runtime were removed only after normal production acceptance. The permanent StealthEye Connection Direct V2 services were preserved.
+
+Final permanent repository acceptance after all temporary proof code was removed:
+- host, worker, engine, and test builds: 0 warnings / 0 errors;
+- git diff check: clean;
+- permanent suite: 133/133 passed, 0 failed, 0 skipped;
+- final residue: 0 STEALTHEYE session tasks, 0 owned session/output files, 0 acceptance Chrome test profiles, and 0 idle active-session worker processes;
+- production stable host, accepted engine, OpenAI Secure MCP Tunnel, and permanent Direct V2 services remained healthy after acceptance cleanup.
+
+Phase 9 is complete.
 
 ## Final success state
 
