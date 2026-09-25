@@ -5,7 +5,7 @@ namespace StealthEye.Contract;
 
 public static class WorkerRpcMethods
 {
-    public const string CurrentProtocolVersion = "1.1.0";
+    public const string CurrentProtocolVersion = "1.2.0";
     public const string Handshake = "worker.handshake";
     public const string StartTerminal = "terminal.start";
     public const string WriteTerminal = "terminal.write";
@@ -21,6 +21,8 @@ public static class WorkerRpcMethods
     public const string ObserveBrowserTargets = "browser.targets";
     public const string NavigateBrowserTarget = "browser.navigate";
     public const string EvaluateBrowserTarget = "browser.evaluate";
+    public const string ObserveBrowserDom = "browser.dom_snapshot";
+    public const string DownloadBrowserTarget = "browser.download";
     public const string ArmBrowserNavigation = "browser.arm_navigation";
     public const string WaitBrowserNavigation = "browser.wait_navigation";
     public const string BulkProbe = "bulk.probe";
@@ -128,6 +130,10 @@ public sealed record WorkerWindowInfo(
 
 public sealed record WorkerDesktopObservationResult(
     [property: JsonPropertyName("session_id")] int SessionId,
+    [property: JsonPropertyName("session_locked")] bool SessionLocked,
+    [property: JsonPropertyName("secure_desktop")] bool SecureDesktop,
+    [property: JsonPropertyName("input_desktop_accessible")] bool InputDesktopAccessible,
+    [property: JsonPropertyName("input_desktop_name")] string? InputDesktopName,
     [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
     [property: JsonPropertyName("windows")] WorkerWindowInfo[] Windows);
 public sealed record WorkerUiaQueryRequest(
@@ -236,6 +242,46 @@ public sealed record WorkerBrowserEvaluateResult(
     [property: JsonPropertyName("description")] string? Description,
     [property: JsonPropertyName("threw")] bool Threw,
     [property: JsonPropertyName("exception_text")] string? ExceptionText);
+public sealed record WorkerBrowserDomRequest(
+    [property: JsonPropertyName("cdp_target_id")] string CdpTargetId,
+    [property: JsonPropertyName("max_depth")] int MaxDepth = 4,
+    [property: JsonPropertyName("max_nodes")] int MaxNodes = 500);
+
+public sealed record WorkerBrowserFrameInfo(
+    [property: JsonPropertyName("cdp_frame_id")] string CdpFrameId,
+    [property: JsonPropertyName("parent_frame_id")] string? ParentFrameId,
+    [property: JsonPropertyName("loader_id")] string? LoaderId,
+    [property: JsonPropertyName("url")] string Url);
+
+public sealed record WorkerBrowserNodeInfo(
+    [property: JsonPropertyName("cdp_node_id")] int CdpNodeId,
+    [property: JsonPropertyName("backend_node_id")] int BackendNodeId,
+    [property: JsonPropertyName("parent_node_id")] int? ParentNodeId,
+    [property: JsonPropertyName("cdp_frame_id")] string? CdpFrameId,
+    [property: JsonPropertyName("node_type")] int NodeType,
+    [property: JsonPropertyName("node_name")] string NodeName,
+    [property: JsonPropertyName("node_value")] string NodeValue,
+    [property: JsonPropertyName("attributes")] string[] Attributes);
+
+public sealed record WorkerBrowserDomResult(
+    [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
+    [property: JsonPropertyName("truncated")] bool Truncated,
+    [property: JsonPropertyName("frames")] WorkerBrowserFrameInfo[] Frames,
+    [property: JsonPropertyName("nodes")] WorkerBrowserNodeInfo[] Nodes);
+
+public sealed record WorkerBrowserDownloadRequest(
+    [property: JsonPropertyName("cdp_target_id")] string CdpTargetId,
+    [property: JsonPropertyName("url")] string Url,
+    [property: JsonPropertyName("download_directory")] string DownloadDirectory,
+    [property: JsonPropertyName("timeout_ms")] int TimeoutMs = 30000);
+
+public sealed record WorkerBrowserDownloadResult(
+    [property: JsonPropertyName("cdp_target_id")] string CdpTargetId,
+    [property: JsonPropertyName("url")] string Url,
+    [property: JsonPropertyName("guid")] string Guid,
+    [property: JsonPropertyName("suggested_filename")] string SuggestedFilename,
+    [property: JsonPropertyName("path")] string Path,
+    [property: JsonPropertyName("received_bytes")] long ReceivedBytes);
 public sealed record WorkerWindowCaptureRequest(
     [property: JsonPropertyName("hwnd")] long Hwnd,
     [property: JsonPropertyName("destination_path")] string DestinationPath,

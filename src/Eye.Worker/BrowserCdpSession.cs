@@ -10,6 +10,7 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
     private readonly Process _chrome;
     private readonly HttpClient _http;
     private readonly string _baseUrl;
+    private readonly Uri _browserSocket;
     private readonly SemaphoreSlim _navigationGate = new(1, 1);
     private BrowserCdpClient? _navigationClient;
     private string? _navigationTargetId;
@@ -18,6 +19,7 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
         Process chrome,
         HttpClient http,
         string baseUrl,
+        Uri browserSocket,
         string chromePath,
         string userDataDir,
         int debugPort,
@@ -27,6 +29,7 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
         _chrome = chrome;
         _http = http;
         _baseUrl = baseUrl;
+        _browserSocket = browserSocket;
         ChromePath = chromePath;
         UserDataDir = userDataDir;
         DebugPort = debugPort;
@@ -110,6 +113,7 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
                 chrome,
                 http,
                 baseUrl,
+                debuggerUri,
                 chromePath,
                 userDataDir,
                 port,
@@ -226,7 +230,7 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
 
         var socket = await TargetSocketAsync(cdpTargetId, cancellationToken);
         await using var client = await BrowserCdpClient.ConnectAsync(socket, cancellationToken);
-        await client.CallAsync("Page.enable", null, cancellationToken);
+        await client.CallAsync(CdpMethods.PageEnable, null, cancellationToken);
         var result = await client.CallAsync("Page.navigate", new { url }, cancellationToken);
         return new WorkerBrowserNavigateResult(
             cdpTargetId,
@@ -253,7 +257,7 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
             var client = await BrowserCdpClient.ConnectAsync(socket, cancellationToken);
             try
             {
-                await client.CallAsync("Page.enable", null, cancellationToken);
+                await client.CallAsync(CdpMethods.PageEnable, null, cancellationToken);
             }
             catch
             {
@@ -336,6 +340,186 @@ internal sealed class BrowserCdpSession : IAsyncDisposable
         }
     }
 
+    internal async Task<WorkerBrowserDomResult> ObserveDomAsync(
+        string cdpTargetId,
+        int maxDepth,
+        int maxNodes,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cdpTargetId))
+            throw new ArgumentException("cdp_target_id is required.", nameof(cdpTargetId));
+        if (maxDepth is < 1 or > 12)
+            throw new ArgumentException("max_depth must be between 1 and 12.", nameof(maxDepth));
+        if (maxNodes is < 1 or > 5000)
+            throw new ArgumentException("max_nodes must be between 1 and 5000.", nameof(maxNodes));
+
+        var socket = await TargetSocketAsync(cdpTargetId, cancellationToken);
+        await using var client = await BrowserCdpClient.ConnectAsync(socket, cancellationToken);
+        await client.CallAsync(CdpMethods.PageEnable, null, cancellationToken);
+
+        var framesResult = await client.CallAsync<CdpEmptyRequest, CdpPageGetFrameTreeResult>(
+            CdpMethods.PageGetFrameTree,
+            new CdpEmptyRequest(),
+            cancellationToken);
+        var document = await client.CallAsync<CdpDomGetDocumentRequest, CdpDomGetDocumentResult>(
+            CdpMethods.DomGetDocument,
+            new CdpDomGetDocumentRequest(maxDepth, true),
+            cancellationToken);
+
+        var frames = new List<WorkerBrowserFrameInfo>();
+        FlattenFrames(framesResult.FrameTree, frames);
+
+        var nodes = new List<WorkerBrowserNodeInfo>(Math.Min(maxNodes, 500));
+        var truncated = false;
+        FlattenNodes(
+            document.Root,
+            parentNodeId: null,
+            inheritedFrameId: framesResult.FrameTree.Frame.Id,
+            nodes,
+            maxNodes,
+            ref truncated);
+
+        return new WorkerBrowserDomResult(
+            DateTimeOffset.UtcNow,
+            truncated,
+            [.. frames],
+            [.. nodes]);
+    }
+
+    internal async Task<WorkerBrowserDownloadResult> DownloadAsync(
+        string cdpTargetId,
+        string url,
+        string downloadDirectory,
+        int timeoutMs,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(cdpTargetId))
+            throw new ArgumentException("cdp_target_id is required.", nameof(cdpTargetId));
+        if (!Uri.TryCreate(url, UriKind.Absolute, out _))
+            throw new ArgumentException("url must be absolute.", nameof(url));
+        if (timeoutMs is < 1 or > 300_000)
+            throw new ArgumentException("timeout_ms must be between 1 and 300000.", nameof(timeoutMs));
+
+        var root = Path.GetFullPath(downloadDirectory);
+        Directory.CreateDirectory(root);
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(timeoutMs);
+
+        await using var browserClient = await BrowserCdpClient.ConnectAsync(_browserSocket, timeout.Token);
+        await browserClient.CallAsync(
+            CdpMethods.BrowserSetDownloadBehavior,
+            new CdpBrowserSetDownloadBehaviorRequest("allow", root, true),
+            timeout.Token);
+
+        var targetSocket = await TargetSocketAsync(cdpTargetId, timeout.Token);
+        await using var targetClient = await BrowserCdpClient.ConnectAsync(targetSocket, timeout.Token);
+        await targetClient.CallAsync(CdpMethods.PageEnable, null, timeout.Token);
+        var navigation = await targetClient.CallAsync<CdpPageNavigateRequest, CdpPageNavigateResult>(
+            CdpMethods.PageNavigate,
+            new CdpPageNavigateRequest(url),
+            timeout.Token);
+        if (!string.IsNullOrWhiteSpace(navigation.ErrorText) &&
+            !string.Equals(navigation.ErrorText, "net::ERR_ABORTED", StringComparison.Ordinal))
+            throw new InvalidOperationException($"Download navigation failed: {navigation.ErrorText}");
+
+        var started = await browserClient.WaitForEventAsync<CdpBrowserDownloadWillBeginEvent>(
+            CdpMethods.BrowserDownloadWillBegin,
+            timeout.Token);
+
+        CdpBrowserDownloadProgressEvent progress;
+        do
+        {
+            progress = await browserClient.WaitForEventAsync<CdpBrowserDownloadProgressEvent>(
+                CdpMethods.BrowserDownloadProgress,
+                timeout.Token);
+        }
+        while (!string.Equals(progress.Guid, started.Guid, StringComparison.Ordinal));
+
+        while (!string.Equals(progress.State, "completed", StringComparison.Ordinal))
+        {
+            if (string.Equals(progress.State, "canceled", StringComparison.Ordinal))
+                throw new InvalidOperationException("Chrome canceled the download.");
+
+            do
+            {
+                progress = await browserClient.WaitForEventAsync<CdpBrowserDownloadProgressEvent>(
+                    CdpMethods.BrowserDownloadProgress,
+                    timeout.Token);
+            }
+            while (!string.Equals(progress.Guid, started.Guid, StringComparison.Ordinal));
+        }
+
+        var path = !string.IsNullOrWhiteSpace(progress.FilePath)
+            ? Path.GetFullPath(progress.FilePath)
+            : Path.GetFullPath(Path.Combine(root, started.SuggestedFilename));
+        var rootPrefix = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (!path.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Chrome reported a download path outside the owned download directory.");
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(3);
+        while (!File.Exists(path) && DateTimeOffset.UtcNow < deadline)
+            await Task.Delay(50, timeout.Token);
+        if (!File.Exists(path))
+            throw new FileNotFoundException("Chrome reported a completed download but the file is missing.", path);
+
+        var length = new FileInfo(path).Length;
+        return new WorkerBrowserDownloadResult(
+            cdpTargetId,
+            started.Url,
+            started.Guid,
+            started.SuggestedFilename,
+            path,
+            length);
+    }
+
+    private static void FlattenFrames(CdpFrameTree tree, List<WorkerBrowserFrameInfo> frames)
+    {
+        frames.Add(new WorkerBrowserFrameInfo(
+            tree.Frame.Id,
+            tree.Frame.ParentId,
+            tree.Frame.LoaderId,
+            tree.Frame.Url));
+        if (tree.ChildFrames is null)
+            return;
+        foreach (var child in tree.ChildFrames)
+            FlattenFrames(child, frames);
+    }
+
+    private static void FlattenNodes(
+        CdpDomNode node,
+        int? parentNodeId,
+        string? inheritedFrameId,
+        List<WorkerBrowserNodeInfo> nodes,
+        int maxNodes,
+        ref bool truncated)
+    {
+        if (nodes.Count >= maxNodes)
+        {
+            truncated = true;
+            return;
+        }
+
+        var frameId = node.FrameId ?? inheritedFrameId;
+        nodes.Add(new WorkerBrowserNodeInfo(
+            node.NodeId,
+            node.BackendNodeId,
+            parentNodeId,
+            frameId,
+            node.NodeType,
+            node.NodeName,
+            node.NodeValue,
+            node.Attributes ?? []));
+
+        if (node.Children is null)
+            return;
+        foreach (var child in node.Children)
+        {
+            FlattenNodes(child, node.NodeId, frameId, nodes, maxNodes, ref truncated);
+            if (truncated)
+                break;
+        }
+    }
     internal async Task<WorkerBrowserEvaluateResult> EvaluateAsync(
         string cdpTargetId,
         string expression,

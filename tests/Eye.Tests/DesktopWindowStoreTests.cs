@@ -73,6 +73,10 @@ public sealed class DesktopWindowStoreTests : IDisposable
 
     private static WorkerDesktopObservationResult Observation(params WorkerWindowInfo[] windows) => new(
         1,
+        false,
+        false,
+        true,
+        "Default",
         DateTimeOffset.UtcNow,
         windows);
 

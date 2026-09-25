@@ -258,6 +258,26 @@ public sealed class SessionWorker : IAsyncDisposable
         InvokeAsync<WorkerBrowserNavigationResult>(
             WorkerRpcMethods.WaitBrowserNavigation,
             cancellationToken);
+    public Task<WorkerBrowserDomResult> ObserveBrowserDomAsync(
+        string cdpTargetId,
+        int maxDepth = 4,
+        int maxNodes = 500,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerBrowserDomResult>(
+            WorkerRpcMethods.ObserveBrowserDom,
+            new WorkerBrowserDomRequest(cdpTargetId, maxDepth, maxNodes),
+            cancellationToken);
+
+    public Task<WorkerBrowserDownloadResult> DownloadBrowserTargetAsync(
+        string cdpTargetId,
+        string url,
+        string downloadDirectory,
+        int timeoutMs = 30000,
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerBrowserDownloadResult>(
+            WorkerRpcMethods.DownloadBrowserTarget,
+            new WorkerBrowserDownloadRequest(cdpTargetId, url, downloadDirectory, timeoutMs),
+            cancellationToken);
     public Task<WorkerWindowCaptureResult> CaptureWindowAsync(
         long hwnd,
         string destinationPath,

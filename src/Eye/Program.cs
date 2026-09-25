@@ -72,6 +72,7 @@ builder.Services.AddSingleton<UiaQueryService>();
 builder.Services.AddSingleton<UiaActionService>();
 builder.Services.AddSingleton<BrowserSessionManager>();
 builder.Services.AddSingleton<BrowserTargetStore>();
+builder.Services.AddSingleton<BrowserDomStore>();
 builder.Services.AddSingleton<BrowserObservationService>();
 builder.Services.AddSingleton<BrowserControlService>();
 builder.Services.AddSingleton<UiaTriggerSource>();

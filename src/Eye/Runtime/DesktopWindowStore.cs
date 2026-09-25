@@ -61,7 +61,15 @@ public sealed class DesktopWindowStore
                 MarkInactive(connection, transaction, observation.SessionId, prior.Hwnd, observation.ObservedAt);
 
             transaction.Commit();
-            return new DesktopWindowSnapshot(cursor, observation.SessionId, observation.ObservedAt, [.. current]);
+            return new DesktopWindowSnapshot(
+                cursor,
+                observation.SessionId,
+                observation.SessionLocked,
+                observation.SecureDesktop,
+                observation.InputDesktopAccessible,
+                observation.InputDesktopName,
+                observation.ObservedAt,
+                [.. current]);
         }
     }
 

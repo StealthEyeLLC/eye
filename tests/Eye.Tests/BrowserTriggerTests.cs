@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using StealthEye.Contract;
 using StealthEye.Runtime;
 
@@ -33,7 +33,7 @@ public sealed class BrowserTriggerTests : IDisposable
             Path.Combine(_root, "spool"));
         var targetStore = new BrowserTargetStore(jobs);
         var observation = new BrowserObservationService(sessions, targetStore);
-        var control = new BrowserControlService(sessions, targetStore);
+        var control = new BrowserControlService(sessions, targetStore, new BrowserDomStore(jobs), new ArtifactStore(jobs));
         var source = new BrowserTriggerSource(sessions, targetStore);
         var triggerStore = new TriggerStore(jobs);
         await using var broker = new TriggerBroker(triggerStore, null, source);

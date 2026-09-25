@@ -1,6 +1,6 @@
 {
   "contract": "stealtheye.eye.mcp",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "status": "canonical-target",
   "publication_state": "generated-not-live-until-cutover",
   "server_instructions": "STEALTHEYE is a privileged Windows capability substrate controlled by ChatGPT. Prefer precise typed operations, then direct CLI/file operations, then browser CDP, then Windows UI Automation, and use raw eye_run only when no narrower operation fits. Long work should become durable jobs; wait on events instead of polling; move large data by artifact reference. Reuse stable IDs, incarnations, and cursors. For consequential effects, use stable task_id/action_id plus a deterministic postcondition so retries are idempotent and evidence-backed. ChatGPT remains the planner; STEALTHEYE does not autonomously plan or declare unverified completion.",
@@ -409,6 +409,10 @@
             "properties": {
               "cursor": { "type": "integer", "minimum": 1 },
               "session_id": { "type": "integer", "minimum": 0 },
+              "session_locked": { "type": "boolean" },
+              "secure_desktop": { "type": "boolean" },
+              "input_desktop_accessible": { "type": "boolean" },
+              "input_desktop_name": { "type": "string" },
               "observed_at": { "type": "string", "format": "date-time" },
               "windows": {
                 "type": "array",
@@ -455,7 +459,7 @@
                 }
               }
             },
-            "required": ["cursor", "session_id", "observed_at", "windows"],
+            "required": ["cursor", "session_id", "session_locked", "secure_desktop", "input_desktop_accessible", "observed_at", "windows"],
             "additionalProperties": false
           }
         },
@@ -550,6 +554,65 @@
               }
             },
             "required": ["cursor", "observed_at", "browser_version", "protocol_version", "targets"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "id": "browser.dom_snapshot",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "target_id": { "type": "string", "minLength": 1 },
+              "max_depth": { "type": "integer", "minimum": 1, "maximum": 12, "default": 4 },
+              "max_nodes": { "type": "integer", "minimum": 1, "maximum": 5000, "default": 500 }
+            },
+            "required": ["target_id"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "cursor": { "type": "integer", "minimum": 1 },
+              "target_id": { "type": "string", "minLength": 1 },
+              "target_incarnation": { "type": "integer", "minimum": 1 },
+              "observed_at": { "type": "string", "format": "date-time" },
+              "truncated": { "type": "boolean" },
+              "frames": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "frame_id": { "type": "string", "minLength": 1 },
+                    "incarnation": { "type": "integer", "minimum": 1 },
+                    "parent_frame_id": { "type": "string", "minLength": 1 },
+                    "loader_id": { "type": "string" },
+                    "url": { "type": "string" }
+                  },
+                  "required": ["frame_id", "incarnation", "url"],
+                  "additionalProperties": false
+                }
+              },
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "node_id": { "type": "string", "minLength": 1 },
+                    "incarnation": { "type": "integer", "minimum": 1 },
+                    "parent_node_id": { "type": "string", "minLength": 1 },
+                    "frame_id": { "type": "string", "minLength": 1 },
+                    "node_type": { "type": "integer", "minimum": 0 },
+                    "node_name": { "type": "string" },
+                    "node_value": { "type": "string" },
+                    "attributes": { "type": "array", "items": { "type": "string" } }
+                  },
+                  "required": ["node_id", "incarnation", "node_type", "node_name", "node_value", "attributes"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["cursor", "target_id", "target_incarnation", "observed_at", "truncated", "frames", "nodes"],
             "additionalProperties": false
           }
         }
@@ -958,6 +1021,37 @@
             "required": ["target_id", "incarnation", "type", "threw"],
             "additionalProperties": false
           }
+        },
+        {
+          "id": "browser.download",
+          "args_required": true,
+          "args_schema": {
+            "type": "object",
+            "properties": {
+              "target_id": { "type": "string", "minLength": 1 },
+              "url": { "type": "string", "minLength": 1 },
+              "timeout_ms": { "type": "integer", "minimum": 1, "maximum": 300000, "default": 30000 }
+            },
+            "required": ["target_id", "url"],
+            "additionalProperties": false
+          },
+          "result_schema": {
+            "type": "object",
+            "properties": {
+              "target_id": { "type": "string", "minLength": 1 },
+              "target_incarnation": { "type": "integer", "minimum": 1 },
+              "url": { "type": "string" },
+              "artifact_id": { "type": "string", "minLength": 1 },
+              "artifact_incarnation": { "type": "integer", "minimum": 1 },
+              "name": { "type": "string" },
+              "size_bytes": { "type": "integer", "minimum": 0 },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "mime_type": { "type": "string" },
+              "storage_tier": { "type": "string", "enum": ["hot", "cold"] }
+            },
+            "required": ["target_id", "target_incarnation", "url", "artifact_id", "artifact_incarnation", "name", "size_bytes", "sha256", "storage_tier"],
+            "additionalProperties": false
+          }
         }
       ]
     },
@@ -1118,8 +1212,8 @@
   "host_engine_protocol": {
     "version": "1.0.0",
     "transport": "stream-json-rpc-over-named-pipes",
-    "worker_protocol_version": "1.1.0",
-    "engine_operation_ids": ["browser.evaluate", "browser.navigate", "browser.observe", "ui.act", "ui.observe", "ui.query"],
+    "worker_protocol_version": "1.2.0",
+    "engine_operation_ids": ["browser.dom_snapshot", "browser.download", "browser.evaluate", "browser.navigate", "browser.observe", "ui.act", "ui.observe", "ui.query"],
     "contract_hash": {
       "algorithm": "sha256",
       "encoding": "lowercase-hex",

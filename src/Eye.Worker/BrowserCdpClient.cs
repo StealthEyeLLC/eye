@@ -54,6 +54,24 @@ internal sealed class BrowserCdpClient : IAsyncDisposable
         }
     }
 
+    internal async Task<TResult> CallAsync<TRequest, TResult>(
+        string method,
+        TRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await CallAsync(method, request, cancellationToken);
+        return JsonSerializer.Deserialize<TResult>(result.GetRawText())
+            ?? throw new InvalidOperationException($"CDP {method} returned no typed result.");
+    }
+
+    internal async Task<TEvent> WaitForEventAsync<TEvent>(
+        string method,
+        CancellationToken cancellationToken)
+    {
+        var parameters = await WaitForEventAsync(method, cancellationToken);
+        return JsonSerializer.Deserialize<TEvent>(parameters.GetRawText())
+            ?? throw new InvalidOperationException($"CDP event {method} returned no typed payload.");
+    }
     internal async Task<JsonElement> WaitForEventAsync(
         string method,
         CancellationToken cancellationToken)

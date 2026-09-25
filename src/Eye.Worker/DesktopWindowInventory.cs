@@ -60,8 +60,14 @@ internal static class DesktopWindowInventory
             return true;
         }, IntPtr.Zero);
 
+        var sessionId = Process.GetCurrentProcess().SessionId;
+        var sessionState = DesktopSessionState.Observe(sessionId);
         return new WorkerDesktopObservationResult(
-            Process.GetCurrentProcess().SessionId,
+            sessionId,
+            sessionState.Locked,
+            sessionState.SecureDesktop,
+            sessionState.InputDesktopAccessible,
+            sessionState.InputDesktopName,
             DateTimeOffset.UtcNow,
             [.. windows]);
     }

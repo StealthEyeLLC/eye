@@ -19,9 +19,18 @@ public sealed class UiaQueryServiceTests : IDisposable
         var elements = new UiaElementStore(jobs);
         var query = new UiaQueryService(windowStore, workerManager, elements);
 
-        var observed = await desktop.ObserveAsync();
-        var target = observed.Windows.First(window => window.Foreground && window.Uia is not null);
-        var first = await query.QueryAsync(target.WindowId, maxDepth: 2, maxNodes: 80);
+        DesktopWindowState? target = null;
+        for (var attempt = 0; attempt < 30 && target is null; attempt++)
+        {
+            var observed = await desktop.ObserveAsync();
+            target = observed.Windows.FirstOrDefault(window => window.Foreground && window.Uia is not null)
+                ?? observed.Windows.FirstOrDefault(window => window.Uia is not null);
+            if (target is null)
+                await Task.Delay(100);
+        }
+
+        Assert.NotNull(target);
+        var first = await query.QueryAsync(target!.WindowId, maxDepth: 2, maxNodes: 80);
         var second = await query.QueryAsync(target.WindowId, maxDepth: 2, maxNodes: 80);
 
         Assert.Equal(target.WindowId, first.WindowId);

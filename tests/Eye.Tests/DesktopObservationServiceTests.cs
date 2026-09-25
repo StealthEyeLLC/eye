@@ -21,6 +21,12 @@ public sealed class DesktopObservationServiceTests : IDisposable
 
         Assert.True(first.SessionId > 0);
         Assert.Equal(first.SessionId, second.SessionId);
+        Assert.Equal(first.SessionLocked, second.SessionLocked);
+        Assert.Equal(first.SecureDesktop, second.SecureDesktop);
+        Assert.Equal(first.InputDesktopAccessible, second.InputDesktopAccessible);
+        Assert.Equal(first.InputDesktopName, second.InputDesktopName);
+        if (first.InputDesktopAccessible)
+            Assert.False(string.IsNullOrWhiteSpace(first.InputDesktopName));
         Assert.NotEmpty(first.Windows);
         Assert.NotEmpty(second.Windows);
         Assert.Equal(first.Cursor + 1, second.Cursor);

@@ -35,6 +35,10 @@ public sealed record UiWindowResult(
 public sealed record UiObserveResult(
     [property: JsonPropertyName("cursor")] long Cursor,
     [property: JsonPropertyName("session_id")] int SessionId,
+    [property: JsonPropertyName("session_locked")] bool SessionLocked,
+    [property: JsonPropertyName("secure_desktop")] bool SecureDesktop,
+    [property: JsonPropertyName("input_desktop_accessible")] bool InputDesktopAccessible,
+    [property: JsonPropertyName("input_desktop_name"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? InputDesktopName,
     [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
     [property: JsonPropertyName("windows")] UiWindowResult[] Windows);
 public sealed record UiQueryArgs(

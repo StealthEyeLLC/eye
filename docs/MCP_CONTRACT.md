@@ -2,7 +2,7 @@
 
 **Status:** Canonical public-interface design  
 **Baseline date:** 2026-08-07  
-**Canonical target contract:** v2.5
+**Canonical target contract:** v2.6
 
 ## Purpose
 
@@ -54,7 +54,7 @@ contracts/eye-mcp-v2.json
 
 The six v2 tool names are frozen.
 
-The v2.5 generated public surface and activation gates are complete and frozen. The contract remains non-live until the runtime cutover gate is executed and verified; generation completion alone does not replace the production service.
+The v2.6 generated public surface and activation gates are complete and frozen. The contract remains non-live until the runtime cutover gate is executed and verified; generation completion alone does not replace the production service.
 
 ## Generated contract rule
 

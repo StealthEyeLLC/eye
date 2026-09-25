@@ -141,6 +141,36 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                             target.Title,
                             target.Url)).ToArray()));
                 }
+                case "browser.dom_snapshot":
+                {
+                    var request = DeserializeRequired<BrowserDomArgs>(op, args);
+                    var snapshot = await RequireBrowserControlService().ObserveDomAsync(
+                        request.TargetId,
+                        request.MaxDepth,
+                        request.MaxNodes,
+                        cancellationToken);
+                    return Success(op, new BrowserDomResult(
+                        snapshot.Cursor,
+                        snapshot.TargetId,
+                        snapshot.TargetIncarnation,
+                        snapshot.ObservedAt,
+                        snapshot.Truncated,
+                        snapshot.Frames.Select(frame => new BrowserFrameResult(
+                            frame.FrameId,
+                            frame.Incarnation,
+                            frame.ParentFrameId,
+                            frame.LoaderId,
+                            frame.Url)).ToArray(),
+                        snapshot.Nodes.Select(node => new BrowserNodeResult(
+                            node.NodeId,
+                            node.Incarnation,
+                            node.ParentNodeId,
+                            node.FrameId,
+                            node.NodeType,
+                            node.NodeName,
+                            node.NodeValue,
+                            node.Attributes)).ToArray()));
+                }
                 case "ui.observe":
                 {
                     var request = args is null || args.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined
@@ -150,6 +180,10 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                     return Success(op, new UiObserveResult(
                         snapshot.Cursor,
                         snapshot.SessionId,
+                        snapshot.SessionLocked,
+                        snapshot.SecureDesktop,
+                        snapshot.InputDesktopAccessible,
+                        snapshot.InputDesktopName,
                         snapshot.ObservedAt,
                         snapshot.Windows.Select(window => new UiWindowResult(
                             window.WindowId,
@@ -331,6 +365,26 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                         result.ErrorText));
                 }
 
+                case "browser.download":
+                {
+                    var request = DeserializeRequired<BrowserDownloadArgs>(op, args);
+                    var result = await RequireBrowserControlService().DownloadAsync(
+                        request.TargetId,
+                        request.Url,
+                        request.TimeoutMs,
+                        cancellationToken);
+                    return Success(op, new BrowserDownloadResult(
+                        result.TargetId,
+                        result.TargetIncarnation,
+                        result.Url,
+                        result.ArtifactId,
+                        result.ArtifactIncarnation,
+                        result.Name,
+                        result.SizeBytes,
+                        result.Sha256,
+                        result.MimeType,
+                        result.StorageTier));
+                }
                 case "browser.evaluate":
                 {
                     var request = DeserializeRequired<BrowserEvaluateArgs>(op, args);

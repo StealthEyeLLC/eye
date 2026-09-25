@@ -10,15 +10,15 @@ public sealed class ContractBoundaryTests
         var contract = EyeContractCatalog.Load();
 
         Assert.Equal("stealtheye.eye.mcp", contract.Manifest.Contract);
-        Assert.Equal("2.5.0", contract.Manifest.Version);
+        Assert.Equal("2.6.0", contract.Manifest.Version);
         Assert.Equal("canonical-target", contract.Manifest.Status);
         Assert.Equal("generated-not-live-until-cutover", contract.Manifest.PublicationState);
         Assert.Equal(
             ["eye_inspect", "eye_run", "eye_change", "eye_interact", "eye_external", "eye_live"],
             contract.Descriptors.Select(x => x.Name).ToArray());
         Assert.Equal("1.0.0", contract.EngineProtocolVersion);
-        Assert.Equal("1.1.0", contract.WorkerProtocolVersion);
-        Assert.Equal(["browser.evaluate", "browser.navigate", "browser.observe", "ui.act", "ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
+        Assert.Equal("1.2.0", contract.WorkerProtocolVersion);
+        Assert.Equal(["browser.dom_snapshot", "browser.download", "browser.evaluate", "browser.navigate", "browser.observe", "ui.act", "ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Equal(64, contract.PublicContractHash.Length);
         Assert.Matches("^[0-9a-f]{64}$", contract.PublicContractHash);
     }

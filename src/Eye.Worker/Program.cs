@@ -204,6 +204,26 @@ sealed class SessionWorkerRpcTarget(IReadOnlyDictionary<string, Stream> bulkStre
     public Task<WorkerBrowserNavigationResult> WaitBrowserNavigationAsync(
         CancellationToken cancellationToken) =>
         RequiredBrowser().WaitNavigationAsync(cancellationToken);
+    [JsonRpcMethod(WorkerRpcMethods.ObserveBrowserDom)]
+    public Task<WorkerBrowserDomResult> ObserveBrowserDomAsync(
+        WorkerBrowserDomRequest request,
+        CancellationToken cancellationToken) =>
+        RequiredBrowser().ObserveDomAsync(
+            request.CdpTargetId,
+            request.MaxDepth,
+            request.MaxNodes,
+            cancellationToken);
+
+    [JsonRpcMethod(WorkerRpcMethods.DownloadBrowserTarget)]
+    public Task<WorkerBrowserDownloadResult> DownloadBrowserTargetAsync(
+        WorkerBrowserDownloadRequest request,
+        CancellationToken cancellationToken) =>
+        RequiredBrowser().DownloadAsync(
+            request.CdpTargetId,
+            request.Url,
+            request.DownloadDirectory,
+            request.TimeoutMs,
+            cancellationToken);
     [JsonRpcMethod(WorkerRpcMethods.CaptureWindow)]
     public Task<WorkerWindowCaptureResult> CaptureWindowAsync(
         WorkerWindowCaptureRequest request,

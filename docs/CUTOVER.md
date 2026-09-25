@@ -6,7 +6,7 @@
 
 This checklist implements `docs/BUILD_BLUEPRINT.md`. It intentionally avoids preserving obsolete migration procedure as the active plan.
 
-## Phase 0 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â machine foundation
+## Phase 0 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â machine foundation
 
 Before runtime ownership changes:
 
@@ -21,7 +21,7 @@ Before runtime ownership changes:
 - [ ] NVIDIA/CUDA stack is healthy where required.
 - [ ] Windows login/account/autologon configuration is left alone unless explicitly changed by the owner.
 
-## Phase 1 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â contract v2 and host/engine protocol
+## Phase 1 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â contract v2 and host/engine protocol
 
 Canonical target tools:
 
@@ -48,7 +48,7 @@ eye_live
 
 Phase 1 activation gate is met. The canonical contract is generated but remains non-live until the runtime cutover gate is executed and verified.
 
-## Phase 2 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â stable host core
+## Phase 2 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â stable host core
 
 - [x] one LocalSystem SCM service owns the stable host.
 - [x] stable host serves loopback MCP.
@@ -70,7 +70,7 @@ Phase 1 activation gate is met. The canonical contract is generated but remains 
 On 2026-09-24 the accepted host was installed as the single Auto-start StealthEye LocalSystem SCM service and independently verified to expose exactly one listener at 127.0.0.1:37931. Live MCP calls proved inline SYSTEM execution as NT AUTHORITY\SYSTEM, inline active-user execution as STEALTHEYELLC\StealthEye, automatic WSL promotion to a durable job, successful active-user WSL completion, and cursor-backed spool output (root::Linux). The accepted test suite also proves explicit inherited-handle isolation, host-owned native ConPTY lifecycle, and Job Object cancellation of both a job root process and its spawned descendant.
 
 Phase 2 is complete. Suitable Job Object interop now uses CsWin32-generated bindings/SafeHandles while the remaining specialized process/session declarations stay narrowly handwritten where they materially simplify the implementation.
-## Phase 3 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â artifacts and identity model
+## Phase 3 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â artifacts and identity model
 
 - [x] host artifact registry exists.
 - [x] artifact metadata includes stable ID, kind, MIME type, size, hash/name as applicable, storage tier, and provenance.
@@ -88,7 +88,7 @@ On 2026-09-24 the accepted artifact registry was verified to persist stable arti
 The identity stores independently prove stable IDs plus incarnation and observation cursors for desktop windows, UIA elements, browser targets, jobs, and artifacts. Reused HWNDs with a different process generation, disappeared/reappeared browser targets, browser type replacement, and UIA elements under a new window incarnation all advance incarnation instead of silently aliasing the old object. Job stdout/stderr, terminal attachment, artifact range reads, and UI/browser observations expose bounded cursor/range progression.
 
 Phase 3 is complete. Fast completed run operations whose combined stdout/stderr exceeds the inline limit now promote their existing spool streams into durable artifacts and return bounded inline excerpts, truncation flags, artifact IDs, and the original job/exit/context metadata. Small fast output remains inline and slow work remains a durable job reference.
-## Phase 4 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â supervised versioned engine
+## Phase 4 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â supervised versioned engine
 
 - [x] capability engine is a separate child process, never a DLL inside stable host.
 - [x] active and previous engine versions live side by side.
@@ -112,7 +112,7 @@ Host-ownership integration coverage creates a completed job, a live ConPTY termi
 The active-user scheduled fallback was also hardened during this phase: the scheduled wrapper now joins the host Job Object before a gate allows it to spawn the requested command. This removes the fast-process PID race where a short user command could exit before ownership was established.
 
 Phase 4 is complete.
-## Phase 5 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â workers, streams, Trigger Broker, waits
+## Phase 5 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â workers, streams, Trigger Broker, waits
 
 - [x] StreamJsonRpc named-pipe control path works for host/engine/worker interactions.
 - [x] multiplexed binary plane exposes and verifies stdout/stderr/VT/image/audio/file channels.
@@ -134,7 +134,7 @@ Worker ownership is host-controlled. Active-session workers are launched on dema
 The Trigger Broker persists registrations and ordered event queues in host-owned SQLite state. Pending time/file triggers reattach after broker restart, process exit uses process-incarnation-aware native exit waiting, file creation uses FileSystemWatcher, UIA changes are fed from the active-session UIA watcher, and browser navigation is now fed from a real CDP Page.frameNavigated event into the same durable queue/cursor model. These sources are event-driven; broader service, port, session, Event Log, device, power/network, and performance sources are future extensions and must not be approximated with polling loops.
 
 Phase 5 is complete.
-## Phase 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Eye Live and operator guidance
+## Phase 6 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Eye Live and operator guidance
 
 - [x] eye_live returns an MCP Apps UI resource only when continuation/supervision is useful.
 - [x] core Eye operation does not depend on UI being rendered.
@@ -153,32 +153,49 @@ Eye Live now renders compact machine/context status, engine recovery state, rece
 Core Eye operation remains independent of UI rendering. The Eye Live snapshot is host-owned and remains useful when the capability engine is unavailable; ordinary MCP tools and the full test suite do not require the component to be mounted. The canonical Eye Operator source in docs/EYE_OPERATOR_SKILL.md is tested for modality hierarchy, durable jobs, native waits, artifacts, stable IDs/incarnations/cursors, UIA/CDP guidance, optional Eye Live doctrine, and contract discipline. Server initialization instructions remain contract-owned and the first 512 characters are tested to carry the essential ChatGPT/typed-operation/job/artifact routing rules.
 
 Phase 6 is complete.
-## Phase 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â desktop and browser capability engine
+## Phase 7 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â desktop and browser capability engine
 
 ### Desktop
 
-- [ ] HWND/process/window inventory exists.
-- [ ] UIA uses cache requests/events and Remote Operations where useful.
-- [ ] stable UIA/window identities and deltas work.
-- [ ] Windows.Graphics.Capture provides efficient window/screen capture.
-- [ ] dirty-region observation is used where practical.
-- [ ] Per-Monitor V2 DPI awareness is established before coordinate-sensitive work.
-- [ ] OCR/visual grounding remains fallback rather than primary state representation.
-- [ ] secure desktop/lock state is reported accurately.
+- [x] HWND/process/window inventory exists.
+- [x] UIA uses cache requests/events and Remote Operations where useful.
+- [x] stable UIA/window identities and deltas work.
+- [x] Windows.Graphics.Capture provides efficient window/screen capture.
+- [x] dirty-region observation is used where practical.
+- [x] Per-Monitor V2 DPI awareness is established before coordinate-sensitive work.
+- [x] OCR/visual grounding remains fallback rather than primary state representation.
+- [x] secure desktop/lock state is reported accurately.
 
 ### Browser
 
-- [ ] installed Chrome launches under active user.
-- [ ] dedicated Eye profile/data directory is used.
-- [ ] CDP is loopback-bound where appropriate.
-- [ ] typed CDP bindings are generated.
-- [ ] stable target/frame/node identities and event waits work.
-- [ ] downloads become artifacts.
-- [ ] browser remains fully usable without Playwright installed.
-- [ ] optional Playwright .NET path is available only where it materially improves behavior.
-- [ ] no permanent Node daemon or bundled browser fleet exists.
+- [x] installed Chrome launches under active user.
+- [x] dedicated Eye profile/data directory is used.
+- [x] CDP is loopback-bound where appropriate.
+- [x] typed CDP bindings are generated.
+- [x] stable target/frame/node identities and event waits work.
+- [x] downloads become artifacts.
+- [x] browser remains fully usable without Playwright installed.
+- [x] optional Playwright .NET path is available only where it materially improves behavior.
+- [x] no permanent Node daemon or bundled browser fleet exists.
 
-## Phase 8 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Blackboard, Relay, context capture, and adapters
+### Phase 7 verification evidence
+
+On 2026-09-24 the desktop/browser capability layer was verified through the version-matched worker protocol 1.2 and MCP contract v2.6. The desktop worker inventories HWND/process/window state, establishes Per-Monitor V2 awareness before observation, uses UI Automation cache requests plus event watchers, persists stable window/UIA identities with cursors, captures through Windows.Graphics.Capture, requests dirty regions, and invokes Windows OCR only when text recognition is explicitly requested. Secure/locked-session reporting now combines WTS session state with the actual input-desktop name/accessibility, so Default versus secure desktop state is surfaced instead of inferred from missing windows.
+
+UIA Remote Operations remain an optional optimization point rather than a forced dependency; the accepted current operations are already covered by cached reads/actions/events, so no extra Remote Operations layer was added without a measured case. The Phase 7 invariant test locks this policy together with the existing modality hierarchy.
+
+The browser worker launches the installed Google Chrome under the active user with a dedicated Eye profile and an ephemeral CDP port explicitly bound to 127.0.0.1. Raw CDP remains the permanent primitive. The bounded typed CDP subset is now generated deterministically from contracts/cdp-bindings-subset.json by tools/generate-cdp-bindings.ps1, and a reproducibility test regenerates the file and compares it byte-for-byte.
+
+Host-owned browser state now persists stable public target/frame/node identities and observation cursors while keeping raw CDP target/frame/backend-node identities private. Browser navigation event waits continue through the host Trigger Broker. A real loopback HTTP attachment was downloaded by Chrome and promoted into the canonical ArtifactStore; the public result exposes artifact ID/incarnation/name/size/SHA-256/MIME/storage tier and no browser filesystem path or raw CDP identity.
+
+Playwright is not installed or required in v1 because the accepted raw-CDP path already covers the current browser behaviors. The optional Playwright .NET accelerator remains permitted only for a measured locator/wait/download/trace advantage. No Eye project references Playwright, Puppeteer, Selenium, Node automation, a bundled Chromium fleet, or a permanent browser daemon.
+
+The Phase 7 focused acceptance passed 22/22 tests, including real active-session browser/UIA/WGC paths, generated-binding reproducibility, stable DOM handles, secure desktop/session state, and artifact-backed downloads.
+
+The authoritative repository acceptance then passed 128/128 tests with zero failed or skipped cases after clean host, worker, engine, and test builds.
+
+Phase 7 is complete.
+## Phase 8 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â Blackboard, Relay, context capture, and adapters
 
 ### Blackboard / Relay
 
@@ -206,7 +223,7 @@ Add based on real tasks, not completeness theater:
 - [ ] deterministic adapters for Git/GitHub CLI, PowerShell/WSL, winget, FFmpeg, services/Task Scheduler, and other actually installed software.
 - [ ] resource-aware execution considers GPU memory/thermals/power/storage tier where useful.
 
-## Phase 9 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â final runtime cutover
+## Phase 9 ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â final runtime cutover
 
 Only cut over when the new runtime independently operates and repairs the machine.
 

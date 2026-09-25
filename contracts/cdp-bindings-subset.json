@@ -1,0 +1,87 @@
+﻿{
+  "source": "Chrome DevTools Protocol /json/protocol",
+  "scope": "bounded STEALTHEYE raw-CDP subset",
+  "namespace": "StealthEye.Worker",
+  "methods": [
+    { "constant": "PageEnable", "value": "Page.enable" },
+    { "constant": "PageNavigate", "value": "Page.navigate" },
+    { "constant": "PageGetFrameTree", "value": "Page.getFrameTree" },
+    { "constant": "PageFrameNavigated", "value": "Page.frameNavigated" },
+    { "constant": "RuntimeEvaluate", "value": "Runtime.evaluate" },
+    { "constant": "DomGetDocument", "value": "DOM.getDocument" },
+    { "constant": "BrowserSetDownloadBehavior", "value": "Browser.setDownloadBehavior" },
+    { "constant": "BrowserDownloadWillBegin", "value": "Browser.downloadWillBegin" },
+    { "constant": "BrowserDownloadProgress", "value": "Browser.downloadProgress" }
+  ],
+  "records": [
+    { "name": "CdpEmptyRequest", "properties": [] },
+    { "name": "CdpPageNavigateRequest", "properties": [
+      { "json": "url", "cs_name": "Url", "cs_type": "string" }
+    ]},
+    { "name": "CdpPageNavigateResult", "properties": [
+      { "json": "frameId", "cs_name": "FrameId", "cs_type": "string?" },
+      { "json": "loaderId", "cs_name": "LoaderId", "cs_type": "string?" },
+      { "json": "errorText", "cs_name": "ErrorText", "cs_type": "string?" }
+    ]},
+    { "name": "CdpRuntimeEvaluateRequest", "properties": [
+      { "json": "expression", "cs_name": "Expression", "cs_type": "string" },
+      { "json": "returnByValue", "cs_name": "ReturnByValue", "cs_type": "bool" },
+      { "json": "awaitPromise", "cs_name": "AwaitPromise", "cs_type": "bool" }
+    ]},
+    { "name": "CdpDomGetDocumentRequest", "properties": [
+      { "json": "depth", "cs_name": "Depth", "cs_type": "int" },
+      { "json": "pierce", "cs_name": "Pierce", "cs_type": "bool" }
+    ]},
+    { "name": "CdpDomGetDocumentResult", "properties": [
+      { "json": "root", "cs_name": "Root", "cs_type": "CdpDomNode" }
+    ]},
+    { "name": "CdpDomNode", "properties": [
+      { "json": "nodeId", "cs_name": "NodeId", "cs_type": "int" },
+      { "json": "backendNodeId", "cs_name": "BackendNodeId", "cs_type": "int" },
+      { "json": "nodeType", "cs_name": "NodeType", "cs_type": "int" },
+      { "json": "nodeName", "cs_name": "NodeName", "cs_type": "string" },
+      { "json": "nodeValue", "cs_name": "NodeValue", "cs_type": "string" },
+      { "json": "frameId", "cs_name": "FrameId", "cs_type": "string?" },
+      { "json": "attributes", "cs_name": "Attributes", "cs_type": "string[]?" },
+      { "json": "children", "cs_name": "Children", "cs_type": "CdpDomNode[]?" }
+    ]},
+    { "name": "CdpPageGetFrameTreeResult", "properties": [
+      { "json": "frameTree", "cs_name": "FrameTree", "cs_type": "CdpFrameTree" }
+    ]},
+    { "name": "CdpFrameTree", "properties": [
+      { "json": "frame", "cs_name": "Frame", "cs_type": "CdpFrame" },
+      { "json": "childFrames", "cs_name": "ChildFrames", "cs_type": "CdpFrameTree[]?" }
+    ]},
+    { "name": "CdpFrame", "properties": [
+      { "json": "id", "cs_name": "Id", "cs_type": "string" },
+      { "json": "parentId", "cs_name": "ParentId", "cs_type": "string?" },
+      { "json": "loaderId", "cs_name": "LoaderId", "cs_type": "string?" },
+      { "json": "url", "cs_name": "Url", "cs_type": "string" }
+    ]},
+    { "name": "CdpPageFrameNavigatedEvent", "properties": [
+      { "json": "frame", "cs_name": "Frame", "cs_type": "CdpFrame" }
+    ]},
+    { "name": "CdpBrowserSetDownloadBehaviorRequest", "properties": [
+      { "json": "behavior", "cs_name": "Behavior", "cs_type": "string" },
+      { "json": "downloadPath", "cs_name": "DownloadPath", "cs_type": "string" },
+      { "json": "eventsEnabled", "cs_name": "EventsEnabled", "cs_type": "bool" }
+    ]},
+    { "name": "CdpBrowserDownloadWillBeginEvent", "properties": [
+      { "json": "frameId", "cs_name": "FrameId", "cs_type": "string" },
+      { "json": "guid", "cs_name": "Guid", "cs_type": "string" },
+      { "json": "url", "cs_name": "Url", "cs_type": "string" },
+      { "json": "suggestedFilename", "cs_name": "SuggestedFilename", "cs_type": "string" }
+    ]},
+    { "name": "CdpBrowserDownloadProgressEvent", "properties": [
+      { "json": "guid", "cs_name": "Guid", "cs_type": "string" },
+      { "json": "totalBytes", "cs_name": "TotalBytes", "cs_type": "double" },
+      { "json": "receivedBytes", "cs_name": "ReceivedBytes", "cs_type": "double" },
+      { "json": "state", "cs_name": "State", "cs_type": "string" },
+      { "json": "filePath", "cs_name": "FilePath", "cs_type": "string?" }
+    ]},
+    { "name": "CdpRuntimeEvaluateResult", "properties": [
+      { "json": "result", "cs_name": "Result", "cs_type": "JsonElement" },
+      { "json": "exceptionDetails", "cs_name": "ExceptionDetails", "cs_type": "JsonElement?" }
+    ]}
+  ]
+}

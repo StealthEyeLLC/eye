@@ -66,6 +66,69 @@ public sealed class BrowserSessionManager(SessionWorkerManager workers) : IAsync
         }
     }
 
+    public async Task<WorkerBrowserDomResult> ObserveDomAsync(
+        string cdpTargetId,
+        int maxDepth = 4,
+        int maxNodes = 500,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var worker = await EnsureWorkerAsync(cancellationToken);
+            if (_status is null)
+                _status = await worker.EnsureBrowserAsync(new WorkerBrowserEnsureRequest(), cancellationToken);
+            return await worker.ObserveBrowserDomAsync(
+                cdpTargetId,
+                maxDepth,
+                maxNodes,
+                cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<WorkerBrowserDownloadResult> DownloadAsync(
+        string cdpTargetId,
+        string url,
+        int timeoutMs = 30000,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var worker = await EnsureWorkerAsync(cancellationToken);
+            if (_status is null)
+                _status = await worker.EnsureBrowserAsync(new WorkerBrowserEnsureRequest(), cancellationToken);
+
+            var downloadDirectory = Path.Combine(
+                _status.UserDataDir,
+                "EyeDownloads",
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(downloadDirectory);
+
+            try
+            {
+                return await worker.DownloadBrowserTargetAsync(
+                    cdpTargetId,
+                    url,
+                    downloadDirectory,
+                    timeoutMs,
+                    cancellationToken);
+            }
+            catch
+            {
+                try { Directory.Delete(downloadDirectory, recursive: true); } catch { }
+                throw;
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
     public async Task<WorkerBrowserEvaluateResult> EvaluateAsync(
         string cdpTargetId,
         string expression,

@@ -1442,6 +1442,44 @@
             "op"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "max_depth": {
+                  "default": 4,
+                  "maximum": 12,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "max_nodes": {
+                  "default": 500,
+                  "maximum": 5000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "target_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "target_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "browser.dom_snapshot"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
         }
       ],
       "type": "object"
@@ -2996,13 +3034,25 @@
                   "minimum": 1,
                   "type": "integer"
                 },
+                "input_desktop_accessible": {
+                  "type": "boolean"
+                },
+                "input_desktop_name": {
+                  "type": "string"
+                },
                 "observed_at": {
                   "format": "date-time",
                   "type": "string"
                 },
+                "secure_desktop": {
+                  "type": "boolean"
+                },
                 "session_id": {
                   "minimum": 0,
                   "type": "integer"
+                },
+                "session_locked": {
+                  "type": "boolean"
                 },
                 "windows": {
                   "items": {
@@ -3119,6 +3169,9 @@
               "required": [
                 "cursor",
                 "session_id",
+                "session_locked",
+                "secure_desktop",
+                "input_desktop_accessible",
                 "observed_at",
                 "windows"
               ],
@@ -3465,6 +3518,178 @@
             "error"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "browser.dom_snapshot"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "cursor": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "frames": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "frame_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "incarnation": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "loader_id": {
+                        "type": "string"
+                      },
+                      "parent_frame_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "frame_id",
+                      "incarnation",
+                      "url"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "nodes": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "attributes": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "frame_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "incarnation": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "node_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "node_name": {
+                        "type": "string"
+                      },
+                      "node_type": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "node_value": {
+                        "type": "string"
+                      },
+                      "parent_node_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "node_id",
+                      "incarnation",
+                      "node_type",
+                      "node_name",
+                      "node_value",
+                      "attributes"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "observed_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "target_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "target_incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "truncated": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "cursor",
+                "target_id",
+                "target_incarnation",
+                "observed_at",
+                "truncated",
+                "frames",
+                "nodes"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "browser.dom_snapshot"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
         }
       ],
       "type": "object"
@@ -3643,6 +3868,74 @@
             },
             "op": {
               "const": "browser.evaluate"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "target_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "timeout_ms": {
+                  "default": 30000,
+                  "maximum": 300000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "url": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "target_id",
+                "url"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "browser.download"
             },
             "postcondition": {
               "additionalProperties": false,
@@ -3945,6 +4238,120 @@
             },
             "operation": {
               "const": "browser.evaluate"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "browser.download"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "artifact_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "artifact_incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "mime_type": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "storage_tier": {
+                  "enum": [
+                    "hot",
+                    "cold"
+                  ],
+                  "type": "string"
+                },
+                "target_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "target_incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "target_id",
+                "target_incarnation",
+                "url",
+                "artifact_id",
+                "artifact_incarnation",
+                "name",
+                "size_bytes",
+                "sha256",
+                "storage_tier"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "browser.download"
             }
           },
           "required": [

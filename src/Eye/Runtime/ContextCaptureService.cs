@@ -162,6 +162,10 @@ public sealed class ContextCaptureService
     private static UiObserveResult ToPublic(DesktopWindowSnapshot snapshot) => new(
         snapshot.Cursor,
         snapshot.SessionId,
+        snapshot.SessionLocked,
+        snapshot.SecureDesktop,
+        snapshot.InputDesktopAccessible,
+        snapshot.InputDesktopName,
         snapshot.ObservedAt,
         snapshot.Windows.Select(window => new UiWindowResult(
             window.WindowId,
