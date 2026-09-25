@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using StealthEye.Runtime;
 
@@ -100,7 +101,7 @@ public sealed class CapabilityManifestTests
             }
         };
 
-        File.WriteAllText(catalog, JsonSerializer.Serialize(payload));
+        File.WriteAllText(catalog, JsonSerializer.Serialize(payload), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
         try
         {
             var manifests = new CapabilityManifestService(catalog);

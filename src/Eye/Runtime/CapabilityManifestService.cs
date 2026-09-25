@@ -194,7 +194,7 @@ public sealed class CapabilityManifestService
 
         try
         {
-            using var document = JsonDocument.Parse(File.ReadAllBytes(path));
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
             if (!document.RootElement.TryGetProperty("apps", out var apps) ||
                 apps.ValueKind != JsonValueKind.Array)
                 return [];
