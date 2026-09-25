@@ -369,6 +369,449 @@
             "args"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "objective": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "objective"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "mission.create"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "artifacts": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "clear_next_action": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "facts": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "jobs": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "next_action": {
+                  "type": "string"
+                },
+                "objective": {
+                  "type": "string"
+                },
+                "questions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "triggers": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "mission_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "mission.update"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "available": {
+                  "default": true,
+                  "type": "boolean"
+                },
+                "chat_ref": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mission_id",
+                "chat_ref"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "mission.chat_associate"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "chat_ref": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mission_id",
+                "chat_ref"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "mission.chat_remove"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "message": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "source": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mission_id",
+                "source",
+                "message"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "relay.send"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "include_screenshot": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "note": {
+                  "type": "string"
+                },
+                "screenshot_ocr": {
+                  "default": false,
+                  "type": "boolean"
+                },
+                "source": {
+                  "default": "chatgpt",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "uia_max_depth": {
+                  "default": 3,
+                  "maximum": 12,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "uia_max_nodes": {
+                  "default": 120,
+                  "maximum": 2000,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "mission_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "context.capture"
+            },
+            "postcondition": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "file",
+                    "command"
+                  ],
+                  "type": "string"
+                },
+                "spec": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "spec"
+              ],
+              "type": "object"
+            },
+            "task_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
         }
       ],
       "type": "object"
@@ -932,6 +1375,752 @@
             "error"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "mission.create"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "artifacts": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "facts": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jobs": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "next_action": {
+                  "type": "string"
+                },
+                "objective": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "questions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "relay": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "created_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "cursor": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "message": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "relay_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "source": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "relay_id",
+                      "cursor",
+                      "source",
+                      "message",
+                      "created_at"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "revision": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "triggers": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "updated_at": {
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mission_id",
+                "incarnation",
+                "revision",
+                "objective",
+                "facts",
+                "decisions",
+                "jobs",
+                "triggers",
+                "artifacts",
+                "questions",
+                "relay",
+                "updated_at"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "mission.create"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "mission.update"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "artifacts": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "facts": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jobs": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "next_action": {
+                  "type": "string"
+                },
+                "objective": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "questions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "relay": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "created_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "cursor": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "message": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "relay_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "source": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "relay_id",
+                      "cursor",
+                      "source",
+                      "message",
+                      "created_at"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "revision": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "triggers": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "updated_at": {
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mission_id",
+                "incarnation",
+                "revision",
+                "objective",
+                "facts",
+                "decisions",
+                "jobs",
+                "triggers",
+                "artifacts",
+                "questions",
+                "relay",
+                "updated_at"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "mission.update"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "mission.chat_associate"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "available": {
+                  "type": "boolean"
+                },
+                "chat_ref": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mission_id",
+                "chat_ref",
+                "available",
+                "updated_at"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "mission.chat_associate"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "mission.chat_remove"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "chat_ref": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "removed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "mission_id",
+                "chat_ref",
+                "removed"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "mission.chat_remove"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "relay.send"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "created_at": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "cursor": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "message": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "relay_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "source": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "relay_id",
+                "cursor",
+                "source",
+                "message",
+                "created_at"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "relay.send"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "context.capture"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "context": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "artifact_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "artifact_incarnation": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "captured_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "mission_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "mission_revision": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "screenshot_artifact_id": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "size_bytes": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "mission_id",
+                    "mission_revision",
+                    "captured_at",
+                    "artifact_id",
+                    "artifact_incarnation",
+                    "size_bytes",
+                    "sha256"
+                  ],
+                  "type": "object"
+                },
+                "relay": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "cursor": {
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "message": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "relay_id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "source": {
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "relay_id",
+                    "cursor",
+                    "source",
+                    "message",
+                    "created_at"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "context",
+                "relay"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "context.capture"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
         }
       ],
       "type": "object"
@@ -1473,6 +2662,241 @@
             },
             "op": {
               "const": "browser.dom_snapshot"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "op": {
+              "const": "machine.describe"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "op": {
+              "const": "session.describe"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "op": {
+              "const": "volume.describe"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "query": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object"
+            },
+            "op": {
+              "const": "software.find"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "software.version"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {},
+              "required": [],
+              "type": "object"
+            },
+            "op": {
+              "const": "operation.list"
+            }
+          },
+          "required": [
+            "op"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "operation.describe"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mission_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "mission.get"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mission_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "mission.chats"
+            }
+          },
+          "required": [
+            "op",
+            "args"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": false,
+              "properties": {
+                "after_cursor": {
+                  "default": 0,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "max_items": {
+                  "default": 64,
+                  "maximum": 64,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mission_id"
+              ],
+              "type": "object"
+            },
+            "op": {
+              "const": "relay.read"
             }
           },
           "required": [
@@ -3690,6 +5114,1179 @@
             "error"
           ],
           "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "machine.describe"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "ac_online": {
+                  "type": "boolean"
+                },
+                "battery_percent": {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "logical_processors": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "machine": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "memory_available_bytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "memory_total_bytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "operations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "available": {
+                        "type": "boolean"
+                      },
+                      "category": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "detail": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "name": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "optional_external": {
+                        "type": "boolean"
+                      },
+                      "provider": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "category",
+                      "provider",
+                      "available",
+                      "optional_external",
+                      "detail"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "os": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "os_architecture": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "process_architecture": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "software": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "available": {
+                        "type": "boolean"
+                      },
+                      "name": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "path": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "available"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "volumes": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "drive_type": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "format": {
+                        "type": "string"
+                      },
+                      "free_bytes": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "ready": {
+                        "type": "boolean"
+                      },
+                      "total_bytes": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "drive_type",
+                      "ready"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "machine",
+                "os",
+                "os_architecture",
+                "process_architecture",
+                "logical_processors",
+                "memory_total_bytes",
+                "memory_available_bytes",
+                "volumes",
+                "software",
+                "operations"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "machine.describe"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "session.describe"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "active_session_id": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "active_user": {
+                  "type": "string"
+                },
+                "host_identity": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "host_session_id": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "host_session_id",
+                "host_identity"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "session.describe"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "volume.describe"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "volumes": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "drive_type": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "format": {
+                        "type": "string"
+                      },
+                      "free_bytes": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "ready": {
+                        "type": "boolean"
+                      },
+                      "total_bytes": {
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "drive_type",
+                      "ready"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "volumes"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "volume.describe"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "software.find"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "software": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "available": {
+                        "type": "boolean"
+                      },
+                      "name": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "path": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "available"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "software"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "software.find"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "software.version"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "available": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "available"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "software.version"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "operation.list"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "operations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "available": {
+                        "type": "boolean"
+                      },
+                      "category": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "detail": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "name": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "optional_external": {
+                        "type": "boolean"
+                      },
+                      "provider": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "category",
+                      "provider",
+                      "available",
+                      "optional_external",
+                      "detail"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "operations"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "operation.list"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "operation.describe"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "operation": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "category": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "detail": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "name": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optional_external": {
+                      "type": "boolean"
+                    },
+                    "provider": {
+                      "minLength": 1,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "category",
+                    "provider",
+                    "available",
+                    "optional_external",
+                    "detail"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "operation"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "operation.describe"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "mission.get"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "artifacts": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "facts": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "incarnation": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "jobs": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "next_action": {
+                  "type": "string"
+                },
+                "objective": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "questions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "relay": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "created_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "cursor": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "message": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "relay_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "source": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "relay_id",
+                      "cursor",
+                      "source",
+                      "message",
+                      "created_at"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "revision": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "triggers": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "updated_at": {
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mission_id",
+                "incarnation",
+                "revision",
+                "objective",
+                "facts",
+                "decisions",
+                "jobs",
+                "triggers",
+                "artifacts",
+                "questions",
+                "relay",
+                "updated_at"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "mission.get"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "mission.chats"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "associations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "available": {
+                        "type": "boolean"
+                      },
+                      "chat_ref": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "mission_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "updated_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "mission_id",
+                      "chat_ref",
+                      "available",
+                      "updated_at"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "associations"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "mission.chats"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "operation": {
+              "const": "relay.read"
+            },
+            "result": {
+              "additionalProperties": false,
+              "properties": {
+                "gap": {
+                  "type": "boolean"
+                },
+                "latest_cursor": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "messages": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "created_at": {
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "cursor": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "message": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "relay_id": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "source": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "relay_id",
+                      "cursor",
+                      "source",
+                      "message",
+                      "created_at"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "mission_id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "next_cursor": {
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "mission_id",
+                "messages",
+                "next_cursor",
+                "latest_cursor",
+                "gap"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "object"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "retryable": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "retryable"
+              ],
+              "type": "object"
+            },
+            "ok": {
+              "const": false
+            },
+            "operation": {
+              "const": "relay.read"
+            }
+          },
+          "required": [
+            "ok",
+            "operation",
+            "error"
+          ],
+          "type": "object"
         }
       ],
       "type": "object"
@@ -4432,6 +7029,39 @@
           },
           "type": "array"
         },
+        "chats": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "chat_ref": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "mission_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "updated_at": {
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "mission_id",
+              "chat_ref",
+              "available",
+              "updated_at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "context": {
           "additionalProperties": false,
           "properties": {
@@ -4699,7 +7329,8 @@
         "relay",
         "jobs",
         "triggers",
-        "artifacts"
+        "artifacts",
+        "chats"
       ],
       "type": "object"
     },
@@ -4729,7 +7360,32 @@
             "action": {
               "type": "string"
             },
+            "available": {
+              "default": true,
+              "type": "boolean"
+            },
+            "chat_ref": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "job_id": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mission_id": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "role": {
               "default": null,
               "type": [
                 "string",
@@ -4793,6 +7449,40 @@
                   "size_bytes",
                   "storage_tier",
                   "created_at"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "chats": {
+              "items": {
+                "properties": {
+                  "available": {
+                    "type": "boolean"
+                  },
+                  "chat_ref": {
+                    "type": "string"
+                  },
+                  "mission_id": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "updated_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mission_id",
+                  "chat_ref",
+                  "role",
+                  "available",
+                  "updated_at"
                 ],
                 "type": "object"
               },
@@ -5099,6 +7789,7 @@
             "engine",
             "missions",
             "relay",
+            "chats",
             "jobs",
             "triggers",
             "artifacts"
@@ -5173,6 +7864,40 @@
               "size_bytes",
               "storage_tier",
               "created_at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "chats": {
+          "items": {
+            "properties": {
+              "available": {
+                "type": "boolean"
+              },
+              "chat_ref": {
+                "type": "string"
+              },
+              "mission_id": {
+                "type": "string"
+              },
+              "role": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "updated_at": {
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "mission_id",
+              "chat_ref",
+              "role",
+              "available",
+              "updated_at"
             ],
             "type": "object"
           },
@@ -5479,6 +8204,7 @@
         "engine",
         "missions",
         "relay",
+        "chats",
         "jobs",
         "triggers",
         "artifacts"

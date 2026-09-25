@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace StealthEye.Contract;
 
@@ -30,6 +30,12 @@ public sealed record EyeLiveMissionResult(
     [property: JsonPropertyName("relay_count")] int RelayCount,
     [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt);
 
+public sealed record EyeLiveChatResult(
+    [property: JsonPropertyName("mission_id")] string MissionId,
+    [property: JsonPropertyName("chat_ref")] string ChatRef,
+    [property: JsonPropertyName("role"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Role,
+    [property: JsonPropertyName("available")] bool Available,
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt);
 public sealed record EyeLiveRelayResult(
     [property: JsonPropertyName("mission_id")] string MissionId,
     [property: JsonPropertyName("cursor")] long Cursor,
@@ -77,13 +83,18 @@ public sealed record EyeLiveSnapshotResult(
     [property: JsonPropertyName("engine")] EyeLiveEngineResult Engine,
     [property: JsonPropertyName("missions")] EyeLiveMissionResult[] Missions,
     [property: JsonPropertyName("relay")] EyeLiveRelayResult[] Relay,
+    [property: JsonPropertyName("chats")] EyeLiveChatResult[] Chats,
     [property: JsonPropertyName("jobs")] EyeLiveJobResult[] Jobs,
     [property: JsonPropertyName("triggers")] EyeLiveTriggerResult[] Triggers,
     [property: JsonPropertyName("artifacts")] EyeLiveArtifactResult[] Artifacts);
 
 public sealed record EyeLiveAppActionArgs(
     [property: JsonPropertyName("action")] string Action,
-    [property: JsonPropertyName("job_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? JobId = null);
+    [property: JsonPropertyName("job_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? JobId = null,
+    [property: JsonPropertyName("mission_id"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? MissionId = null,
+    [property: JsonPropertyName("chat_ref"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ChatRef = null,
+    [property: JsonPropertyName("role"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Role = null,
+    [property: JsonPropertyName("available")] bool Available = true);
 
 public sealed record EyeLiveAppActionResult(
     [property: JsonPropertyName("action")] string Action,

@@ -59,6 +59,12 @@ public sealed class SessionWorkerManager : IAsyncDisposable
         return await lease.Worker.ObserveWindowsAsync(includeInvisible, cancellationToken);
     }
 
+    public async Task<WorkerDesktopContextResult> ObserveDesktopContextAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await using var lease = await LeaseAsync(cancellationToken);
+        return await lease.Worker.ObserveDesktopContextAsync(cancellationToken);
+    }
     public async Task<WorkerUiaQueryResult> QueryUiaAsync(
         long hwnd,
         int maxDepth = 4,

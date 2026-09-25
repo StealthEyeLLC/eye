@@ -187,6 +187,12 @@ public sealed class SessionWorker : IAsyncDisposable
             WorkerRpcMethods.ObserveWindows,
             new WorkerDesktopObserveRequest(includeInvisible),
             cancellationToken);
+    public Task<WorkerDesktopContextResult> ObserveDesktopContextAsync(
+        CancellationToken cancellationToken = default) =>
+        InvokeAsync<WorkerDesktopContextResult>(
+            WorkerRpcMethods.ObserveDesktopContext,
+            new WorkerDesktopContextRequest(),
+            cancellationToken);
     public Task<WorkerUiaQueryResult> QueryUiaAsync(
         long hwnd,
         int maxDepth = 4,

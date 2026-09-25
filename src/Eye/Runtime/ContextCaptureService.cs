@@ -11,6 +11,7 @@ public sealed class ContextCaptureService
     private readonly DesktopCaptureService _captures;
     private readonly BrowserObservationService _browser;
     private readonly ArtifactStore _artifacts;
+    private readonly DesktopContextService? _desktopContext;
     private readonly string _contextRoot;
 
     public ContextCaptureService(
@@ -20,7 +21,8 @@ public sealed class ContextCaptureService
         UiaQueryService uia,
         DesktopCaptureService captures,
         BrowserObservationService browser,
-        ArtifactStore artifacts)
+        ArtifactStore artifacts,
+        DesktopContextService? desktopContext = null)
     {
         _missions = missions;
         _desktop = desktop;
@@ -28,6 +30,7 @@ public sealed class ContextCaptureService
         _captures = captures;
         _browser = browser;
         _artifacts = artifacts;
+        _desktopContext = desktopContext;
         var spoolParent = Directory.GetParent(jobs.SpoolRoot)?.FullName ?? jobs.SpoolRoot;
         _contextRoot = Path.Combine(spoolParent, "context");
         Directory.CreateDirectory(_contextRoot);
@@ -52,6 +55,7 @@ public sealed class ContextCaptureService
         UiaQuerySnapshot? foregroundUia = null;
         DesktopCaptureSnapshot? screenshot = null;
         BrowserTargetSnapshot? browser = null;
+        WorkerDesktopContextResult? desktopContext = null;
         string? desktopError = null;
         string? uiaError = null;
         string? captureError = null;
@@ -110,6 +114,20 @@ public sealed class ContextCaptureService
             browserError = ex.Message;
         }
 
+        if (_desktopContext is not null)
+        {
+            try
+            {
+                desktopContext = await _desktopContext.ObserveAsync(cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                desktopError = desktopError is null
+                    ? $"context: {ex.Message}"
+                    : $"{desktopError}; context: {ex.Message}";
+            }
+        }
+
         var document = new ContextCaptureDocument(
             capturedAt,
             mission,
@@ -117,6 +135,11 @@ public sealed class ContextCaptureService
             foregroundUia is null ? null : ToPublic(foregroundUia),
             screenshot,
             browser is null ? null : ToPublic(browser),
+            desktopContext?.ClipboardText,
+            desktopContext?.SelectionText,
+            desktopContext?.ForegroundProcessPath,
+            desktopContext?.ExplorerPath,
+            desktopContext?.SelectedPaths ?? [],
             desktopError,
             uiaError,
             captureError,

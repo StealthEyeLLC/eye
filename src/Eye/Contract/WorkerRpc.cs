@@ -5,13 +5,14 @@ namespace StealthEye.Contract;
 
 public static class WorkerRpcMethods
 {
-    public const string CurrentProtocolVersion = "1.2.0";
+    public const string CurrentProtocolVersion = "1.3.0";
     public const string Handshake = "worker.handshake";
     public const string StartTerminal = "terminal.start";
     public const string WriteTerminal = "terminal.write";
     public const string ResizeTerminal = "terminal.resize";
     public const string WaitTerminal = "terminal.wait";
     public const string ObserveWindows = "desktop.windows";
+    public const string ObserveDesktopContext = "desktop.context";
     public const string QueryUia = "desktop.uia_query";
     public const string ActUia = "desktop.uia_act";
     public const string CaptureWindow = "desktop.capture";
@@ -136,6 +137,15 @@ public sealed record WorkerDesktopObservationResult(
     [property: JsonPropertyName("input_desktop_name")] string? InputDesktopName,
     [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
     [property: JsonPropertyName("windows")] WorkerWindowInfo[] Windows);
+public sealed record WorkerDesktopContextRequest;
+
+public sealed record WorkerDesktopContextResult(
+    [property: JsonPropertyName("observed_at")] DateTimeOffset ObservedAt,
+    [property: JsonPropertyName("clipboard_text")] string? ClipboardText,
+    [property: JsonPropertyName("selection_text")] string? SelectionText,
+    [property: JsonPropertyName("foreground_process_path")] string? ForegroundProcessPath,
+    [property: JsonPropertyName("explorer_path")] string? ExplorerPath,
+    [property: JsonPropertyName("selected_paths")] string[] SelectedPaths);
 public sealed record WorkerUiaQueryRequest(
     [property: JsonPropertyName("hwnd")] long Hwnd,
     [property: JsonPropertyName("max_depth")] int MaxDepth = 4,

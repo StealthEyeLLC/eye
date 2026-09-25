@@ -146,6 +146,9 @@ sealed class SessionWorkerRpcTarget(IReadOnlyDictionary<string, Stream> bulkStre
     [JsonRpcMethod(WorkerRpcMethods.ObserveWindows)]
     public WorkerDesktopObservationResult ObserveWindows(WorkerDesktopObserveRequest request) =>
         DesktopWindowInventory.Observe(request.IncludeInvisible);
+    [JsonRpcMethod(WorkerRpcMethods.ObserveDesktopContext)]
+    public WorkerDesktopContextResult ObserveDesktopContext(WorkerDesktopContextRequest request) =>
+        DesktopContextProbe.Observe();
     [JsonRpcMethod(WorkerRpcMethods.QueryUia)]
     public WorkerUiaQueryResult QueryUia(WorkerUiaQueryRequest request) =>
         DesktopUiaTreeReader.Query(request);

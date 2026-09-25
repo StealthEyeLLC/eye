@@ -51,6 +51,8 @@ public sealed class EyeLiveTests : IDisposable
         Assert.Contains("ui/message", html, StringComparison.Ordinal);
         Assert.Contains("id=\"missions\"", html, StringComparison.Ordinal);
         Assert.Contains("id=\"relay\"", html, StringComparison.Ordinal);
+        Assert.Contains("id=\"chats\"", html, StringComparison.Ordinal);
+        Assert.Contains("mission.chat_associate", html, StringComparison.Ordinal);
         Assert.Contains("stdout_tail", html, StringComparison.Ordinal);
         Assert.DoesNotContain("http://", html, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("https://", html, StringComparison.OrdinalIgnoreCase);
@@ -103,6 +105,9 @@ public sealed class EyeLiveTests : IDisposable
             mission.MissionId,
             "operator",
             "Eye Live relay is available.");
+        var missionChats = new MissionChatAssociationStore(jobs);
+        var chat = missionChats.Associate(mission.MissionId, "chat://eye-live-test", "operator", available: false);
+
 
         await using var engine = new EngineSupervisor(state, engines);
         var engineStatus = await engine.InitializeAsync();
@@ -113,6 +118,7 @@ public sealed class EyeLiveTests : IDisposable
             triggers,
             artifacts,
             blackboard,
+            missionChats,
             engine).Snapshot();
 
         Assert.Equal("unavailable", snapshot.Engine.State);
@@ -136,6 +142,11 @@ public sealed class EyeLiveTests : IDisposable
         var liveRelay = Assert.Single(snapshot.Relay);
         Assert.Equal(relayEntry.Cursor, liveRelay.Cursor);
         Assert.Equal(relayEntry.Message, liveRelay.Message);
+
+        var liveChat = Assert.Single(snapshot.Chats);
+        Assert.Equal(chat.ChatRef, liveChat.ChatRef);
+        Assert.Equal(chat.Role, liveChat.Role);
+        Assert.False(liveChat.Available);
 
         Assert.Single(snapshot.Triggers);
         Assert.Contains(snapshot.Artifacts, x => x.ArtifactId == artifact.ArtifactId);

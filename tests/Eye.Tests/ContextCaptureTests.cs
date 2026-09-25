@@ -45,6 +45,11 @@ public sealed class ContextCaptureTests : IDisposable
         Assert.Equal(result.MissionRevision, root.GetProperty("mission").GetProperty("revision").GetInt64());
         Assert.True(root.GetProperty("desktop").GetProperty("windows").GetArrayLength() > 0);
         Assert.Equal(JsonValueKind.Null, root.GetProperty("browser").ValueKind);
+        Assert.Equal(JsonValueKind.Array, root.GetProperty("selected_paths").ValueKind);
+        Assert.True(root.TryGetProperty("clipboard_text", out _));
+        Assert.True(root.TryGetProperty("selection_text", out _));
+        Assert.True(root.TryGetProperty("foreground_process_path", out _));
+        Assert.True(root.TryGetProperty("explorer_path", out _));
         Assert.Contains("Blackboard and Relay are ready.", json, StringComparison.Ordinal);
 
         Assert.DoesNotContain("hwnd", json, StringComparison.OrdinalIgnoreCase);
@@ -110,7 +115,7 @@ public sealed class ContextCaptureTests : IDisposable
         var browserObservation = new BrowserObservationService(browserSessions, new BrowserTargetStore(jobs));
         var missions = new MissionBlackboardStore(jobs);
         var relay = new RelayService(missions);
-        var context = new ContextCaptureService(jobs, missions, desktop, uia, captures, browserObservation, artifacts);
+        var context = new ContextCaptureService(jobs, missions, desktop, uia, captures, browserObservation, artifacts, new DesktopContextService(workers));
         return new Services(jobs, artifacts, browserSessions, browserObservation, missions, relay, context);
     }
 

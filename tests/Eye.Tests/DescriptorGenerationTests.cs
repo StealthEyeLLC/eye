@@ -17,8 +17,8 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(
             [
                 "action.status", "artifact.delete", "artifact.diff", "artifact.export", "artifact.import", "artifact.info", "artifact.preview", "artifact.read_range",
-                "browser.dom_snapshot", "browser.download", "browser.evaluate", "browser.navigate", "browser.observe", "capabilities", "engine.activate", "engine.restart", "engine.rollback", "engine.status", "job.attach", "job.cancel", "job.read",
-                "job.resize", "job.result", "job.start", "job.status", "job.wait", "job.write", "run", "system.status", "ui.act", "ui.observe", "ui.query"
+                "browser.dom_snapshot", "browser.download", "browser.evaluate", "browser.navigate", "browser.observe", "capabilities", "context.capture", "engine.activate", "engine.restart", "engine.rollback", "engine.status", "job.attach", "job.cancel", "job.read",
+                "job.resize", "job.result", "job.start", "job.status", "job.wait", "job.write", "machine.describe", "mission.chat_associate", "mission.chat_remove", "mission.chats", "mission.create", "mission.get", "mission.update", "operation.describe", "operation.list", "relay.read", "relay.send", "run", "session.describe", "software.find", "software.version", "system.status", "ui.act", "ui.observe", "ui.query", "volume.describe"
             ],
             contract.PublishedOperationIds.Order(StringComparer.Ordinal).ToArray());
         Assert.Equal(["browser.dom_snapshot", "browser.download", "browser.evaluate", "browser.navigate", "browser.observe", "ui.act", "ui.observe", "ui.query"], contract.AllowedEngineOperationIds.Order(StringComparer.Ordinal).ToArray());
@@ -32,6 +32,16 @@ public sealed class DescriptorGenerationTests
         Assert.Equal("eye_inspect", contract.GetToolForOperation("ui.query").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("browser.observe").Name);
         Assert.Equal("eye_inspect", contract.GetToolForOperation("browser.dom_snapshot").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("machine.describe").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("session.describe").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("volume.describe").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("software.find").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("software.version").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("operation.list").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("operation.describe").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("mission.get").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("mission.chats").Name);
+        Assert.Equal("eye_inspect", contract.GetToolForOperation("relay.read").Name);
         Assert.Equal("eye_interact", contract.GetToolForOperation("ui.act").Name);
         Assert.Equal("eye_interact", contract.GetToolForOperation("browser.navigate").Name);
         Assert.Equal("eye_interact", contract.GetToolForOperation("browser.evaluate").Name);
@@ -43,6 +53,12 @@ public sealed class DescriptorGenerationTests
         Assert.Equal("eye_change", contract.GetToolForOperation("engine.activate").Name);
         Assert.Equal("eye_change", contract.GetToolForOperation("artifact.export").Name);
         Assert.Equal("eye_change", contract.GetToolForOperation("artifact.import").Name);
+        Assert.Equal("eye_change", contract.GetToolForOperation("mission.create").Name);
+        Assert.Equal("eye_change", contract.GetToolForOperation("mission.update").Name);
+        Assert.Equal("eye_change", contract.GetToolForOperation("mission.chat_associate").Name);
+        Assert.Equal("eye_change", contract.GetToolForOperation("mission.chat_remove").Name);
+        Assert.Equal("eye_change", contract.GetToolForOperation("relay.send").Name);
+        Assert.Equal("eye_change", contract.GetToolForOperation("context.capture").Name);
     }
 
     [Fact]
@@ -53,8 +69,8 @@ public sealed class DescriptorGenerationTests
         Assert.Equal(["eye_inspect", "eye_run", "eye_change", "eye_interact", "eye_external", "eye_live"], descriptors.Select(x => x.Name).ToArray());
 
         var inspect = descriptors.Single(x => x.Name == "eye_inspect");
-        Assert.Equal(17, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(34, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(27, inspect.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(54, inspect.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var run = descriptors.Single(x => x.Name == "eye_run");
         AssertPropertySet<ActionPostconditionArgs>(
@@ -85,8 +101,8 @@ public sealed class DescriptorGenerationTests
         }
 
         var change = descriptors.Single(x => x.Name == "eye_change");
-        Assert.Equal(6, change.InputSchema.GetProperty("oneOf").GetArrayLength());
-        Assert.Equal(12, change.OutputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(12, change.InputSchema.GetProperty("oneOf").GetArrayLength());
+        Assert.Equal(24, change.OutputSchema.GetProperty("oneOf").GetArrayLength());
 
         var interact = descriptors.Single(x => x.Name == "eye_interact");
         Assert.Equal(4, interact.InputSchema.GetProperty("oneOf").GetArrayLength());

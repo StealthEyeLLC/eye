@@ -28,6 +28,26 @@ public sealed class EyeLiveAppTool(
             "job.cancel" when !string.IsNullOrWhiteSpace(request.JobId) =>
                 (EyeEffectClass.Run, "job.cancel", new JobIdArgs(request.JobId)),
             "job.cancel" => throw new ArgumentException("job_id is required for job.cancel.", nameof(request)),
+            "mission.chat_associate" when
+                !string.IsNullOrWhiteSpace(request.MissionId) &&
+                !string.IsNullOrWhiteSpace(request.ChatRef) =>
+                (EyeEffectClass.Change, "mission.chat_associate", new MissionChatAssociateArgs(
+                    request.MissionId,
+                    request.ChatRef,
+                    request.Role,
+                    request.Available)),
+            "mission.chat_associate" => throw new ArgumentException(
+                "mission_id and chat_ref are required for mission.chat_associate.",
+                nameof(request)),
+            "mission.chat_remove" when
+                !string.IsNullOrWhiteSpace(request.MissionId) &&
+                !string.IsNullOrWhiteSpace(request.ChatRef) =>
+                (EyeEffectClass.Change, "mission.chat_remove", new MissionChatRemoveArgs(
+                    request.MissionId,
+                    request.ChatRef)),
+            "mission.chat_remove" => throw new ArgumentException(
+                "mission_id and chat_ref are required for mission.chat_remove.",
+                nameof(request)),
             _ => throw new ArgumentException($"Unsupported Eye Live action: {request.Action}", nameof(request))
         };
 
@@ -203,6 +223,7 @@ button.danger{border-color:color-mix(in srgb,#c33 55%,transparent)}
     <section class="card"><h2>Context</h2><div id="context" class="empty">No data</div></section>
     <section class="card"><h2>Missions</h2><div id="missions" class="list empty">No data</div></section>
     <section class="card"><h2>Relay</h2><div id="relay" class="list empty">No data</div></section>
+    <section class="card"><h2>Chats</h2><div class="actions"><input class="follow" id="chatMission" placeholder="mission id"><input class="follow" id="chatRef" placeholder="chat ref"><input class="follow" id="chatRole" placeholder="role"><button id="associateChat">Associate</button></div><div id="chats" class="list empty">No data</div></section>
     <section class="card"><h2>Recent jobs / terminals</h2><div id="jobs" class="list empty">No data</div></section>
     <section class="card"><h2>Recent triggers</h2><div id="triggers" class="list empty">No data</div></section>
     <section class="card"><h2>Recent artifacts</h2><div id="artifacts" class="list empty">No data</div></section>
@@ -264,6 +285,11 @@ button.danger{border-color:color-mix(in srgb,#c33 55%,transparent)}
     document.getElementById('relay').innerHTML=rows(s.relay,r=>
       '<div class="row"><div class="line"><span>'+esc(r.source)+'</span><span class="pill">#'+esc(r.cursor)+'</span></div>'+
       '<div>'+esc(r.message)+'</div><div class="muted">'+esc(r.mission_id)+' | '+esc(fmt(r.created_at))+'</div></div>');
+    document.getElementById('chats').className='list';
+    document.getElementById('chats').innerHTML=rows(s.chats,ch=>
+      '<div class="row"><div class="line"><span class="id">'+esc(ch.chat_ref)+'</span><span class="pill">'+esc(ch.role??'chat')+'</span></div>'+
+      '<div class="muted">'+esc(ch.mission_id)+' | '+(ch.available?'available':'closed/unavailable')+' | '+esc(fmt(ch.updated_at))+'</div>'+
+      '<div class="actions"><button data-remove-chat="'+esc(ch.chat_ref)+'" data-mission="'+esc(ch.mission_id)+'">Remove</button></div></div>');
 
     document.getElementById('jobs').className='list';
     document.getElementById('jobs').innerHTML=rows(s.jobs,j=>
@@ -298,13 +324,21 @@ button.danger{border-color:color-mix(in srgb,#c33 55%,transparent)}
     }finally{setBusy(false);}
   }
 
-  async function act(action,job=null){
+  async function act(action,data={}){
     setBusy(true);
     try{
-      const r=await call('eye_live_action',{request:{action,job_id:job}});
+      const r=await call('eye_live_action',{request:Object.assign({action},data)});
       const x=structured(r);
       render(x?.snapshot??x);
     }finally{setBusy(false);}
+  }
+
+  async function associateChat(){
+    const mission_id=document.getElementById('chatMission').value.trim();
+    const chat_ref=document.getElementById('chatRef').value.trim();
+    const role=document.getElementById('chatRole').value.trim();
+    if(!mission_id||!chat_ref)return;
+    await act('mission.chat_associate',{mission_id,chat_ref,role:role||null,available:true});
   }
 
   async function sendFollowup(){
@@ -332,8 +366,10 @@ button.danger{border-color:color-mix(in srgb,#c33 55%,transparent)}
     if(!el)return;
     if(el.id==='refresh')refresh();
     else if(el.id==='send')sendFollowup();
+    else if(el.id==='associateChat')associateChat();
     else if(el.dataset.engine)act('engine.'+el.dataset.engine);
-    else if(el.dataset.cancel)act('job.cancel',el.dataset.cancel);
+    else if(el.dataset.cancel)act('job.cancel',{job_id:el.dataset.cancel});
+    else if(el.dataset.removeChat)act('mission.chat_remove',{mission_id:el.dataset.mission,chat_ref:el.dataset.removeChat});
   });
 
   (async()=>{

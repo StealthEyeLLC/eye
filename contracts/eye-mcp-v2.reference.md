@@ -3,12 +3,12 @@
 > Generated from contracts/eye-mcp-v2.json. Do not edit by hand.
 
 - Contract: stealtheye.eye.mcp
-- Version: 2.6.0
+- Version: 2.7.0
 - Status: canonical-target
 - Publication state: generated-not-live-until-cutover
-- Canonical JSON SHA-256: f576432f532341bd181e7593bf2235aef5cc5eb146c8016dc946d78dc117e8f5
+- Canonical JSON SHA-256: 607e811d7273bd91f382f6270969157c152d46d2abc1a01817f3d757ca48b82d
 - Host/engine protocol: 1.0.0
-- Worker protocol: 1.2.0
+- Worker protocol: 1.3.0
 
 ## Server instructions
 
@@ -18,9 +18,9 @@ STEALTHEYE is a privileged Windows capability substrate controlled by ChatGPT. P
 
 | Tool | Effect class | Machine effects | Operations |
 | --- | --- | --- | --- |
-| eye_inspect | inspect | read-only-or-observational | system.status, action.status, capabilities, engine.status, job.status, job.read, job.wait, job.result, job.attach, artifact.info, artifact.preview, artifact.read_range, artifact.diff, ui.observe, ui.query, browser.observe, browser.dom_snapshot |
+| eye_inspect | inspect | read-only-or-observational | system.status, action.status, capabilities, engine.status, job.status, job.read, job.wait, job.result, job.attach, artifact.info, artifact.preview, artifact.read_range, artifact.diff, ui.observe, ui.query, browser.observe, browser.dom_snapshot, machine.describe, session.describe, volume.describe, software.find, software.version, operation.list, operation.describe, mission.get, mission.chats, relay.read |
 | eye_run | run | local-execution | run, job.start, job.write, job.resize, job.cancel |
-| eye_change | change | local-write | engine.activate, engine.restart, engine.rollback, artifact.import, artifact.export, artifact.delete |
+| eye_change | change | local-write | engine.activate, engine.restart, engine.rollback, artifact.import, artifact.export, artifact.delete, mission.create, mission.update, mission.chat_associate, mission.chat_remove, relay.send, context.capture |
 | eye_interact | interact | interactive | ui.act, browser.navigate, browser.evaluate, browser.download |
 | eye_external | external | open-world | (none) |
 | eye_live | ui | none | (none) |

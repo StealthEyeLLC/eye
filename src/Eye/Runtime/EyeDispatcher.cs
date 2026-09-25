@@ -13,7 +13,7 @@ public enum EyeEffectClass
     External
 }
 
-public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null, UiaActionService? uiaActionService = null, BrowserObservationService? browserObservationService = null, BrowserControlService? browserControlService = null, ActionJournalStore? actionJournalStore = null, ConsequentialActionRunner? consequentialActionRunner = null, ActionReconciler? actionReconciler = null, EyeContractCatalog? publicContract = null)
+public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactStore, EngineSupervisor? engineSupervisor = null, DesktopObservationService? desktopObservationService = null, UiaQueryService? uiaQueryService = null, UiaActionService? uiaActionService = null, BrowserObservationService? browserObservationService = null, BrowserControlService? browserControlService = null, ActionJournalStore? actionJournalStore = null, ConsequentialActionRunner? consequentialActionRunner = null, ActionReconciler? actionReconciler = null, EyeContractCatalog? publicContract = null, MissionBlackboardStore? missionBlackboard = null, RelayService? relayService = null, MissionChatAssociationStore? missionChats = null, MissionContinuationService? missionContinuation = null, CapabilityManifestService? capabilityManifests = null)
 {
     private const int FastCompletionWindowMs = 1000;
     private const long InlineOutputLimitBytes = 262_144;
@@ -107,6 +107,48 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                         WindowsIdentity.GetCurrent().Name,
                         System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime()));
 
+                case "machine.describe":
+                    return Success(op, RequireCapabilityManifests().DescribeMachine());
+                case "session.describe":
+                    return Success(op, RequireCapabilityManifests().DescribeSession());
+                case "volume.describe":
+                    return Success(op, RequireCapabilityManifests().DescribeVolumes());
+                case "software.find":
+                {
+                    var request = args is null ? new SoftwareFindArgs() : DeserializeRequired<SoftwareFindArgs>(op, args);
+                    return Success(op, RequireCapabilityManifests().FindSoftware(request.Query));
+                }
+                case "software.version":
+                {
+                    var request = DeserializeRequired<SoftwareNameArgs>(op, args);
+                    return Success(op, RequireCapabilityManifests().SoftwareVersion(request.Name));
+                }
+                case "operation.list":
+                    return Success(op, RequireCapabilityManifests().OperationList());
+                case "operation.describe":
+                {
+                    var request = DeserializeRequired<OperationNameArgs>(op, args);
+                    return Success(op, RequireCapabilityManifests().OperationDescribe(request.Name));
+                }
+                case "mission.get":
+                {
+                    var request = DeserializeRequired<MissionIdArgs>(op, args);
+                    return Success(op, RequireMissionBlackboard().GetRequired(request.MissionId));
+                }
+                case "mission.chats":
+                {
+                    var request = DeserializeRequired<MissionIdArgs>(op, args);
+                    RequireMissionBlackboard().GetRequired(request.MissionId);
+                    return Success(op, new { associations = RequireMissionChats().List(request.MissionId) });
+                }
+                case "relay.read":
+                {
+                    var request = DeserializeRequired<RelayReadArgs>(op, args);
+                    return Success(op, RequireRelayService().Read(
+                        request.MissionId,
+                        request.AfterCursor,
+                        request.MaxItems));
+                }
                 case "action.status":
                 {
                     var request = DeserializeRequired<ActionIdArgs>(op, args);
@@ -468,6 +510,68 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
                         diff.FirstDifferenceOffset));
                 }
 
+                case "mission.create":
+                {
+                    var request = DeserializeRequired<MissionCreateArgs>(op, args);
+                    return Success(op, RequireMissionBlackboard().Create(request.Objective));
+                }
+                case "mission.update":
+                {
+                    var request = DeserializeRequired<MissionUpdateArgs>(op, args);
+                    return Success(op, RequireMissionBlackboard().Update(
+                        request.MissionId,
+                        new MissionBlackboardUpdate(
+                            request.Objective,
+                            request.Facts,
+                            request.Decisions,
+                            request.Jobs,
+                            request.Triggers,
+                            request.Artifacts,
+                            request.Questions,
+                            request.NextAction,
+                            request.ClearNextAction)));
+                }
+                case "mission.chat_associate":
+                {
+                    var request = DeserializeRequired<MissionChatAssociateArgs>(op, args);
+                    RequireMissionBlackboard().GetRequired(request.MissionId);
+                    return Success(op, RequireMissionChats().Associate(
+                        request.MissionId,
+                        request.ChatRef,
+                        request.Role,
+                        request.Available));
+                }
+                case "mission.chat_remove":
+                {
+                    var request = DeserializeRequired<MissionChatRemoveArgs>(op, args);
+                    RequireMissionBlackboard().GetRequired(request.MissionId);
+                    return Success(op, new MissionChatRemoveResult(
+                        request.MissionId,
+                        request.ChatRef,
+                        RequireMissionChats().Remove(request.MissionId, request.ChatRef)));
+                }
+                case "relay.send":
+                {
+                    var request = DeserializeRequired<RelaySendArgs>(op, args);
+                    return Success(op, RequireRelayService().Send(
+                        request.MissionId,
+                        request.Source,
+                        request.Message));
+                }
+                case "context.capture":
+                {
+                    var request = DeserializeRequired<ContextCaptureArgs>(op, args);
+                    var result = await RequireMissionContinuation().CaptureAndRelayAsync(
+                        request.MissionId,
+                        request.Source,
+                        request.Note,
+                        request.IncludeScreenshot,
+                        request.ScreenshotOcr,
+                        request.UiaMaxDepth,
+                        request.UiaMaxNodes,
+                        cancellationToken);
+                    return Success(op, result);
+                }
                 case "engine.activate":
                 {
                     var request = DeserializeRequired<EngineActivateArgs>(op, args);
@@ -795,6 +899,16 @@ public sealed class EyeDispatcher(JobManager jobManager, ArtifactStore artifactS
 
     private ActionReconciler RequireActionReconciler() =>
         actionReconciler ?? throw new InvalidOperationException("Action reconciler is not configured.");
+    private CapabilityManifestService RequireCapabilityManifests() =>
+        capabilityManifests ?? throw new InvalidOperationException("Capability manifest service is not configured.");
+    private MissionBlackboardStore RequireMissionBlackboard() =>
+        missionBlackboard ?? throw new InvalidOperationException("Mission Blackboard is not configured.");
+    private RelayService RequireRelayService() =>
+        relayService ?? throw new InvalidOperationException("Relay service is not configured.");
+    private MissionChatAssociationStore RequireMissionChats() =>
+        missionChats ?? throw new InvalidOperationException("Mission chat association store is not configured.");
+    private MissionContinuationService RequireMissionContinuation() =>
+        missionContinuation ?? throw new InvalidOperationException("Mission continuation service is not configured.");
     private BrowserObservationService RequireBrowserObservationService() =>
         browserObservationService ?? throw new InvalidOperationException("Browser observation service is not configured.");
 

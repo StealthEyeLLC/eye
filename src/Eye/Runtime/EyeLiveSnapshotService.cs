@@ -1,4 +1,4 @@
-﻿using System.Security.Principal;
+using System.Security.Principal;
 using System.Text;
 using StealthEye.Contract;
 
@@ -9,6 +9,7 @@ public sealed class EyeLiveSnapshotService(
     TriggerStore triggerStore,
     ArtifactStore artifactStore,
     MissionBlackboardStore blackboard,
+    MissionChatAssociationStore missionChats,
     EngineSupervisor engineSupervisor)
 {
     private const int RecentLimit = 20;
@@ -22,6 +23,7 @@ public sealed class EyeLiveSnapshotService(
         var triggers = triggerStore.ListRecent(RecentLimit);
         var artifacts = artifactStore.ListRecent(RecentLimit);
         var missions = blackboard.ListRecent(MissionLimit);
+        var chats = missionChats.ListRecent(32);
         var relay = missions
             .SelectMany(mission => mission.Relay.Select(entry => new EyeLiveRelayResult(
                 mission.MissionId,
@@ -62,6 +64,12 @@ public sealed class EyeLiveSnapshotService(
                 mission.Relay.Length,
                 mission.UpdatedAt)).ToArray(),
             relay,
+            chats.Select(chat => new EyeLiveChatResult(
+                chat.MissionId,
+                chat.ChatRef,
+                chat.Role,
+                chat.Available,
+                chat.UpdatedAt)).ToArray(),
             jobs.Select(job => new EyeLiveJobResult(
                 job.JobId,
                 job.Incarnation,

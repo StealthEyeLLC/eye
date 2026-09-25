@@ -106,6 +106,25 @@ public sealed class SessionWorkerTests
             !string.IsNullOrWhiteSpace(window.Uia.ClassName));
     }
     [Fact]
+    public async Task SessionWorker_ObservesBoundedActiveDesktopContext()
+    {
+        var contract = EyeContractCatalog.Load();
+        await using var worker = await SessionWorker.StartAsync(
+            WorkerExecutable(),
+            contract.WorkerProtocolVersion,
+            TimeSpan.FromSeconds(10));
+
+        var context = await worker.ObserveDesktopContextAsync();
+
+        Assert.True(context.ObservedAt > DateTimeOffset.UtcNow.AddMinutes(-1));
+        Assert.NotNull(context.SelectedPaths);
+        Assert.True(context.SelectedPaths.Length <= 64);
+        Assert.True(context.ClipboardText is null || context.ClipboardText.Length <= 8192);
+        Assert.True(context.SelectionText is null || context.SelectionText.Length <= 8192);
+        Assert.True(context.ForegroundProcessPath is null || Path.IsPathFullyQualified(context.ForegroundProcessPath));
+        Assert.True(context.ExplorerPath is null || context.ExplorerPath.Length > 0);
+    }
+    [Fact]
     public async Task SessionWorker_QueriesBoundedUiaTreeForObservedWindow()
     {
         var contract = EyeContractCatalog.Load();
