@@ -77,10 +77,34 @@ public sealed class McpServedSurfaceIntegrationTests : IDisposable
             Assert.Equal(contract.Manifest.ServerInstructions, client.ServerInstructions);
 
             var tools = await client.ListToolsAsync();
+            var appOnlyNames = EyeLiveMcp.CreateAppTools()
+                .Select(x => x.ProtocolTool.Name)
+                .ToHashSet(StringComparer.Ordinal);
+            var expectedServedNames = contract.Descriptors
+                .Select(x => x.Name)
+                .Concat(appOnlyNames)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.Equal(
+                expectedServedNames,
+                tools.Select(x => x.Name).Order(StringComparer.Ordinal).ToArray());
+
             Assert.Equal(
                 contract.Descriptors.Select(x => x.Name).Order(StringComparer.Ordinal),
-                tools.Select(x => x.Name).Order(StringComparer.Ordinal));
+                tools.Where(x => !appOnlyNames.Contains(x.Name))
+                    .Select(x => x.Name)
+                    .Order(StringComparer.Ordinal));
 
+            foreach (var appOnlyName in appOnlyNames)
+            {
+                var appOnly = tools.Single(x => x.Name == appOnlyName);
+                var meta = appOnly.ProtocolTool.Meta!.ToJsonString()
+                    .Replace(" ", string.Empty, StringComparison.Ordinal)
+                    .Replace("\r", string.Empty, StringComparison.Ordinal)
+                    .Replace("\n", string.Empty, StringComparison.Ordinal);
+                Assert.Contains("\"visibility\":[\"app\"]", meta, StringComparison.Ordinal);
+            }
             var actual = EyeGeneratedMcp.NormalizeProtocolTools(
                 tools.Select(x => x.ProtocolTool));
             var expected = File.ReadAllText(Path.Combine(

@@ -4025,6 +4025,37 @@
           },
           "type": "array"
         },
+        "context": {
+          "additionalProperties": false,
+          "properties": {
+            "active_job_count": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "latest_mission_id": {
+              "type": "string"
+            },
+            "mission_count": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "pending_trigger_count": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "relay_message_count": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "mission_count",
+            "active_job_count",
+            "pending_trigger_count",
+            "relay_message_count"
+          ],
+          "type": "object"
+        },
         "engine": {
           "additionalProperties": false,
           "properties": {
@@ -4089,6 +4120,12 @@
               "state": {
                 "type": "string"
               },
+              "stderr_tail": {
+                "type": "string"
+              },
+              "stdout_tail": {
+                "type": "string"
+              },
               "terminal": {
                 "type": "boolean"
               }
@@ -4099,7 +4136,9 @@
               "state",
               "context",
               "terminal",
-              "created_at"
+              "created_at",
+              "stdout_tail",
+              "stderr_tail"
             ],
             "type": "object"
           },
@@ -4120,6 +4159,81 @@
             "identity"
           ],
           "type": "object"
+        },
+        "missions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "incarnation": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "mission_id": {
+                "type": "string"
+              },
+              "next_action": {
+                "type": "string"
+              },
+              "objective": {
+                "type": "string"
+              },
+              "relay_count": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "revision": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "updated_at": {
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "mission_id",
+              "incarnation",
+              "revision",
+              "objective",
+              "relay_count",
+              "updated_at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "relay": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "cursor": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "message": {
+                "type": "string"
+              },
+              "mission_id": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mission_id",
+              "cursor",
+              "source",
+              "message",
+              "created_at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "triggers": {
           "items": {
@@ -4172,7 +4286,10 @@
       "required": [
         "generated_at",
         "machine",
+        "context",
         "engine",
+        "missions",
+        "relay",
         "jobs",
         "triggers",
         "artifacts"
@@ -4180,6 +4297,788 @@
       "type": "object"
     },
     "title": "Eye Live"
+  },
+  {
+    "_meta": {
+      "ui": {
+        "visibility": [
+          "app"
+        ]
+      }
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false,
+      "title": "Eye Live Action"
+    },
+    "description": "Perform a bounded Eye Live recovery or job-cancel action.",
+    "icons": null,
+    "inputSchema": {
+      "properties": {
+        "request": {
+          "properties": {
+            "action": {
+              "type": "string"
+            },
+            "job_id": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "request"
+      ],
+      "type": "object"
+    },
+    "name": "eye_live_action",
+    "outputSchema": {
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "completed": {
+          "type": "boolean"
+        },
+        "snapshot": {
+          "properties": {
+            "artifacts": {
+              "items": {
+                "properties": {
+                  "artifact_id": {
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "incarnation": {
+                    "type": "integer"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer"
+                  },
+                  "storage_tier": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "artifact_id",
+                  "incarnation",
+                  "kind",
+                  "name",
+                  "size_bytes",
+                  "storage_tier",
+                  "created_at"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "context": {
+              "properties": {
+                "active_job_count": {
+                  "type": "integer"
+                },
+                "latest_mission_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "mission_count": {
+                  "type": "integer"
+                },
+                "pending_trigger_count": {
+                  "type": "integer"
+                },
+                "relay_message_count": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "mission_count",
+                "active_job_count",
+                "pending_trigger_count",
+                "relay_message_count",
+                "latest_mission_id"
+              ],
+              "type": "object"
+            },
+            "engine": {
+              "properties": {
+                "active_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "engine_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "last_error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "previous_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "process_id": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "state": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state",
+                "active_version",
+                "previous_version",
+                "engine_version",
+                "process_id",
+                "last_error"
+              ],
+              "type": "object"
+            },
+            "generated_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "jobs": {
+              "items": {
+                "properties": {
+                  "completed_at": {
+                    "format": "date-time",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "context": {
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "failure_message": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "incarnation": {
+                    "type": "integer"
+                  },
+                  "job_id": {
+                    "type": "string"
+                  },
+                  "pid": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "state": {
+                    "type": "string"
+                  },
+                  "stderr_tail": {
+                    "type": "string"
+                  },
+                  "stdout_tail": {
+                    "type": "string"
+                  },
+                  "terminal": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "job_id",
+                  "incarnation",
+                  "state",
+                  "context",
+                  "terminal",
+                  "pid",
+                  "created_at",
+                  "completed_at",
+                  "failure_message",
+                  "stdout_tail",
+                  "stderr_tail"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "machine": {
+              "properties": {
+                "identity": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "identity"
+              ],
+              "type": "object"
+            },
+            "missions": {
+              "items": {
+                "properties": {
+                  "incarnation": {
+                    "type": "integer"
+                  },
+                  "mission_id": {
+                    "type": "string"
+                  },
+                  "next_action": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "objective": {
+                    "type": "string"
+                  },
+                  "relay_count": {
+                    "type": "integer"
+                  },
+                  "revision": {
+                    "type": "integer"
+                  },
+                  "updated_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mission_id",
+                  "incarnation",
+                  "revision",
+                  "objective",
+                  "next_action",
+                  "relay_count",
+                  "updated_at"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "relay": {
+              "items": {
+                "properties": {
+                  "created_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "cursor": {
+                    "type": "integer"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "mission_id": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mission_id",
+                  "cursor",
+                  "source",
+                  "message",
+                  "created_at"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "triggers": {
+              "items": {
+                "properties": {
+                  "created_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "deadline_at": {
+                    "format": "date-time",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "failure_message": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "file_path": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "incarnation": {
+                    "type": "integer"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "process_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "state": {
+                    "type": "string"
+                  },
+                  "trigger_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "trigger_id",
+                  "incarnation",
+                  "kind",
+                  "state",
+                  "created_at",
+                  "deadline_at",
+                  "process_id",
+                  "file_path",
+                  "failure_message"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "generated_at",
+            "machine",
+            "context",
+            "engine",
+            "missions",
+            "relay",
+            "jobs",
+            "triggers",
+            "artifacts"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "action",
+        "completed",
+        "snapshot"
+      ],
+      "type": "object"
+    },
+    "title": "Eye Live Action"
+  },
+  {
+    "_meta": {
+      "ui": {
+        "visibility": [
+          "app"
+        ]
+      }
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true,
+      "title": "Eye Live Refresh"
+    },
+    "description": "Refresh Eye Live state.",
+    "icons": null,
+    "inputSchema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "eye_live_refresh",
+    "outputSchema": {
+      "properties": {
+        "artifacts": {
+          "items": {
+            "properties": {
+              "artifact_id": {
+                "type": "string"
+              },
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "incarnation": {
+                "type": "integer"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "size_bytes": {
+                "type": "integer"
+              },
+              "storage_tier": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "artifact_id",
+              "incarnation",
+              "kind",
+              "name",
+              "size_bytes",
+              "storage_tier",
+              "created_at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "context": {
+          "properties": {
+            "active_job_count": {
+              "type": "integer"
+            },
+            "latest_mission_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mission_count": {
+              "type": "integer"
+            },
+            "pending_trigger_count": {
+              "type": "integer"
+            },
+            "relay_message_count": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "mission_count",
+            "active_job_count",
+            "pending_trigger_count",
+            "relay_message_count",
+            "latest_mission_id"
+          ],
+          "type": "object"
+        },
+        "engine": {
+          "properties": {
+            "active_version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "engine_version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "last_error": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "previous_version": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "process_id": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "state": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "state",
+            "active_version",
+            "previous_version",
+            "engine_version",
+            "process_id",
+            "last_error"
+          ],
+          "type": "object"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "jobs": {
+          "items": {
+            "properties": {
+              "completed_at": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "context": {
+                "type": "string"
+              },
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "failure_message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "incarnation": {
+                "type": "integer"
+              },
+              "job_id": {
+                "type": "string"
+              },
+              "pid": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "state": {
+                "type": "string"
+              },
+              "stderr_tail": {
+                "type": "string"
+              },
+              "stdout_tail": {
+                "type": "string"
+              },
+              "terminal": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "job_id",
+              "incarnation",
+              "state",
+              "context",
+              "terminal",
+              "pid",
+              "created_at",
+              "completed_at",
+              "failure_message",
+              "stdout_tail",
+              "stderr_tail"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "machine": {
+          "properties": {
+            "identity": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "identity"
+          ],
+          "type": "object"
+        },
+        "missions": {
+          "items": {
+            "properties": {
+              "incarnation": {
+                "type": "integer"
+              },
+              "mission_id": {
+                "type": "string"
+              },
+              "next_action": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "objective": {
+                "type": "string"
+              },
+              "relay_count": {
+                "type": "integer"
+              },
+              "revision": {
+                "type": "integer"
+              },
+              "updated_at": {
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "mission_id",
+              "incarnation",
+              "revision",
+              "objective",
+              "next_action",
+              "relay_count",
+              "updated_at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "relay": {
+          "items": {
+            "properties": {
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "cursor": {
+                "type": "integer"
+              },
+              "message": {
+                "type": "string"
+              },
+              "mission_id": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mission_id",
+              "cursor",
+              "source",
+              "message",
+              "created_at"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "triggers": {
+          "items": {
+            "properties": {
+              "created_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline_at": {
+                "format": "date-time",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "failure_message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "file_path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "incarnation": {
+                "type": "integer"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "process_id": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "state": {
+                "type": "string"
+              },
+              "trigger_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "trigger_id",
+              "incarnation",
+              "kind",
+              "state",
+              "created_at",
+              "deadline_at",
+              "process_id",
+              "file_path",
+              "failure_message"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "generated_at",
+        "machine",
+        "context",
+        "engine",
+        "missions",
+        "relay",
+        "jobs",
+        "triggers",
+        "artifacts"
+      ],
+      "type": "object"
+    },
+    "title": "Eye Live Refresh"
   },
   {
     "_meta": null,

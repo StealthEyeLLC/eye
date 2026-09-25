@@ -113,6 +113,22 @@ public sealed class MissionBlackboardStore
         }
     }
 
+    public MissionBlackboardRecord[] ListRecent(int limit = 10)
+    {
+        if (limit is < 1 or > 50)
+            throw new ArgumentException("limit must be between 1 and 50.", nameof(limit));
+        lock (_gate)
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT * FROM mission_blackboards ORDER BY updated_utc DESC LIMIT $limit;";
+            command.Parameters.AddWithValue("$limit", limit);
+            using var reader = command.ExecuteReader();
+            var records = new List<MissionBlackboardRecord>();
+            while (reader.Read()) records.Add(Read(reader));
+            return [.. records];
+        }
+    }
     internal MissionBlackboardRecord AppendRelay(string missionId, string source, string message)
     {
         source = RequiredText(source, nameof(source));

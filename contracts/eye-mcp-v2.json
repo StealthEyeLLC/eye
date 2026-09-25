@@ -1,6 +1,6 @@
 {
   "contract": "stealtheye.eye.mcp",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "status": "canonical-target",
   "publication_state": "generated-not-live-until-cutover",
   "server_instructions": "STEALTHEYE is a privileged Windows capability substrate controlled by ChatGPT. Prefer precise typed operations, then direct CLI/file operations, then browser CDP, then Windows UI Automation, and use raw eye_run only when no narrower operation fits. Long work should become durable jobs; wait on events instead of polling; move large data by artifact reference. Reuse stable IDs, incarnations, and cursors. For consequential effects, use stable task_id/action_id plus a deterministic postcondition so retries are idempotent and evidence-backed. ChatGPT remains the planner; STEALTHEYE does not autonomously plan or declare unverified completion.",
@@ -994,6 +994,18 @@
             "required": ["name", "identity"],
             "additionalProperties": false
           },
+          "context": {
+            "type": "object",
+            "properties": {
+              "mission_count": { "type": "integer", "minimum": 0 },
+              "active_job_count": { "type": "integer", "minimum": 0 },
+              "pending_trigger_count": { "type": "integer", "minimum": 0 },
+              "relay_message_count": { "type": "integer", "minimum": 0 },
+              "latest_mission_id": { "type": "string" }
+            },
+            "required": ["mission_count", "active_job_count", "pending_trigger_count", "relay_message_count"],
+            "additionalProperties": false
+          },
           "engine": {
             "type": "object",
             "properties": {
@@ -1006,6 +1018,38 @@
             },
             "required": ["state"],
             "additionalProperties": false
+          },
+          "missions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mission_id": { "type": "string" },
+                "incarnation": { "type": "integer", "minimum": 1 },
+                "revision": { "type": "integer", "minimum": 1 },
+                "objective": { "type": "string" },
+                "next_action": { "type": "string" },
+                "relay_count": { "type": "integer", "minimum": 0 },
+                "updated_at": { "type": "string", "format": "date-time" }
+              },
+              "required": ["mission_id", "incarnation", "revision", "objective", "relay_count", "updated_at"],
+              "additionalProperties": false
+            }
+          },
+          "relay": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mission_id": { "type": "string" },
+                "cursor": { "type": "integer", "minimum": 1 },
+                "source": { "type": "string" },
+                "message": { "type": "string" },
+                "created_at": { "type": "string", "format": "date-time" }
+              },
+              "required": ["mission_id", "cursor", "source", "message", "created_at"],
+              "additionalProperties": false
+            }
           },
           "jobs": {
             "type": "array",
@@ -1020,9 +1064,11 @@
                 "pid": { "type": "integer", "minimum": 0 },
                 "created_at": { "type": "string", "format": "date-time" },
                 "completed_at": { "type": "string", "format": "date-time" },
-                "failure_message": { "type": "string" }
+                "failure_message": { "type": "string" },
+                "stdout_tail": { "type": "string" },
+                "stderr_tail": { "type": "string" }
               },
-              "required": ["job_id", "incarnation", "state", "context", "terminal", "created_at"],
+              "required": ["job_id", "incarnation", "state", "context", "terminal", "created_at", "stdout_tail", "stderr_tail"],
               "additionalProperties": false
             }
           },
@@ -1063,7 +1109,7 @@
             }
           }
         },
-        "required": ["generated_at", "machine", "engine", "jobs", "triggers", "artifacts"],
+        "required": ["generated_at", "machine", "context", "engine", "missions", "relay", "jobs", "triggers", "artifacts"],
         "additionalProperties": false
       },
       "operations": []
@@ -1160,6 +1206,7 @@
       "portable_bridge": "MCP Apps ui/* JSON-RPC",
       "follow_up_message": "ui/message",
       "helpers": "app-only via _meta.ui.visibility:[app]",
+      "app_helper_tools": ["eye_live_refresh", "eye_live_action"],
       "must_not_be_required_for_core_operation": true
     },
     "file_inputs": {

@@ -139,6 +139,7 @@ public sealed class DescriptorGenerationTests
         var contract = EyeContractCatalog.Load();
         var tools = EyeGeneratedMcp.CreateModelTools(contract)
             .Append(EyeLiveMcp.CreateTool(contract))
+            .Concat(EyeLiveMcp.CreateAppTools())
             .ToArray();
         var actual = EyeGeneratedMcp.NormalizeToolsList(tools);
         var root = RepositoryRoot();

@@ -39,7 +39,8 @@ var builder = WebApplication.CreateBuilder(args);
 var publicContract = EyeContractCatalog.Load();
 var modelTools = EyeGeneratedMcp.CreateModelTools(publicContract);
 var eyeLiveTool = EyeLiveMcp.CreateTool(publicContract);
-var servedTools = modelTools.Append(eyeLiveTool).ToArray();
+var eyeLiveAppTools = EyeLiveMcp.CreateAppTools();
+var servedTools = modelTools.Append(eyeLiveTool).Concat(eyeLiveAppTools).ToArray();
 
 builder.Services.AddWindowsService(options => options.ServiceName = "StealthEye");
 var urls = Environment.GetEnvironmentVariable("EYE_URLS")
@@ -80,6 +81,7 @@ builder.Services.AddSingleton<EyeDispatcher>();
 builder.Services.AddSingleton<EyeTool>();
 builder.Services.AddSingleton<EyeLiveSnapshotService>();
 builder.Services.AddSingleton<EyeLiveTool>();
+builder.Services.AddSingleton<EyeLiveAppTool>();
 builder.Services
     .AddMcpServer(options => options.ServerInstructions = publicContract.Manifest.ServerInstructions)
     .WithHttpTransport(options => options.Stateless = true)

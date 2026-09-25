@@ -6,7 +6,7 @@
 
 This checklist implements `docs/BUILD_BLUEPRINT.md`. It intentionally avoids preserving obsolete migration procedure as the active plan.
 
-## Phase 0 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â machine foundation
+## Phase 0 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â machine foundation
 
 Before runtime ownership changes:
 
@@ -21,7 +21,7 @@ Before runtime ownership changes:
 - [ ] NVIDIA/CUDA stack is healthy where required.
 - [ ] Windows login/account/autologon configuration is left alone unless explicitly changed by the owner.
 
-## Phase 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â contract v2 and host/engine protocol
+## Phase 1 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â contract v2 and host/engine protocol
 
 Canonical target tools:
 
@@ -48,7 +48,7 @@ eye_live
 
 Phase 1 activation gate is met. The canonical contract is generated but remains non-live until the runtime cutover gate is executed and verified.
 
-## Phase 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â stable host core
+## Phase 2 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â stable host core
 
 - [x] one LocalSystem SCM service owns the stable host.
 - [x] stable host serves loopback MCP.
@@ -70,7 +70,7 @@ Phase 1 activation gate is met. The canonical contract is generated but remains 
 On 2026-09-24 the accepted host was installed as the single Auto-start StealthEye LocalSystem SCM service and independently verified to expose exactly one listener at 127.0.0.1:37931. Live MCP calls proved inline SYSTEM execution as NT AUTHORITY\SYSTEM, inline active-user execution as STEALTHEYELLC\StealthEye, automatic WSL promotion to a durable job, successful active-user WSL completion, and cursor-backed spool output (root::Linux). The accepted test suite also proves explicit inherited-handle isolation, host-owned native ConPTY lifecycle, and Job Object cancellation of both a job root process and its spawned descendant.
 
 Phase 2 is complete. Suitable Job Object interop now uses CsWin32-generated bindings/SafeHandles while the remaining specialized process/session declarations stay narrowly handwritten where they materially simplify the implementation.
-## Phase 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â artifacts and identity model
+## Phase 3 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â artifacts and identity model
 
 - [x] host artifact registry exists.
 - [x] artifact metadata includes stable ID, kind, MIME type, size, hash/name as applicable, storage tier, and provenance.
@@ -88,7 +88,7 @@ On 2026-09-24 the accepted artifact registry was verified to persist stable arti
 The identity stores independently prove stable IDs plus incarnation and observation cursors for desktop windows, UIA elements, browser targets, jobs, and artifacts. Reused HWNDs with a different process generation, disappeared/reappeared browser targets, browser type replacement, and UIA elements under a new window incarnation all advance incarnation instead of silently aliasing the old object. Job stdout/stderr, terminal attachment, artifact range reads, and UI/browser observations expose bounded cursor/range progression.
 
 Phase 3 is complete. Fast completed run operations whose combined stdout/stderr exceeds the inline limit now promote their existing spool streams into durable artifacts and return bounded inline excerpts, truncation flags, artifact IDs, and the original job/exit/context metadata. Small fast output remains inline and slow work remains a durable job reference.
-## Phase 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â supervised versioned engine
+## Phase 4 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â supervised versioned engine
 
 - [x] capability engine is a separate child process, never a DLL inside stable host.
 - [x] active and previous engine versions live side by side.
@@ -112,7 +112,7 @@ Host-ownership integration coverage creates a completed job, a live ConPTY termi
 The active-user scheduled fallback was also hardened during this phase: the scheduled wrapper now joins the host Job Object before a gate allows it to spawn the requested command. This removes the fast-process PID race where a short user command could exit before ownership was established.
 
 Phase 4 is complete.
-## Phase 5 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â workers, streams, Trigger Broker, waits
+## Phase 5 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â workers, streams, Trigger Broker, waits
 
 - [x] StreamJsonRpc named-pipe control path works for host/engine/worker interactions.
 - [x] multiplexed binary plane exposes and verifies stdout/stderr/VT/image/audio/file channels.
@@ -134,17 +134,26 @@ Worker ownership is host-controlled. Active-session workers are launched on dema
 The Trigger Broker persists registrations and ordered event queues in host-owned SQLite state. Pending time/file triggers reattach after broker restart, process exit uses process-incarnation-aware native exit waiting, file creation uses FileSystemWatcher, UIA changes are fed from the active-session UIA watcher, and browser navigation is now fed from a real CDP Page.frameNavigated event into the same durable queue/cursor model. These sources are event-driven; broader service, port, session, Event Log, device, power/network, and performance sources are future extensions and must not be approximated with polling loops.
 
 Phase 5 is complete.
-## Phase 6 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Eye Live and operator guidance
+## Phase 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Eye Live and operator guidance
 
-- [ ] `eye_live` returns an MCP Apps UI resource only when continuation/supervision is useful.
-- [ ] core Eye operation does not depend on UI being rendered.
-- [ ] Eye Live can display mission, jobs/terminals, live output, triggers, artifacts, relay state, and compact machine/context status.
-- [ ] Eye Live can call app-only helpers without exposing them to model tool selection.
-- [ ] UI follow-up messaging works through supported bridge behavior.
-- [ ] Eye Operator skill exists and teaches modality hierarchy, jobs, waits, artifacts, handles/cursors, and contract discipline.
-- [ ] MCP server initialization instructions provide compact routing rules with self-contained first 512 characters.
+- [x] eye_live returns an MCP Apps UI resource only when continuation/supervision is useful.
+- [x] core Eye operation does not depend on UI being rendered.
+- [x] Eye Live can display mission, jobs/terminals, live output, triggers, artifacts, relay state, and compact machine/context status.
+- [x] Eye Live can call app-only helpers without exposing them to model tool selection.
+- [x] UI follow-up messaging works through supported bridge behavior.
+- [x] Eye Operator skill exists and teaches modality hierarchy, jobs, waits, artifacts, handles/cursors, and contract discipline.
+- [x] MCP server initialization instructions provide compact routing rules with self-contained first 512 characters.
 
-## Phase 7 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â desktop and browser capability engine
+### Phase 6 verification evidence
+
+On 2026-09-24 Eye Live was verified as an optional MCP Apps component mounted only through the dedicated eye_live UI tool. The ordinary five capability facades plus eye_live remain the six model-visible tools; eye_live_refresh and eye_live_action are served with app-only UI visibility and are reserved for the mounted app. The live loopback MCP surface test verifies both the eight-tool served surface and the six-tool model-visible boundary.
+
+Eye Live now renders compact machine/context status, engine recovery state, recent missions, relay messages, jobs/terminals with bounded stdout/stderr tails, triggers, and artifacts. Its bounded app-only action helper permits engine restart/rollback and job cancellation without exposing those helpers to model selection. Its follow-up composer uses the MCP Apps ui/message bridge so the user can hand the displayed state back to ChatGPT without turning the component into an autonomous agent.
+
+Core Eye operation remains independent of UI rendering. The Eye Live snapshot is host-owned and remains useful when the capability engine is unavailable; ordinary MCP tools and the full test suite do not require the component to be mounted. The canonical Eye Operator source in docs/EYE_OPERATOR_SKILL.md is tested for modality hierarchy, durable jobs, native waits, artifacts, stable IDs/incarnations/cursors, UIA/CDP guidance, optional Eye Live doctrine, and contract discipline. Server initialization instructions remain contract-owned and the first 512 characters are tested to carry the essential ChatGPT/typed-operation/job/artifact routing rules.
+
+Phase 6 is complete.
+## Phase 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â desktop and browser capability engine
 
 ### Desktop
 
@@ -169,7 +178,7 @@ Phase 5 is complete.
 - [ ] optional Playwright .NET path is available only where it materially improves behavior.
 - [ ] no permanent Node daemon or bundled browser fleet exists.
 
-## Phase 8 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Blackboard, Relay, context capture, and adapters
+## Phase 8 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Blackboard, Relay, context capture, and adapters
 
 ### Blackboard / Relay
 
@@ -197,7 +206,7 @@ Add based on real tasks, not completeness theater:
 - [ ] deterministic adapters for Git/GitHub CLI, PowerShell/WSL, winget, FFmpeg, services/Task Scheduler, and other actually installed software.
 - [ ] resource-aware execution considers GPU memory/thermals/power/storage tier where useful.
 
-## Phase 9 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â final runtime cutover
+## Phase 9 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â final runtime cutover
 
 Only cut over when the new runtime independently operates and repairs the machine.
 
